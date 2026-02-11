@@ -33,7 +33,7 @@
     "@onegenui/jobs": "workspace:*",
     "@supabase/supabase-js": "^2.0.0",
     "tiktoken": "^1.0.0",
-    "@ai-sdk/mcp": "^0.1.0"
+    "@ai-sdk/mcp": "^1.0.0"
   },
   "peerDependenciesMeta": {
     "@onegenui/mcp": { "optional": true },
