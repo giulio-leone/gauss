@@ -26,13 +26,13 @@ export interface McpServerInfo {
   name: string;
   status: "connected" | "disconnected" | "error";
   toolCount: number;
-  transport: "stdio" | "http" | "sse";
+  transport: "stdio" | "http" | "sse" | "streamable-http";
 }
 
 export interface McpServerConfig {
   id: string;
   name: string;
-  transport: "stdio" | "http" | "sse";
+  transport: "stdio" | "http" | "sse" | "streamable-http";
   command?: string;
   args?: string[];
   url?: string;

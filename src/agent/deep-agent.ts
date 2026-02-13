@@ -221,6 +221,18 @@ export class DeepAgent {
     return builder.build();
   }
 
+  /**
+   * Auto-configuring factory that works in any runtime.
+   * Uses universal adapters (VirtualFilesystem, InMemoryAdapter, ApproximateTokenCounter)
+   * that require zero platform-specific APIs.
+   *
+   * For runtime-specific adapters (LocalFilesystem, DenoFilesystem, OpfsFilesystem, etc.),
+   * use `DeepAgent.create()` and compose manually.
+   */
+  static auto(config: DeepAgentConfig): DeepAgent {
+    return DeepAgent.create(config).withPlanning().build();
+  }
+
   // ---------------------------------------------------------------------------
   // Private: build merged tool set
   // ---------------------------------------------------------------------------

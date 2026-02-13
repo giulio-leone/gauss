@@ -121,11 +121,11 @@ export { ApprovalManager } from "./agent/approval-manager.js";
 export { EventBus } from "./agent/event-bus.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Filesystem
+// Adapters — Filesystem (runtime-agnostic)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { VirtualFilesystem } from "./adapters/filesystem/virtual-fs.adapter.js";
-export { LocalFilesystem } from "./adapters/filesystem/local-fs.adapter.js";
+export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
+// Node.js-specific: LocalFilesystem → import from "@onegenui/deep-agents/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — MCP
@@ -177,11 +177,11 @@ export {
 } from "./tools/planning/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Adapters — Token Counter
+// Adapters — Token Counter (runtime-agnostic)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
-export { TiktokenTokenCounter } from "./adapters/token-counter/tiktoken.adapter.js";
+// Node.js-specific: TiktokenTokenCounter → import from "@onegenui/deep-agents/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context — Token Tracking, Compression, Summarization
@@ -201,3 +201,16 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { createAllTodosDoneCondition } from "./agent/stop-conditions.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Runtime Detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  detectRuntime,
+  detectCapabilities,
+} from "./runtime/detect.js";
+export type {
+  RuntimeId,
+  RuntimeCapabilities,
+} from "./runtime/detect.js";

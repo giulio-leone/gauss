@@ -621,6 +621,80 @@ await agent.dispose();
 | `baseStepInterval` | `number` | `5` | Steps between checkpoints |
 | `maxCheckpoints` | `number` | `10` | Maximum retained checkpoints |
 
+## Multi-Runtime Support
+
+The framework runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Workers, Vercel Edge), and **Browser** runtimes. The core API (`DeepAgent`, `VirtualFilesystem`, `InMemoryAdapter`) is runtime-agnostic; platform-specific adapters live in dedicated sub-path exports.
+
+### Installation per Runtime
+
+```ts
+// Node.js / Bun — core + Node-specific adapters
+import { DeepAgent } from '@onegenui/deep-agents';
+import { LocalFilesystem, TiktokenTokenCounter } from '@onegenui/deep-agents/node';
+
+// Deno — Deno.Kv memory, Deno filesystem
+import { DenoFilesystem, DenoKvMemoryAdapter } from '@onegenui/deep-agents/deno';
+
+// Edge / Cloudflare Workers — OPFS filesystem, IndexedDB memory
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/deep-agents/edge';
+
+// Browser — same adapters as Edge (OPFS + IndexedDB)
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/deep-agents/browser';
+```
+
+### Auto-Configuration
+
+`DeepAgent.auto()` creates an agent using universal adapters (`VirtualFilesystem`, `InMemoryAdapter`, `ApproximateTokenCounter`) that work in any runtime — no platform-specific imports required.
+
+```ts
+import { DeepAgent } from '@onegenui/deep-agents';
+import { openai } from '@ai-sdk/openai';
+
+const agent = DeepAgent.auto({
+  model: openai('gpt-4o'),
+  instructions: 'You are a helpful assistant.',
+});
+
+const result = await agent.run('Summarize the project.');
+```
+
+For runtime-specific adapters (e.g. `LocalFilesystem`, `DenoKvMemoryAdapter`), use `DeepAgent.create()` and compose manually.
+
+### MCP Server Mode
+
+Expose agent tools as an MCP-compatible HTTP server for cross-language consumption:
+
+```ts
+import { DeepAgent } from '@onegenui/deep-agents';
+import { McpServer, createStreamableHttpHandler } from '@onegenui/deep-agents/server';
+import { openai } from '@ai-sdk/openai';
+
+const agent = DeepAgent.minimal({
+  model: openai('gpt-4o'),
+  instructions: 'You are a coding assistant.',
+});
+
+const server = new McpServer({
+  name: 'my-agent',
+  version: '1.0.0',
+  tools: agent.tools,
+});
+
+const handler = createStreamableHttpHandler({ server });
+
+// Node.js / Bun — serve with any HTTP framework
+const httpServer = Bun.serve({ port: 3000, fetch: handler });
+// Or with Node.js:
+// import { createServer } from 'node:http';
+// createServer(async (req, res) => { ... }).listen(3000);
+```
+
+### Cross-Language Consumption
+
+Any language that speaks HTTP + JSON-RPC can consume agent tools via the MCP Streamable HTTP transport. Initialize a session, list available tools, call them, and close the session — all with standard HTTP requests.
+
+See [`examples/python-mcp-client/`](./examples/python-mcp-client/) for a working Python client.
+
 ## License
 
 MIT
