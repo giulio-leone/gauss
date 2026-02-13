@@ -12,9 +12,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js",
+      "require": "./dist/node/index.cjs"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -28,23 +37,23 @@
     "zod": "^4.0.0"
   },
   "peerDependencies": {
-    "@onegenui/mcp": "workspace:*",
-    "@onegenui/providers": "workspace:*",
-    "@onegenui/jobs": "workspace:*",
+    "@ai-sdk/mcp": "^1.0.0",
     "@supabase/supabase-js": "^2.0.0",
-    "tiktoken": "^1.0.0",
-    "@ai-sdk/mcp": "^1.0.0"
+    "tiktoken": "^1.0.0"
   },
   "peerDependenciesMeta": {
-    "@onegenui/mcp": { "optional": true },
-    "@onegenui/providers": { "optional": true },
-    "@onegenui/jobs": { "optional": true },
-    "@supabase/supabase-js": { "optional": true },
-    "tiktoken": { "optional": true },
-    "@ai-sdk/mcp": { "optional": true }
+    "@supabase/supabase-js": {
+      "optional": true
+    },
+    "tiktoken": {
+      "optional": true
+    },
+    "@ai-sdk/mcp": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.2.3",
     "rimraf": "^6.1.2",
     "tsup": "^8.0.2",
     "typescript": "^5.9.3",

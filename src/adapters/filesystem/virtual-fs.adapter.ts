@@ -2,9 +2,6 @@
 // VirtualFilesystem — In-memory filesystem with optional disk persistence
 // =============================================================================
 
-import { writeFile, mkdir } from "node:fs/promises";
-import { dirname, join, posix } from "node:path";
-
 import type { FilesystemPort } from "../../ports/filesystem.port.js";
 import type {
   FileEntry,
@@ -23,8 +20,11 @@ interface StoredEntry {
   modifiedAt: number;
 }
 
+export type DiskSyncFn = (filePath: string, content: string) => Promise<void>;
+
 interface VirtualFsOptions {
   basePath?: string;
+  onSync?: DiskSyncFn;
 }
 
 export class VirtualFilesystem implements FilesystemPort {
@@ -33,9 +33,11 @@ export class VirtualFilesystem implements FilesystemPort {
     persistent: new Map(),
   };
   private readonly basePath: string;
+  private readonly onSync?: DiskSyncFn;
 
   constructor(options: VirtualFsOptions = {}) {
-    this.basePath = options.basePath ?? process.cwd();
+    this.basePath = options.basePath ?? "";
+    this.onSync = options.onSync;
   }
 
   async read(path: string, zone: FilesystemZone = "transient"): Promise<string> {
@@ -158,11 +160,13 @@ export class VirtualFilesystem implements FilesystemPort {
   }
 
   async syncToPersistent(): Promise<void> {
+    if (!this.onSync) {
+      throw new Error("syncToPersistent requires an onSync callback");
+    }
     for (const [filePath, entry] of this.zones.persistent) {
       if (entry.isDirectory) continue;
-      const diskPath = join(this.basePath, filePath);
-      await mkdir(dirname(diskPath), { recursive: true });
-      await writeFile(diskPath, entry.content, "utf-8");
+      const fullPath = this.basePath ? this.basePath + "/" + filePath : filePath;
+      await this.onSync(fullPath, entry.content);
     }
   }
 
@@ -188,5 +192,16 @@ export class VirtualFilesystem implements FilesystemPort {
 }
 
 function normalizePath(p: string): string {
-  return posix.normalize(p).replace(/^\/+/, "").replace(/\/+$/, "");
+  // Collapse consecutive slashes, then split into segments
+  const segments = p.replace(/\/+/g, "/").split("/");
+  const resolved: string[] = [];
+  for (const seg of segments) {
+    if (seg === "." || seg === "") continue;
+    if (seg === "..") {
+      resolved.pop();
+    } else {
+      resolved.push(seg);
+    }
+  }
+  return resolved.join("/");
 }
