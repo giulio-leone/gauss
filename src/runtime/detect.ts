@@ -14,35 +14,40 @@ export interface RuntimeCapabilities {
   hasWebCrypto: boolean;
 }
 
-/** Detect the current runtime environment (lazy, cached) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any;
+
+let cachedRuntime: RuntimeId | undefined;
+let cachedCapabilities: RuntimeCapabilities | undefined;
+
+/** Detect the current runtime environment (result is cached after first call) */
 export function detectRuntime(): RuntimeId {
-  // Deno detection
-  if (typeof (globalThis as any).Deno !== "undefined") return "deno";
-  // Bun detection
-  if (typeof (globalThis as any).Bun !== "undefined") return "bun";
-  // Cloudflare Workers detection (has fetch, no window, no process)
-  if (typeof (globalThis as any).caches !== "undefined"
-      && typeof (globalThis as any).process === "undefined"
-      && typeof (globalThis as any).window === "undefined") return "cloudflare-workers";
-  // Node.js detection
-  if (typeof (globalThis as any).process !== "undefined"
-      && typeof (globalThis as any).process.versions?.node === "string") return "node";
-  // Browser detection
-  if (typeof (globalThis as any).window !== "undefined"
-      && typeof (globalThis as any).document !== "undefined") return "browser";
-  return "unknown";
+  if (cachedRuntime !== undefined) return cachedRuntime;
+
+  if (typeof g.Deno !== "undefined") cachedRuntime = "deno";
+  else if (typeof g.Bun !== "undefined") cachedRuntime = "bun";
+  else if (typeof g.caches !== "undefined" && typeof g.process === "undefined" && typeof g.window === "undefined") cachedRuntime = "cloudflare-workers";
+  else if (typeof g.process !== "undefined" && typeof g.process.versions?.node === "string") cachedRuntime = "node";
+  else if (typeof g.window !== "undefined" && typeof g.document !== "undefined") cachedRuntime = "browser";
+  else cachedRuntime = "unknown";
+
+  return cachedRuntime;
 }
 
-/** Detect available capabilities (lazy, cached) */
+/** Detect available capabilities (result is cached after first call) */
 export function detectCapabilities(): RuntimeCapabilities {
+  if (cachedCapabilities !== undefined) return cachedCapabilities;
+
   const runtime = detectRuntime();
-  return {
+  cachedCapabilities = {
     runtime,
     hasNativeFs: runtime === "node" || runtime === "bun" || runtime === "deno",
-    hasIndexedDB: typeof (globalThis as any).indexedDB !== "undefined",
-    hasOPFS: typeof (globalThis as any).navigator?.storage?.getDirectory === "function",
-    hasDenoKv: runtime === "deno" && typeof (globalThis as any).Deno?.openKv === "function",
+    hasIndexedDB: typeof g.indexedDB !== "undefined",
+    hasOPFS: typeof g.navigator?.storage?.getDirectory === "function",
+    hasDenoKv: runtime === "deno" && typeof g.Deno?.openKv === "function",
     hasFetch: typeof globalThis.fetch === "function",
     hasWebCrypto: typeof globalThis.crypto?.randomUUID === "function",
   };
+
+  return cachedCapabilities;
 }

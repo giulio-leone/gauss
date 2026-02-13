@@ -22,7 +22,6 @@ import { ApproximateTokenCounter } from "../adapters/token-counter/approximate.a
 import { createFilesystemTools } from "../tools/filesystem/index.js";
 import { createPlanningTools } from "../tools/planning/index.js";
 import { createSubagentTools } from "../tools/subagent/index.js";
-import { detectCapabilities } from "../runtime/detect.js";
 
 // =============================================================================
 // Result type
@@ -222,30 +221,16 @@ export class DeepAgent {
     return builder.build();
   }
 
+  /**
+   * Auto-configuring factory that works in any runtime.
+   * Uses universal adapters (VirtualFilesystem, InMemoryAdapter, ApproximateTokenCounter)
+   * that require zero platform-specific APIs.
+   *
+   * For runtime-specific adapters (LocalFilesystem, DenoFilesystem, OpfsFilesystem, etc.),
+   * use `DeepAgent.create()` and compose manually.
+   */
   static auto(config: DeepAgentConfig): DeepAgent {
-    const caps = detectCapabilities();
-    const builder = DeepAgent.create(config).withPlanning();
-
-    // Auto-select filesystem adapter
-    if (caps.hasNativeFs) {
-      // Node/Bun/Deno have native fs — use VirtualFilesystem with no sync by default
-      // Consumer should explicitly use LocalFilesystem/DenoFilesystem for real fs access
-      builder.withFilesystem(new VirtualFilesystem());
-    } else if (caps.hasOPFS) {
-      // Dynamic import for edge/browser OPFS adapter
-      // Fall back to VirtualFilesystem since we can't do top-level await here
-      builder.withFilesystem(new VirtualFilesystem());
-    } else {
-      builder.withFilesystem(new VirtualFilesystem());
-    }
-
-    // Auto-select memory adapter
-    builder.withMemory(new InMemoryAdapter());
-
-    // Token counter — always use approximate (universal)
-    builder.withTokenCounter(new ApproximateTokenCounter());
-
-    return builder.build();
+    return DeepAgent.create(config).withPlanning().build();
   }
 
   // ---------------------------------------------------------------------------

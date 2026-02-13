@@ -42,7 +42,10 @@ export function createStreamableHttpHandler(options: StreamableHttpHandlerOption
   return async (request: Request): Promise<Response> => {
     if (request.method === "DELETE") {
       const sessionId = request.headers.get("mcp-session-id");
-      if (sessionId) sessions.deleteSession(sessionId);
+      if (!sessionId || !sessions.isValidSession(sessionId)) {
+        return new Response(null, { status: 404 });
+      }
+      sessions.deleteSession(sessionId);
       return new Response(null, { status: 200 });
     }
 
@@ -54,14 +57,22 @@ export function createStreamableHttpHandler(options: StreamableHttpHandlerOption
       return new Response(null, { status: 405 });
     }
 
-    const body = await request.json() as Record<string, unknown>;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json() as Record<string, unknown>;
+    } catch {
+      return new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
     const isInit = body.method === "initialize";
 
-    // Session validation for non-init requests
+    // Session validation: required for all non-init requests
     if (!isInit) {
       const sessionId = request.headers.get("mcp-session-id");
-      if (sessionId && !sessions.isValidSession(sessionId)) {
-        return new Response(null, { status: 404 });
+      if (!sessionId || !sessions.isValidSession(sessionId)) {
+        return new Response(null, { status: 401 });
       }
     }
 
