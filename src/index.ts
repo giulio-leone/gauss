@@ -124,8 +124,47 @@ export { EventBus } from "./agent/event-bus.js";
 // Plugins
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { DeepAgentPlugin, PluginHooks, PluginContext } from "./ports/plugin.port.js";
-export { PluginManager } from "./plugins/index.js";
+export type {
+  DeepAgentPlugin,
+  PluginHooks,
+  PluginContext,
+  PluginSetupContext,
+  PluginRunMetadata,
+  BeforeRunParams,
+  BeforeRunResult,
+  AfterRunParams,
+  BeforeToolParams,
+  BeforeToolResult,
+  AfterToolParams,
+  BeforeStepParams,
+  BeforeStepResult,
+  AfterStepParams,
+  OnErrorParams,
+  OnErrorResult,
+} from "./ports/plugin.port.js";
+export {
+  PluginManager,
+  AgentCardPlugin,
+  createAgentCardPlugin,
+  A2APlugin,
+  createA2APlugin,
+  createA2AJsonRpcHandler,
+  createA2AHttpHandler,
+} from "./plugins/index.js";
+export type {
+  AgentCardPluginOptions,
+  AgentCardSnapshot,
+  AgentCardProvider,
+  AgentCardSource,
+  A2APluginOptions,
+  A2AAgentRuntime,
+  A2AJsonRpcRequest,
+  A2AJsonRpcResponse,
+  A2ATask,
+  A2ATaskStatus,
+  A2ATasksSendParams,
+  A2ARequestHandlers,
+} from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Filesystem (runtime-agnostic)

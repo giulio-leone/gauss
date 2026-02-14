@@ -1,1 +1,28 @@
 export { PluginManager } from "./plugin-manager.js";
+
+export {
+  AgentCardPlugin,
+  createAgentCardPlugin,
+  type AgentCardPluginOptions,
+  type AgentCardSnapshot,
+  type AgentCardProvider,
+  type AgentCardSource,
+} from "./agent-card.plugin.js";
+
+export {
+  A2APlugin,
+  createA2APlugin,
+  type A2APluginOptions,
+  type A2AAgentRuntime,
+} from "./a2a.plugin.js";
+
+export {
+  createA2AJsonRpcHandler,
+  createA2AHttpHandler,
+  type A2AJsonRpcRequest,
+  type A2AJsonRpcResponse,
+  type A2ATask,
+  type A2ATaskStatus,
+  type A2ATasksSendParams,
+  type A2ARequestHandlers,
+} from "./a2a-handler.js";
