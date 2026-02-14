@@ -27,6 +27,8 @@ export type {
   SessionState,
 } from "./types.js";
 
+export type { RuntimePort } from "./ports/runtime.port.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Ports (contracts for hexagonal architecture)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -227,6 +229,13 @@ export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Runtime
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { NodeRuntimeAdapter } from "./adapters/runtime/node-runtime.adapter.js";
+export { detectRuntimeName, createRuntimeAdapter, type RuntimeName } from "./adapters/runtime/detect-runtime.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tools — Filesystem

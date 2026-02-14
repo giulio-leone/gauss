@@ -14,6 +14,8 @@ import type { McpPort } from "../ports/mcp.port.js";
 import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig, CheckpointConfig, SubagentConfig } from "../types.js";
 import type { DeepAgentPlugin, PluginContext, PluginRunMetadata, PluginSetupContext } from "../ports/plugin.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
+import type { RuntimePort } from "../ports/runtime.port.js";
+import { createRuntimeAdapter } from "../adapters/runtime/detect-runtime.js";
 
 import { EventBus } from "./event-bus.js";
 import { PluginManager } from "../plugins/plugin-manager.js";
@@ -55,6 +57,7 @@ export class DeepAgentBuilder {
   private userId?: string;
   private tokenCounter?: TokenCounterPort;
   private mcp?: McpPort;
+  private runtime?: RuntimePort;
 
   private planning = false;
   private subagents = false;
@@ -96,6 +99,11 @@ export class DeepAgentBuilder {
 
   withMcp(mcp: McpPort): this {
     this.mcp = mcp;
+    return this;
+  }
+
+  withRuntime(runtime: RuntimePort): this {
+    this.runtime = runtime;
     return this;
   }
 
@@ -158,6 +166,7 @@ export class DeepAgentBuilder {
       memory,
       tokenCounter,
       mcp: this.mcp,
+      runtime: this.runtime,
       learning: this.learning,
       userId: this.userId,
       planning: this.planning,
@@ -195,6 +204,7 @@ interface DeepAgentInternalConfig {
   memory: MemoryPort;
   tokenCounter: TokenCounterPort;
   mcp?: McpPort;
+  runtime?: RuntimePort;
   learning?: LearningPort;
   userId?: string;
   planning: boolean;
@@ -211,11 +221,13 @@ export class DeepAgent {
   readonly eventBus: EventBus;
 
   private readonly config: DeepAgentInternalConfig;
+  private readonly runtime: RuntimePort;
   private readonly tokenTracker: TokenTracker;
   private readonly pluginManager: PluginManager;
 
   constructor(config: DeepAgentInternalConfig) {
-    this.sessionId = config.id ?? crypto.randomUUID();
+    this.runtime = config.runtime ?? createRuntimeAdapter();
+    this.sessionId = config.id ?? this.runtime.randomUUID();
     this.eventBus = new EventBus(this.sessionId);
     this.config = config;
     this.tokenTracker = new TokenTracker(config.tokenCounter, {
@@ -364,6 +376,7 @@ export class DeepAgent {
       this.sessionId,
       (evt) => this.eventBus.emit(evt.type, evt.data),
     );
+    const runtime = this.runtime;
 
     let stepIndex = 0;
     for (const [name, toolDef] of Object.entries(tools)) {
@@ -375,7 +388,7 @@ export class DeepAgent {
       maybeExecutable.execute = async (...args: unknown[]) => {
         const { approved, reason } = await approval.checkAndApprove(
           name,
-          crypto.randomUUID(),
+          runtime.randomUUID(),
           args[0],
           stepIndex++,
         );
@@ -538,7 +551,7 @@ export class DeepAgent {
 
       if (cpConfig?.enabled) {
         const checkpoint = {
-          id: crypto.randomUUID(),
+          id: this.runtime.randomUUID(),
           sessionId: this.sessionId,
           stepIndex: steps.length,
           conversation: [
