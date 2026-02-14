@@ -1,6 +1,6 @@
-# @onegenui/deep-agents
+# OneAgent (@onegenui/agent)
 
-> Deep Agent Framework built on Vercel AI SDK v6
+> OneAgent — AI Agent Framework built on Vercel AI SDK v6
 
 A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.
 
@@ -20,7 +20,7 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 ## Installation
 
 ```bash
-pnpm add @onegenui/deep-agents
+pnpm add @onegenui/agent
 ```
 
 ### Peer Dependencies
@@ -44,7 +44,7 @@ pnpm add @supabase/supabase-js tiktoken
 ## Quick Start
 
 ```typescript
-import { DeepAgent } from "@onegenui/deep-agents";
+import { DeepAgent } from "@onegenui/agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.minimal({
@@ -182,7 +182,7 @@ const agent = DeepAgent.minimal({
 Creates a fully-featured agent with planning, subagents, and optional memory/MCP/token counter overrides.
 
 ```typescript
-import { SupabaseMemoryAdapter } from "@onegenui/deep-agents";
+import { SupabaseMemoryAdapter } from "@onegenui/agent";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(url, key);
@@ -253,7 +253,7 @@ Plugins are executed in **registration order** and can participate in a determin
 Plugins can also inject tools by exposing a `tools` map.
 
 ```typescript
-import type { DeepAgentPlugin } from "@onegenui/deep-agents";
+import type { DeepAgentPlugin } from "@onegenui/agent";
 
 const observabilityPlugin: DeepAgentPlugin = {
   name: "observability",
@@ -289,7 +289,7 @@ import {
   DeepAgent,
   AgentCardPlugin,
   A2APlugin,
-} from "@onegenui/deep-agents";
+} from "@onegenui/agent";
 
 const agentCard = new AgentCardPlugin();
 const a2a = new A2APlugin({ agentCardProvider: agentCard });
@@ -557,7 +557,7 @@ The `TokenTracker` accumulates input and output token usage across the session, 
 ### Basic Planning Agent
 
 ```typescript
-import { DeepAgent } from "@onegenui/deep-agents";
+import { DeepAgent } from "@onegenui/agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.minimal({
@@ -575,7 +575,7 @@ const result = await agent.run(
 ### Agent with MCP Tools
 
 ```typescript
-import { DeepAgent, AiSdkMcpAdapter } from "@onegenui/deep-agents";
+import { DeepAgent, AiSdkMcpAdapter } from "@onegenui/agent";
 import { openai } from "@ai-sdk/openai";
 
 const mcp = new AiSdkMcpAdapter({
@@ -610,7 +610,7 @@ import {
   SupabaseMemoryAdapter,
   LocalFilesystem,
   TiktokenTokenCounter,
-} from "@onegenui/deep-agents";
+} from "@onegenui/agent";
 import { openai } from "@ai-sdk/openai";
 import { createClient } from "@supabase/supabase-js";
 
@@ -710,17 +710,17 @@ The framework runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Worke
 
 ```ts
 // Node.js / Bun — core + Node-specific adapters
-import { DeepAgent } from '@onegenui/deep-agents';
-import { LocalFilesystem, TiktokenTokenCounter } from '@onegenui/deep-agents/node';
+import { DeepAgent } from '@onegenui/agent';
+import { LocalFilesystem, TiktokenTokenCounter } from '@onegenui/agent/node';
 
 // Deno — Deno.Kv memory, Deno filesystem
-import { DenoFilesystem, DenoKvMemoryAdapter } from '@onegenui/deep-agents/deno';
+import { DenoFilesystem, DenoKvMemoryAdapter } from '@onegenui/agent/deno';
 
 // Edge / Cloudflare Workers — OPFS filesystem, IndexedDB memory
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/deep-agents/edge';
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/agent/edge';
 
 // Browser — same adapters as Edge (OPFS + IndexedDB)
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/deep-agents/browser';
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/agent/browser';
 ```
 
 ### Auto-Configuration
@@ -728,7 +728,7 @@ import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/deep-agents/br
 `DeepAgent.auto()` creates an agent using universal adapters (`VirtualFilesystem`, `InMemoryAdapter`, `ApproximateTokenCounter`) that work in any runtime — no platform-specific imports required.
 
 ```ts
-import { DeepAgent } from '@onegenui/deep-agents';
+import { DeepAgent } from '@onegenui/agent';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.auto({
@@ -746,8 +746,8 @@ For runtime-specific adapters (e.g. `LocalFilesystem`, `DenoKvMemoryAdapter`), u
 Expose agent tools as an MCP-compatible HTTP server for cross-language consumption:
 
 ```ts
-import { DeepAgent } from '@onegenui/deep-agents';
-import { McpServer, createStreamableHttpHandler } from '@onegenui/deep-agents/server';
+import { DeepAgent } from '@onegenui/agent';
+import { McpServer, createStreamableHttpHandler } from '@onegenui/agent/server';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.minimal({
@@ -781,7 +781,7 @@ See [`examples/python-mcp-client/`](./examples/python-mcp-client/) for a working
 Orchestrate multiple agents using a declarative graph API with DAG execution, parallel forking, and consensus:
 
 ```ts
-import { AgentGraph, LlmJudgeConsensus } from '@onegenui/deep-agents';
+import { AgentGraph, LlmJudgeConsensus } from '@onegenui/agent';
 import { openai } from '@ai-sdk/openai';
 
 const model = openai('gpt-4o');
@@ -811,7 +811,7 @@ console.log(result.nodeResults); // Per-node results
 Stream agent events via SSE for real-time monitoring:
 
 ```ts
-import { DeepAgent, createSseHandler } from '@onegenui/deep-agents';
+import { DeepAgent, createSseHandler } from '@onegenui/agent';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.minimal({ model: openai('gpt-4o'), instructions: '...' });

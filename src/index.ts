@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/deep-agents — Public API
+// @onegenui/agent — Public API
 // =============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
-// Node.js-specific: LocalFilesystem → import from "@onegenui/deep-agents/node"
+// Node.js-specific: LocalFilesystem → import from "@onegenui/agent/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — MCP
@@ -227,7 +227,7 @@ export {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
-// Node.js-specific: TiktokenTokenCounter → import from "@onegenui/deep-agents/node"
+// Node.js-specific: TiktokenTokenCounter → import from "@onegenui/agent/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context — Token Tracking, Compression, Summarization

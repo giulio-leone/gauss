@@ -13,8 +13,8 @@
 import {
   DeepAgent,
   VirtualFilesystem,
-} from "@onegenui/deep-agents";
-import type { AgentEvent } from "@onegenui/deep-agents";
+} from "@onegenui/agent";
+import type { AgentEvent } from "@onegenui/agent";
 
 const model = {} as import("ai").LanguageModel;
 

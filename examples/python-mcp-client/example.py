@@ -1,5 +1,5 @@
 """
-MCP Streamable HTTP client — connects to a @onegenui/deep-agents MCP server.
+MCP Streamable HTTP client — connects to a @onegenui/agent MCP server.
 
 Demonstrates: initialize, list tools, call a tool, close session.
 Requires: pip install httpx

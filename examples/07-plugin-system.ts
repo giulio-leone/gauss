@@ -8,7 +8,7 @@ import {
   AgentCardPlugin,
   DeepAgent,
   type DeepAgentPlugin,
-} from "@onegenui/deep-agents";
+} from "@onegenui/agent";
 
 const model = {} as import("ai").LanguageModel;
 

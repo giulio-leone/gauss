@@ -64,7 +64,7 @@ export class StreamableHttpMcpAdapter implements McpPort {
       params: {
         protocolVersion: "2025-03-26",
         capabilities: {},
-        clientInfo: { name: "onegenui-deep-agents", version: "1.0.0" },
+        clientInfo: { name: "onegenui-agent", version: "1.0.0" },
       },
     }, null, config.headers);
 

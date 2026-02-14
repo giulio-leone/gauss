@@ -1,6 +1,6 @@
 # Python MCP Client Example
 
-Connects to a `@onegenui/deep-agents` MCP server via Streamable HTTP and demonstrates tool discovery and execution.
+Connects to a `@onegenui/agent` MCP server via Streamable HTTP and demonstrates tool discovery and execution.
 
 ## Prerequisites
 
@@ -14,8 +14,8 @@ pip install httpx
 
 ```ts
 // server.ts
-import { DeepAgent } from '@onegenui/deep-agents';
-import { McpServer, createStreamableHttpHandler } from '@onegenui/deep-agents/server';
+import { DeepAgent } from '@onegenui/agent';
+import { McpServer, createStreamableHttpHandler } from '@onegenui/agent/server';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.minimal({

@@ -32,7 +32,7 @@ export class McpServer {
   private readonly tools: Record<string, Tool>;
 
   constructor(options: McpServerOptions) {
-    this.name = options.name ?? "onegenui-deep-agents";
+    this.name = options.name ?? "onegenui-agent";
     this.version = options.version ?? "1.0.0";
     this.tools = options.tools;
   }

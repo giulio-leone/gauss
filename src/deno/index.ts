@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/deep-agents/deno — Deno-specific adapters
+// @onegenui/agent/deno — Deno-specific adapters
 // =============================================================================
 
 export { DenoFilesystem } from "./deno-fs.adapter.js";

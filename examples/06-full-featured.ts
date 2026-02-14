@@ -7,8 +7,8 @@
 
 import {
   DeepAgent, LocalFilesystem, SupabaseMemoryAdapter, AiSdkMcpAdapter,
-} from "@onegenui/deep-agents";
-import type { AgentEvent, ApprovalRequest } from "@onegenui/deep-agents";
+} from "@onegenui/agent";
+import type { AgentEvent, ApprovalRequest } from "@onegenui/agent";
 
 const model = {} as import("ai").LanguageModel;
 

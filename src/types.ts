@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/deep-agents — Shared Type Definitions
+// @onegenui/agent — Shared Type Definitions
 // =============================================================================
 
 import type { LanguageModel } from "ai";

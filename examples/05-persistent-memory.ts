@@ -12,8 +12,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent, SupabaseMemoryAdapter } from "@onegenui/deep-agents";
-import type { CheckpointConfig } from "@onegenui/deep-agents";
+import { DeepAgent, SupabaseMemoryAdapter } from "@onegenui/agent";
+import type { CheckpointConfig } from "@onegenui/agent";
 
 const model = {} as import("ai").LanguageModel;
 

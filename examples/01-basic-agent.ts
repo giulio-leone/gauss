@@ -10,8 +10,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent } from "@onegenui/deep-agents";
-import type { DeepAgentResult } from "@onegenui/deep-agents";
+import { DeepAgent } from "@onegenui/agent";
+import type { DeepAgentResult } from "@onegenui/agent";
 
 // -- Placeholder model (replace with a real provider) ------------------------
 const model = {} as import("ai").LanguageModel;

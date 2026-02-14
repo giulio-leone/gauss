@@ -11,8 +11,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent } from "@onegenui/deep-agents";
-import type { AgentEvent, SubagentConfig } from "@onegenui/deep-agents";
+import { DeepAgent } from "@onegenui/agent";
+import type { AgentEvent, SubagentConfig } from "@onegenui/agent";
 
 const model = {} as import("ai").LanguageModel;
 

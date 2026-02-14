@@ -1,7 +1,7 @@
 {
-  "name": "@onegenui/deep-agents",
+  "name": "@onegenui/agent",
   "version": "0.1.0",
-  "description": "Deep Agent Framework built on Vercel AI SDK v6 — planning, context management, subagents, persistent memory, MCP integration",
+  "description": "OneAgent — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
