@@ -8,10 +8,12 @@ import type { LanguageModel, Tool } from "ai";
 
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { MemoryPort } from "../ports/memory.port.js";
+import type { LearningPort } from "../ports/learning.port.js";
 import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
 import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig, CheckpointConfig, SubagentConfig } from "../types.js";
 import type { DeepAgentPlugin, PluginContext, PluginRunMetadata, PluginSetupContext } from "../ports/plugin.port.js";
+import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 
 import { EventBus } from "./event-bus.js";
 import { PluginManager } from "../plugins/plugin-manager.js";
@@ -49,6 +51,8 @@ export class DeepAgentBuilder {
 
   private fs?: FilesystemPort;
   private memory?: MemoryPort;
+  private learning?: LearningPort;
+  private userId?: string;
   private tokenCounter?: TokenCounterPort;
   private mcp?: McpPort;
 
@@ -76,6 +80,12 @@ export class DeepAgentBuilder {
 
   withMemory(memory: MemoryPort): this {
     this.memory = memory;
+    return this;
+  }
+
+  withLearning(learning: LearningPort, userId?: string): this {
+    this.learning = learning;
+    this.userId = userId;
     return this;
   }
 
@@ -148,6 +158,8 @@ export class DeepAgentBuilder {
       memory,
       tokenCounter,
       mcp: this.mcp,
+      learning: this.learning,
+      userId: this.userId,
       planning: this.planning,
       subagents: this.subagents,
       subagentConfig: this.subagentConfig,
@@ -183,6 +195,8 @@ interface DeepAgentInternalConfig {
   memory: MemoryPort;
   tokenCounter: TokenCounterPort;
   mcp?: McpPort;
+  learning?: LearningPort;
+  userId?: string;
   planning: boolean;
   subagents: boolean;
   subagentConfig?: Partial<SubagentConfig>;
@@ -269,6 +283,7 @@ export class DeepAgent {
       },
       filesystem: this.config.fs,
       memory: this.config.memory,
+      learning: this.config.learning,
       toolNames,
       runMetadata,
     };
@@ -450,6 +465,15 @@ export class DeepAgent {
       const tools = prepared.tools;
       pluginCtx = prepared.pluginCtx;
 
+      // Inject learning context if available
+      if (this.config.learning) {
+        const userId = this.config.userId ?? this.sessionId;
+        const profile = await this.config.learning.getProfile(userId);
+        const memories = await this.config.learning.getMemories(userId, { limit: 10 });
+        const learningContext = this.buildLearningContext(profile, memories);
+        if (learningContext) prompt = `${learningContext}\n\n${prompt}`;
+      }
+
       const beforeRunResult = await this.pluginManager.runBeforeRun(pluginCtx, { prompt });
       if (beforeRunResult.prompt !== undefined) {
         prompt = beforeRunResult.prompt;
@@ -571,6 +595,25 @@ export class DeepAgent {
       const tools = prepared.tools;
       pluginCtx = prepared.pluginCtx;
 
+      // Inject learning context as a system message
+      if (this.config.learning) {
+        const userId = this.config.userId ?? this.sessionId;
+        const [profile, memories] = await Promise.all([
+          this.config.learning.getProfile(userId),
+          this.config.learning.getMemories(userId, { limit: 10 }),
+        ]);
+        const learningContext = this.buildLearningContext(profile, memories);
+        if (learningContext) {
+          params = {
+            ...params,
+            messages: [
+              { role: "system", content: learningContext },
+              ...params.messages,
+            ],
+          };
+        }
+      }
+
       this.eventBus.emit("agent:start", { messages: params.messages });
 
       const agent = new ToolLoopAgent({
@@ -592,6 +635,23 @@ export class DeepAgent {
       this.eventBus.emit("error", { error });
       throw error;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Learning context
+  // ---------------------------------------------------------------------------
+
+  private buildLearningContext(profile: UserProfile | null, memories: UserMemory[]): string {
+    const parts: string[] = [];
+    if (profile) {
+      if (profile.context) parts.push(`User context: ${profile.context}`);
+      if (profile.style) parts.push(`Preferred style: ${profile.style}`);
+      if (profile.language) parts.push(`Language: ${profile.language}`);
+    }
+    if (memories.length > 0) {
+      parts.push(`Known facts about this user:\n${memories.map((m) => `- ${m.content}`).join("\n")}`);
+    }
+    return parts.length > 0 ? `[Learning Context]\n${parts.join("\n")}` : "";
   }
 
   // ---------------------------------------------------------------------------

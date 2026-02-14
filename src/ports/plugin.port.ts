@@ -7,6 +7,7 @@ import type { Tool } from "ai";
 import type { AgentEventHandler, AgentEventType } from "../types.js";
 import type { FilesystemPort } from "./filesystem.port.js";
 import type { MemoryPort } from "./memory.port.js";
+import type { LearningPort } from "./learning.port.js";
 
 export interface PluginRunMetadata {
   readonly [key: string]: unknown;
@@ -19,6 +20,7 @@ export interface PluginContext {
   readonly config: Readonly<{ instructions: string; maxSteps: number }>;
   readonly filesystem: FilesystemPort;
   readonly memory: MemoryPort;
+  readonly learning?: LearningPort;
   readonly toolNames: readonly string[];
   readonly runMetadata?: PluginRunMetadata;
 }

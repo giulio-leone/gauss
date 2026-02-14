@@ -32,6 +32,7 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { MemoryPort } from "./ports/memory.port.js";
+export type { LearningPort } from "./ports/learning.port.js";
 export type { FilesystemPort } from "./ports/filesystem.port.js";
 export type {
   McpPort,
@@ -74,6 +75,15 @@ export {
   CheckpointSchema,
   type Checkpoint,
 } from "./domain/checkpoint.schema.js";
+
+export {
+  UserProfileSchema,
+  UserMemorySchema,
+  SharedKnowledgeSchema,
+  type UserProfile,
+  type UserMemory,
+  type SharedKnowledge,
+} from "./domain/learning.schema.js";
 
 export {
   MessageSchema,
@@ -186,6 +196,12 @@ export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
 
 export { InMemoryAdapter } from "./adapters/memory/in-memory.adapter.js";
 export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Learning
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tools — Filesystem
