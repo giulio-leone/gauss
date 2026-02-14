@@ -166,6 +166,8 @@ export {
   GuardrailsError,
   OneCrawlPlugin,
   createOneCrawlPlugin,
+  VectorlessPlugin,
+  createVectorlessPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -183,6 +185,7 @@ export type {
   GuardrailsPluginOptions,
   ContentFilter,
   OneCrawlPluginOptions,
+  VectorlessPluginOptions,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -41,3 +41,9 @@ export {
   createOneCrawlPlugin,
   type OneCrawlPluginOptions,
 } from "./onecrawl.plugin.js";
+
+export {
+  VectorlessPlugin,
+  createVectorlessPlugin,
+  type VectorlessPluginOptions,
+} from "./vectorless.plugin.js";
