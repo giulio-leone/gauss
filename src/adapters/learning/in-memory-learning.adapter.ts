@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { LearningPort } from "../../ports/learning.port.js";
-import type { UserProfile, UserMemory, SharedKnowledge } from "../../domain/learning.schema.js";
+import type { UserProfile, UserMemory, UserMemoryInput, SharedKnowledge, SharedKnowledgeInput } from "../../domain/learning.schema.js";
 
 /**
  * Stores all learning state in Maps keyed by userId.
@@ -49,10 +49,13 @@ export class InMemoryLearningAdapter implements LearningPort {
 
   async addMemory(
     userId: string,
-    memory: Omit<UserMemory, "id" | "createdAt">,
+    memory: Omit<UserMemoryInput, "id" | "createdAt">,
   ): Promise<UserMemory> {
     const entry: UserMemory = {
       ...memory,
+      tags: memory.tags ?? [],
+      confidence: memory.confidence ?? 1,
+      source: memory.source ?? "inferred",
       id: crypto.randomUUID(),
       createdAt: Date.now(),
     };
@@ -105,10 +108,11 @@ export class InMemoryLearningAdapter implements LearningPort {
   // -- Shared Knowledge -------------------------------------------------------
 
   async addKnowledge(
-    knowledge: Omit<SharedKnowledge, "id" | "createdAt" | "usageCount">,
+    knowledge: Omit<SharedKnowledgeInput, "id" | "createdAt" | "usageCount">,
   ): Promise<SharedKnowledge> {
     const entry: SharedKnowledge = {
       ...knowledge,
+      tags: knowledge.tags ?? [],
       id: crypto.randomUUID(),
       usageCount: 0,
       createdAt: Date.now(),

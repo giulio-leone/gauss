@@ -82,7 +82,9 @@ export {
   SharedKnowledgeSchema,
   type UserProfile,
   type UserMemory,
+  type UserMemoryInput,
   type SharedKnowledge,
+  type SharedKnowledgeInput,
 } from "./domain/learning.schema.js";
 
 export {

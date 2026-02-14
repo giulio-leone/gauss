@@ -16,6 +16,11 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 - **Checkpointing** -- periodic state snapshots for session resume
 - **Event system** -- typed lifecycle events with wildcard subscriptions
 - **MCP integration** -- discover and execute tools from any MCP server
+- **Cross-session learning** -- user profiles, memories, and shared knowledge persisting across sessions
+- **Guardrails** -- input/output validation with Zod schemas, content filtering, and PII detection
+- **Web scraping tools** -- crawl, search, and batch scrape via OneCrawl plugin
+- **RAG/knowledge tools** -- entity extraction, knowledge queries via Vectorless plugin  
+- **Evaluation metrics** -- latency, token usage, tool frequency, and custom scoring
 
 ## Installation
 
@@ -34,6 +39,8 @@ The package requires `ai` (v6+) and `zod` (v4+) as direct dependencies. The foll
 | `@supabase/supabase-js` | Supabase-backed persistent memory |
 | `tiktoken` | Accurate BPE token counting |
 | `@ai-sdk/mcp` | AI SDK MCP client adapter |
+| `onecrawl` | Web scraping and search tools (OneCrawlPlugin) |
+| `@onegenui/vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
 
 Install only the peers you need:
 
@@ -104,6 +111,7 @@ src/
     model.port.ts             ModelPort interface
     plugin.port.ts            Plugin contracts and lifecycle hooks
     token-counter.port.ts     TokenCounterPort interface
+    learning.port.ts          LearningPort interface
   adapters/
     filesystem/
       virtual-fs.adapter.ts   In-memory VFS with optional disk sync
@@ -117,6 +125,8 @@ src/
     token-counter/
       approximate.adapter.ts  Character-ratio estimation (~4 chars/token)
       tiktoken.adapter.ts     BPE-accurate counting via tiktoken
+    learning/
+      in-memory-learning.adapter.ts  Map-based learning storage
   agent/
     deep-agent.ts             DeepAgent class and DeepAgentBuilder
     agent-config.ts           Default configs and resolvers
@@ -128,6 +138,10 @@ src/
     agent-card.plugin.ts      AgentCard generation and serving
     a2a.plugin.ts             A2A integration plugin
     a2a-handler.ts            JSON-RPC A2A request handler
+    guardrails.plugin.ts      Input/output validation and content filtering
+    onecrawl.plugin.ts        OneCrawl web scraping integration
+    vectorless.plugin.ts      Vectorless RAG/knowledge integration
+    evals.plugin.ts           Evaluation metrics collection
   tools/
     filesystem/               ls, read_file, write_file, edit_file, glob, grep
     planning/                 write_todos, review_todos
@@ -141,6 +155,8 @@ src/
     checkpoint.schema.ts      Checkpoint Zod schemas
     conversation.schema.ts    Message and conversation schemas
     events.schema.ts          Event type schemas
+    learning.schema.ts        Learning Zod schemas
+    eval.schema.ts            Evaluation Zod schemas
 ```
 
 ## API Reference
@@ -222,6 +238,7 @@ Fluent builder returned by `DeepAgent.create()`.
 |--------|-------------|
 | `.withFilesystem(fs)` | Provide a custom `FilesystemPort` implementation |
 | `.withMemory(memory)` | Provide a custom `MemoryPort` implementation |
+| `.withLearning(learning, userId?)` | Provide a `LearningPort` for cross-session learning |
 | `.withTokenCounter(counter)` | Provide a custom `TokenCounterPort` implementation |
 | `.withMcp(mcp)` | Provide a `McpPort` for MCP tool integration |
 | `.withPlanning()` | Enable planning tools (`write_todos`, `review_todos`) |
@@ -281,6 +298,10 @@ const agent = DeepAgent.create({
 |--------|-------------|
 | `AgentCardPlugin` | Resolves `agents.md` / `skills.md` with priority `manual file > override > auto-generated` |
 | `A2APlugin` | Exposes an A2A JSON-RPC handler and adds the `a2a:call` tool for remote A2A agents |
+| `GuardrailsPlugin` | Input/output validation with Zod schemas, content filtering, and PII detection |
+| `OneCrawlPlugin` | Web scraping and search tools via `onecrawl` (tools: `scrape`, `search`, `batch`) |
+| `VectorlessPlugin` | RAG/knowledge tools via `@onegenui/vectorless` (tools: `generate`, `query`, `search-entities`, `list`) |
+| `EvalsPlugin` | Evaluation metrics: latency, tokens, tool usage, custom scorers |
 
 `A2APlugin` can consume `AgentCardPlugin` as a discovery provider:
 
@@ -303,6 +324,91 @@ const agent = DeepAgent.create({
   .build();
 
 const a2aHttpHandler = a2a.createHttpHandler(agent);
+```
+
+#### GuardrailsPlugin
+
+Input/output validation and content filtering:
+
+```typescript
+import { DeepAgent, createGuardrailsPlugin, createPiiFilter } from "@onegenui/agent";
+import { z } from "zod";
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a helpful assistant.",
+})
+  .use(createGuardrailsPlugin({
+    inputSchema: z.string().min(1).max(10000),
+    outputSchema: z.string().max(50000),
+    contentFilters: [createPiiFilter()],
+    toolSchemas: {
+      write_file: z.object({ path: z.string(), content: z.string().max(100000) }),
+    },
+    onFailure: "throw", // or "warn"
+  }))
+  .build();
+```
+
+#### OneCrawlPlugin
+
+Web scraping and search tools:
+
+```typescript
+import { DeepAgent, createOneCrawlPlugin } from "@onegenui/agent";
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You can search and scrape the web.",
+})
+  .use(createOneCrawlPlugin({
+    maxContentLength: 10000,
+    timeout: 30000,
+  }))
+  .build();
+// Adds tools: scrape, search, batch
+```
+
+#### VectorlessPlugin
+
+RAG/knowledge extraction tools (no vector database needed):
+
+```typescript
+import { DeepAgent, createVectorlessPlugin } from "@onegenui/agent";
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You can extract and query knowledge from text.",
+})
+  .use(createVectorlessPlugin())
+  .build();
+// Adds tools: generate, query, search-entities, list
+```
+
+#### EvalsPlugin
+
+Evaluation metrics collection:
+
+```typescript
+import { DeepAgent, createEvalsPlugin } from "@onegenui/agent";
+
+const evals = createEvalsPlugin({
+  persist: true,
+  scorers: [
+    { name: "length", score: (_prompt, output) => Math.min(output.length / 1000, 1) },
+  ],
+  onEval: (result) => console.log(`Latency: ${result.metrics.latencyMs}ms`),
+});
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a helpful assistant.",
+})
+  .use(evals)
+  .build();
+
+await agent.run("Hello");
+console.log(evals.getLastResult()); // { metrics: { latencyMs, stepCount, toolCalls, ... } }
 ```
 
 ### Tools
@@ -412,6 +518,44 @@ interface MemoryPort {
 }
 ```
 
+#### LearningPort
+
+Cross-session learning with user profiles, memories, and shared knowledge.
+
+```typescript
+interface LearningPort {
+  getProfile(userId: string): Promise<UserProfile | null>;
+  updateProfile(userId: string, updates: Partial<Omit<UserProfile, "userId" | "createdAt">>): Promise<UserProfile>;
+  deleteProfile(userId: string): Promise<void>;
+  
+  addMemory(userId: string, memory: Omit<UserMemoryInput, "id" | "createdAt">): Promise<UserMemory>;
+  getMemories(userId: string, options?: { tags?: string[]; limit?: number; since?: number }): Promise<UserMemory[]>;
+  deleteMemory(userId: string, memoryId: string): Promise<void>;
+  clearMemories(userId: string): Promise<void>;
+  
+  addKnowledge(knowledge: Omit<SharedKnowledgeInput, "id" | "createdAt" | "usageCount">): Promise<SharedKnowledge>;
+  queryKnowledge(query: string, options?: { category?: string; limit?: number }): Promise<SharedKnowledge[]>;
+  incrementKnowledgeUsage(knowledgeId: string): Promise<void>;
+  deleteKnowledge(knowledgeId: string): Promise<void>;
+}
+```
+
+```typescript
+import { DeepAgent, InMemoryLearningAdapter } from "@onegenui/agent";
+
+const learning = new InMemoryLearningAdapter();
+await learning.updateProfile("user-1", { style: "concise", language: "en" });
+await learning.addMemory("user-1", { content: "Prefers TypeScript", tags: ["preference"] });
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a helpful assistant.",
+})
+  .withLearning(learning, "user-1")
+  .build();
+// Learning context is automatically injected into run() and stream()
+```
+
 #### McpPort
 
 MCP server discovery and tool execution.
@@ -458,6 +602,12 @@ interface TokenCounterPort {
 |---------|-------------|
 | `InMemoryAdapter` | `Map`-based in-process storage. Suitable for testing and ephemeral sessions. Default adapter. |
 | `SupabaseMemoryAdapter` | Supabase-backed storage using `deep_agent_todos`, `deep_agent_checkpoints`, `deep_agent_conversations`, and `deep_agent_metadata` tables. |
+
+#### Learning
+
+| Adapter | Description |
+|---------|-------------|
+| `InMemoryLearningAdapter` | `Map`-based in-process learning storage. Suitable for testing and ephemeral sessions. |
 
 #### Token Counter
 

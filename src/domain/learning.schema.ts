@@ -24,6 +24,7 @@ export const UserMemorySchema = z.object({
   createdAt: z.number().default(() => Date.now()),
 });
 export type UserMemory = z.infer<typeof UserMemorySchema>;
+export type UserMemoryInput = z.input<typeof UserMemorySchema>;
 
 export const SharedKnowledgeSchema = z.object({
   id: z.string(),
@@ -34,3 +35,4 @@ export const SharedKnowledgeSchema = z.object({
   createdAt: z.number().default(() => Date.now()),
 });
 export type SharedKnowledge = z.infer<typeof SharedKnowledgeSchema>;
+export type SharedKnowledgeInput = z.input<typeof SharedKnowledgeSchema>;
