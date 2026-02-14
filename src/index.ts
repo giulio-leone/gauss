@@ -235,6 +235,9 @@ export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { NodeRuntimeAdapter } from "./adapters/runtime/node-runtime.adapter.js";
+export { DenoRuntimeAdapter } from "./adapters/runtime/deno-runtime.adapter.js";
+export { BunRuntimeAdapter } from "./adapters/runtime/bun-runtime.adapter.js";
+export { EdgeRuntimeAdapter } from "./adapters/runtime/edge-runtime.adapter.js";
 export { detectRuntimeName, createRuntimeAdapter, type RuntimeName } from "./adapters/runtime/detect-runtime.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
