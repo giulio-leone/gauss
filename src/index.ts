@@ -111,7 +111,7 @@ export {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { DeepAgent, DeepAgentBuilder } from "./agent/deep-agent.js";
-export type { DeepAgentResult } from "./agent/deep-agent.js";
+export type { DeepAgentResult, DeepAgentRunOptions } from "./agent/deep-agent.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Agent — Approval & Events
@@ -119,6 +119,13 @@ export type { DeepAgentResult } from "./agent/deep-agent.js";
 
 export { ApprovalManager } from "./agent/approval-manager.js";
 export { EventBus } from "./agent/event-bus.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugins
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { DeepAgentPlugin, PluginHooks, PluginContext } from "./ports/plugin.port.js";
+export { PluginManager } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Filesystem (runtime-agnostic)
