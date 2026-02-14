@@ -8,6 +8,7 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 
 - **Builder pattern** -- fluent API with `DeepAgent.create()`, `.minimal()`, and `.full()` factory methods
 - **Hexagonal architecture** -- ports and adapters for filesystem, memory, MCP, token counting, and model access
+- **Plugin system** -- deterministic middleware lifecycle with hook-based extensions and tool injection
 - **Built-in planning** -- structured todo management with dependency tracking and priority
 - **Subagent orchestration** -- spawn child agents with configurable depth limits and timeouts
 - **Context management** -- automatic rolling summarization, tool-result offloading, and message truncation
@@ -101,6 +102,7 @@ src/
     memory.port.ts            MemoryPort interface
     mcp.port.ts               McpPort interface
     model.port.ts             ModelPort interface
+    plugin.port.ts            Plugin contracts and lifecycle hooks
     token-counter.port.ts     TokenCounterPort interface
   adapters/
     filesystem/
@@ -121,6 +123,11 @@ src/
     approval-manager.ts       Tool-call approval logic
     event-bus.ts              Typed event emitter
     stop-conditions.ts        Reusable stop predicates
+  plugins/
+    plugin-manager.ts         Plugin lifecycle + deterministic hook execution
+    agent-card.plugin.ts      AgentCard generation and serving
+    a2a.plugin.ts             A2A integration plugin
+    a2a-handler.ts            JSON-RPC A2A request handler
   tools/
     filesystem/               ls, read_file, write_file, edit_file, glob, grep
     planning/                 write_todos, review_todos
@@ -221,6 +228,7 @@ Fluent builder returned by `DeepAgent.create()`.
 | `.withSubagents(config?)` | Enable the `task` tool for spawning subagents |
 | `.withApproval(config?)` | Enable human-in-the-loop approval for tool calls |
 | `.withMaxSteps(n)` | Override the maximum number of agent loop steps |
+| `.use(plugin)` | Register a plugin (hooks + optional tool injection) |
 | `.on(event, handler)` | Register an event handler before building |
 | `.build()` | Construct the `DeepAgent` instance |
 
@@ -232,6 +240,70 @@ All methods return `this` for chaining. Defaults are applied for any adapter not
 | Memory | `InMemoryAdapter` |
 | Token Counter | `ApproximateTokenCounter` |
 | Max Steps | `30` |
+
+### Plugin System
+
+Plugins are executed in **registration order** and can participate in a deterministic lifecycle:
+
+- `beforeRun` / `afterRun`
+- `beforeTool` / `afterTool`
+- `beforeStep` / `afterStep`
+- `onError`
+
+Plugins can also inject tools by exposing a `tools` map.
+
+```typescript
+import type { DeepAgentPlugin } from "@onegenui/deep-agents";
+
+const observabilityPlugin: DeepAgentPlugin = {
+  name: "observability",
+  hooks: {
+    beforeRun: async (_ctx, params) => ({
+      prompt: `[trace] ${params.prompt}`,
+    }),
+    afterRun: async (_ctx, params) => {
+      console.log("Final output length:", params.result.text.length);
+    },
+  },
+};
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "You are a release engineer.",
+})
+  .use(observabilityPlugin)
+  .build();
+```
+
+#### Built-in Plugins
+
+| Plugin | Description |
+|--------|-------------|
+| `AgentCardPlugin` | Resolves `agents.md` / `skills.md` with priority `manual file > override > auto-generated` |
+| `A2APlugin` | Exposes an A2A JSON-RPC handler and adds the `a2a:call` tool for remote A2A agents |
+
+`A2APlugin` can consume `AgentCardPlugin` as a discovery provider:
+
+```typescript
+import {
+  DeepAgent,
+  AgentCardPlugin,
+  A2APlugin,
+} from "@onegenui/deep-agents";
+
+const agentCard = new AgentCardPlugin();
+const a2a = new A2APlugin({ agentCardProvider: agentCard });
+
+const agent = DeepAgent.create({
+  model: openai("gpt-4o"),
+  instructions: "Coordinate infra operations across distributed agents.",
+})
+  .use(agentCard)
+  .use(a2a)
+  .build();
+
+const a2aHttpHandler = a2a.createHttpHandler(agent);
+```
 
 ### Tools
 
@@ -472,6 +544,15 @@ When messages exceed `truncationThreshold` (default: 85% of context window), the
 The `TokenTracker` accumulates input and output token usage across the session, providing budget awareness and cost estimation.
 
 ## Examples
+
+- `examples/01-basic-agent.ts` — minimal planning agent
+- `examples/02-planning-agent.ts` — structured todo workflow
+- `examples/03-subagent-orchestration.ts` — parent/child delegation
+- `examples/04-mcp-integration.ts` — MCP tool federation
+- `examples/05-persistent-memory.ts` — persistent session state
+- `examples/06-full-featured.ts` — full stack composition
+- `examples/07-plugin-system.ts` — custom plugin + AgentCardPlugin
+- `examples/08-a2a-server.ts` — expose DeepAgent as A2A JSON-RPC server
 
 ### Basic Planning Agent
 

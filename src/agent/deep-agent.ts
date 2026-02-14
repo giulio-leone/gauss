@@ -313,7 +313,7 @@ export class DeepAgent {
           parentFilesystem: this.config.fs,
           maxDepth: this.config.subagentConfig?.maxDepth,
           timeoutMs: this.config.subagentConfig?.timeoutMs,
-        }),
+        }) as unknown as Record<string, Tool>,
         "subagents",
       );
     }

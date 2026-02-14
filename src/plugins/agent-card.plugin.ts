@@ -67,17 +67,26 @@ export class AgentCardPlugin implements DeepAgentPlugin, AgentCardProvider {
   readonly version = "1.0.0";
   readonly tools: Record<string, Tool>;
 
-  private readonly options: Required<Pick<AgentCardPluginOptions, "paths" | "readZones">>
-    & Pick<AgentCardPluginOptions, "overrides">;
+  private readonly options: {
+    paths: {
+      agents: string;
+      skills: string;
+    };
+    readZones: FilesystemZone[];
+    overrides?: AgentCardPluginOptions["overrides"];
+  };
 
   private setupCtx?: PluginSetupContext;
   private latestCtx?: PluginContext;
 
   readonly hooks = {
-    beforeRun: async (ctx: PluginContext): Promise<void> => {
+    beforeRun: async (ctx: PluginContext, _params: { prompt: string }): Promise<void> => {
       this.latestCtx = ctx;
     },
-    afterRun: async (ctx: PluginContext): Promise<void> => {
+    afterRun: async (
+      ctx: PluginContext,
+      _params: { result: { text: string; steps: unknown[]; sessionId: string } },
+    ): Promise<void> => {
       this.latestCtx = ctx;
     },
   };

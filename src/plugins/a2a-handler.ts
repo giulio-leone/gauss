@@ -101,10 +101,11 @@ export function createA2AJsonRpcHandler(
             return createError(id, -32602, "Invalid params: prompt is required");
           }
 
-          const taskId = params.taskId === undefined ? undefined : asString(params.taskId);
-          if (params.taskId !== undefined && !taskId) {
+          const parsedTaskId = params.taskId === undefined ? undefined : asString(params.taskId);
+          if (params.taskId !== undefined && !parsedTaskId) {
             return createError(id, -32602, "Invalid params: taskId must be a non-empty string");
           }
+          const taskId = parsedTaskId ?? undefined;
 
           const metadata = params.metadata === undefined ? undefined : asRecord(params.metadata);
           if (params.metadata !== undefined && !metadata) {

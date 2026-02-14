@@ -53,7 +53,7 @@ export class A2APlugin implements DeepAgentPlugin {
   private latestCtx?: PluginContext;
 
   readonly hooks = {
-    beforeRun: async (ctx: PluginContext): Promise<void> => {
+    beforeRun: async (ctx: PluginContext, _params: { prompt: string }): Promise<void> => {
       this.latestCtx = ctx;
       const taskId = this.getTaskIdFromContext(ctx);
       if (!taskId) return;
@@ -68,7 +68,10 @@ export class A2APlugin implements DeepAgentPlugin {
       if (!taskId) return;
       this.markTaskCompleted(taskId, params.result.text);
     },
-    onError: async (ctx: PluginContext, params: { error: unknown }): Promise<void> => {
+    onError: async (
+      ctx: PluginContext,
+      params: { error: unknown; phase: "run" | "stream" | "tool" | "step" | "setup" },
+    ): Promise<void> => {
       const taskId = this.getTaskIdFromContext(ctx);
       if (!taskId) return;
       this.markTaskFailed(taskId, params.error);
