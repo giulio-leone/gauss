@@ -5,7 +5,8 @@
 import { tool, type Tool } from "ai";
 import { z } from "zod";
 
-import type { DeepAgentPlugin } from "../ports/plugin.port.js";
+import type { PluginHooks } from "../ports/plugin.port.js";
+import { BasePlugin } from "./base.plugin.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -24,9 +25,8 @@ export interface VectorlessPluginOptions {
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class VectorlessPlugin implements DeepAgentPlugin {
+export class VectorlessPlugin extends BasePlugin {
   readonly name = "knowledge";
-  readonly version = "1.0.0";
 
   private readonly options: VectorlessPluginOptions;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,8 +34,13 @@ export class VectorlessPlugin implements DeepAgentPlugin {
   private currentKnowledge: unknown = null;
 
   constructor(options: VectorlessPluginOptions = {}) {
+    super();
     this.options = options;
     this.currentKnowledge = options.knowledgeBase ?? null;
+  }
+
+  protected buildHooks(): PluginHooks {
+    return {};
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

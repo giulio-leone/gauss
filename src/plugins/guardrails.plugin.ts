@@ -3,7 +3,6 @@
 // =============================================================================
 
 import type {
-  DeepAgentPlugin,
   PluginHooks,
   PluginContext,
   BeforeRunParams,
@@ -12,6 +11,7 @@ import type {
   BeforeToolParams,
   BeforeToolResult,
 } from "../ports/plugin.port.js";
+import { BasePlugin } from "./base.plugin.js";
 import type { ZodType } from "zod";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,18 +58,16 @@ export class GuardrailsError extends Error {
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class GuardrailsPlugin implements DeepAgentPlugin {
+export class GuardrailsPlugin extends BasePlugin {
   readonly name = "guardrails";
-  readonly version = "1.0.0";
 
   private readonly options: Required<
     Pick<GuardrailsPluginOptions, "onFailure" | "contentFilters" | "inputValidators" | "outputValidators">
   > &
     Pick<GuardrailsPluginOptions, "inputSchema" | "outputSchema" | "toolSchemas">;
 
-  readonly hooks: PluginHooks;
-
   constructor(options: GuardrailsPluginOptions = {}) {
+    super();
     this.options = {
       onFailure: options.onFailure ?? "throw",
       contentFilters: options.contentFilters ?? [],
@@ -79,8 +77,10 @@ export class GuardrailsPlugin implements DeepAgentPlugin {
       outputSchema: options.outputSchema,
       toolSchemas: options.toolSchemas,
     };
+  }
 
-    this.hooks = {
+  protected buildHooks(): PluginHooks {
+    return {
       beforeRun: this.beforeRun.bind(this),
       afterRun: this.afterRun.bind(this),
       beforeTool: this.beforeTool.bind(this),

@@ -3,12 +3,12 @@
 // =============================================================================
 
 import type {
-  DeepAgentPlugin,
   PluginHooks,
   PluginContext,
   BeforeRunParams,
   BeforeRunResult,
 } from "../ports/plugin.port.js";
+import { BasePlugin } from "./base.plugin.js";
 import type {
   WorkflowStep,
   WorkflowContext,
@@ -53,19 +53,21 @@ export class WorkflowError extends Error {
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class WorkflowPlugin implements DeepAgentPlugin {
+export class WorkflowPlugin extends BasePlugin {
   readonly name = "workflow";
-  readonly version = "1.0.0";
-  readonly hooks: PluginHooks;
 
   private readonly steps: WorkflowStep[];
   private readonly initialContext: WorkflowContext;
   private lastResult: WorkflowResult | undefined;
 
   constructor(config: WorkflowPluginConfig) {
+    super();
     this.steps = config.steps;
     this.initialContext = config.initialContext ?? {};
-    this.hooks = {
+  }
+
+  protected buildHooks(): PluginHooks {
+    return {
       beforeRun: this.beforeRun.bind(this),
     };
   }

@@ -5,7 +5,8 @@
 import { tool, type Tool } from "ai";
 import { z } from "zod";
 
-import type { DeepAgentPlugin } from "../ports/plugin.port.js";
+import type { PluginHooks } from "../ports/plugin.port.js";
+import { BasePlugin } from "./base.plugin.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -24,16 +25,20 @@ export interface OneCrawlPluginOptions {
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-export class OneCrawlPlugin implements DeepAgentPlugin {
+export class OneCrawlPlugin extends BasePlugin {
   readonly name = "crawl";
-  readonly version = "1.0.0";
 
   private readonly options: OneCrawlPluginOptions;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private crawlerPromise: Promise<any> | null = null;
 
   constructor(options: OneCrawlPluginOptions = {}) {
+    super();
     this.options = options;
+  }
+
+  protected buildHooks(): PluginHooks {
+    return {};
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

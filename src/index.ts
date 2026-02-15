@@ -172,6 +172,7 @@ export type {
 } from "./ports/plugin.port.js";
 export {
   PluginManager,
+  BasePlugin,
   AgentCardPlugin,
   createAgentCardPlugin,
   A2APlugin,

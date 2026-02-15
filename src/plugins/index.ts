@@ -1,4 +1,5 @@
 export { PluginManager } from "./plugin-manager.js";
+export { BasePlugin } from "./base.plugin.js";
 
 export {
   AgentCardPlugin,

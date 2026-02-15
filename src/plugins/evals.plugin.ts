@@ -3,7 +3,6 @@
 // =============================================================================
 
 import type {
-  DeepAgentPlugin,
   PluginHooks,
   PluginContext,
   BeforeRunParams,
@@ -12,6 +11,7 @@ import type {
   AfterToolParams,
   OnErrorParams,
 } from "../ports/plugin.port.js";
+import { BasePlugin } from "./base.plugin.js";
 import type { EvalResult, EvalMetrics } from "../domain/eval.schema.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,18 +42,20 @@ interface RunState {
   toolCallCounts: Record<string, number>;
 }
 
-export class EvalsPlugin implements DeepAgentPlugin {
+export class EvalsPlugin extends BasePlugin {
   readonly name = "evals";
-  readonly version = "1.0.0";
-  readonly hooks: PluginHooks;
 
   private readonly options: EvalsPluginOptions;
   private readonly results: EvalResult[] = [];
   private readonly runStates = new Map<string, RunState>();
 
   constructor(options: EvalsPluginOptions = {}) {
+    super();
     this.options = options;
-    this.hooks = {
+  }
+
+  protected buildHooks(): PluginHooks {
+    return {
       beforeRun: this.beforeRun.bind(this),
       afterRun: this.afterRun.bind(this),
       afterTool: this.afterTool.bind(this),
