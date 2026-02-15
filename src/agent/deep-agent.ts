@@ -17,6 +17,7 @@ import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import { createRuntimeAdapter } from "../adapters/runtime/detect-runtime.js";
 
+import { AbstractBuilder } from "../utils/abstract-builder.js";
 import { EventBus } from "./event-bus.js";
 import { PluginManager } from "../plugins/plugin-manager.js";
 import { ApprovalManager } from "./approval-manager.js";
@@ -47,7 +48,7 @@ export interface DeepAgentRunOptions {
 // Builder
 // =============================================================================
 
-export class DeepAgentBuilder {
+export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   private readonly agentConfig: DeepAgentConfig;
   private maxStepsOverride?: number;
 
@@ -73,6 +74,7 @@ export class DeepAgentBuilder {
   }> = [];
 
   constructor(config: DeepAgentConfig) {
+    super();
     this.agentConfig = config;
   }
 
@@ -147,10 +149,12 @@ export class DeepAgentBuilder {
     return this;
   }
 
-  build(): DeepAgent {
+  protected validate(): void {
     if (!this.agentConfig.model) throw new Error("model is required");
     if (!this.agentConfig.instructions) throw new Error("instructions is required");
+  }
 
+  protected construct(): DeepAgent {
     const fs = this.fs ?? new VirtualFilesystem();
     const memory = this.memory ?? new InMemoryAdapter();
     const tokenCounter = this.tokenCounter ?? new ApproximateTokenCounter();

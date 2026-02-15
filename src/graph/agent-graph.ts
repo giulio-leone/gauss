@@ -8,6 +8,7 @@ import type { DeepAgentConfig } from "../types.js";
 import type { ConsensusPort } from "../ports/consensus.port.js";
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { EventBus } from "../agent/event-bus.js";
+import { AbstractBuilder } from "../utils/abstract-builder.js";
 import { AgentNode } from "./agent-node.js";
 import { GraphExecutor } from "./graph-executor.js";
 import { SharedContext } from "./shared-context.js";
@@ -57,7 +58,7 @@ export class AgentGraph {
   }
 }
 
-export class AgentGraphBuilder {
+export class AgentGraphBuilder extends AbstractBuilder<AgentGraph> {
   private readonly nodeMap = new Map<string, AgentNode>();
   private readonly edgeMap = new Map<string, string[]>();
   private readonly forkMap = new Map<
@@ -69,6 +70,7 @@ export class AgentGraphBuilder {
   private eventBus: EventBus | undefined;
 
   constructor(config?: Partial<GraphConfig>) {
+    super();
     this.config = GraphConfigSchema.parse(config ?? {});
   }
 
@@ -135,10 +137,12 @@ export class AgentGraphBuilder {
     return this;
   }
 
-  build(): AgentGraph {
+  protected validate(): void {
     this.validateEdges();
     this.validateNoCycles();
+  }
 
+  protected construct(): AgentGraph {
     return new AgentGraph(
       this.nodeMap,
       this.edgeMap,
