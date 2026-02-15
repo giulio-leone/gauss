@@ -1,12 +1,12 @@
 ---
 sidebar_position: 6
 title: Port Interfaces
-description: Complete reference for all OneAgent port interfaces
+description: Complete reference for all GaussFlow port interfaces
 ---
 
 # Port Interfaces
 
-Ports define the contracts for OneAgent's hexagonal architecture. Implement any port to provide a custom adapter.
+Ports define the contracts for GaussFlow's hexagonal architecture. Implement any port to provide a custom adapter.
 
 ## FilesystemPort
 

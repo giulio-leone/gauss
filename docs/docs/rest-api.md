@@ -4,12 +4,12 @@ sidebar_position: 8
 
 # REST API
 
-OneAgent includes a zero-dependency HTTP REST API server, enabling any language (Python, Go, Ruby, etc.) to use OneAgent over HTTP.
+GaussFlow includes a zero-dependency HTTP REST API server, enabling any language (Python, Go, Ruby, etc.) to use GaussFlow over HTTP.
 
 ## Quick Start
 
 ```typescript
-import { OneAgentServer } from "@onegenui/agent";
+import { OneAgentServer } from "@giulio-leone/gaussflow-agent";
 
 const server = new OneAgentServer({
   port: 3456,

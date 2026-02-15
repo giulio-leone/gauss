@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/agent — Public API
+// @giulio-leone/gaussflow-agent — Public API
 // =============================================================================
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,7 +236,7 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtual-fs.adapter.js";
-// Node.js-specific: LocalFilesystem → import from "@onegenui/agent/node"
+// Node.js-specific: LocalFilesystem → import from "@giulio-leone/gaussflow-agent/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — MCP
@@ -333,7 +333,7 @@ export {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { ApproximateTokenCounter } from "./adapters/token-counter/approximate.adapter.js";
-// Node.js-specific: TiktokenTokenCounter → import from "@onegenui/agent/node"
+// Node.js-specific: TiktokenTokenCounter → import from "@giulio-leone/gaussflow-agent/node"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context — Token Tracking, Compression, Summarization

@@ -11,8 +11,8 @@
 // import { openai } from "@ai-sdk/openai";
 // const model = openai("gpt-4o");
 
-import { DeepAgent, AiSdkMcpAdapter } from "@onegenui/agent";
-import type { McpServerConfig } from "@onegenui/agent";
+import { DeepAgent, AiSdkMcpAdapter } from "@giulio-leone/gaussflow-agent";
+import type { McpServerConfig } from "@giulio-leone/gaussflow-agent";
 
 const model = {} as import("ai").LanguageModel;
 

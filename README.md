@@ -1,6 +1,6 @@
-# OneAgent (@onegenui/agent)
+# GaussFlow (@giulio-leone/gaussflow-agent)
 
-> **OneAgent by OneGenUI** — AI Agent Framework built on Vercel AI SDK v6
+> **GaussFlow** — AI Agent Framework built on Vercel AI SDK v6
 
 A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.
 
@@ -28,13 +28,13 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 - **MCP integration** — discover and execute tools from any MCP server
 - **Cross-session learning** — user profiles, memories, and shared knowledge persisting across sessions
 - **Multi-runtime** — runs on Node.js, Deno, Bun, Edge (Cloudflare Workers, Vercel Edge), and Browser
-- **CLI** — interactive REPL and single-shot mode with `oneagent chat/run/demo` commands
+- **CLI** — interactive REPL and single-shot mode with `gaussflow chat/run/demo` commands
 - **REST API** — zero-dependency HTTP server for multi-language access (Python, Go, Ruby, etc.)
 
 ## Installation
 
 ```bash
-pnpm add @onegenui/agent
+pnpm add @giulio-leone/gaussflow-agent
 ```
 
 ### Peer Dependencies
@@ -43,13 +43,13 @@ The package requires `ai` (v6+) and `zod` (v4+) as direct dependencies. The foll
 
 | Package | Purpose |
 |---------|---------|
-| `@onegenui/mcp` | OneGenUI MCP registry adapter |
-| `@onegenui/providers` | AI model provider utilities |
+| `@giulio-leone/gaussflow-mcp` | GaussFlow MCP registry adapter |
+| `@giulio-leone/gaussflow-providers` | AI model provider utilities |
 | `@supabase/supabase-js` | Supabase-backed persistent memory |
 | `tiktoken` | Accurate BPE token counting |
 | `@ai-sdk/mcp` | AI SDK MCP client adapter |
 | `onecrawl` | Web scraping and search tools (OneCrawlPlugin) |
-| `@onegenui/vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
+| `@giulio-leone/gaussflow-vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
 
 Install only the peers you need:
 
@@ -60,7 +60,7 @@ pnpm add @supabase/supabase-js tiktoken
 ## Quick Start
 
 ```typescript
-import { DeepAgent } from "@onegenui/agent";
+import { DeepAgent } from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.minimal({
@@ -79,7 +79,7 @@ console.log(`Session: ${result.sessionId}`);
 
 ## Architecture
 
-OneAgent follows **hexagonal architecture** (ports & adapters). The core domain (DeepAgent) depends only on port interfaces; adapters implement those interfaces for specific platforms and services. Plugins extend behavior via lifecycle hooks.
+GaussFlow follows **hexagonal architecture** (ports & adapters). The core domain (DeepAgent) depends only on port interfaces; adapters implement those interfaces for specific platforms and services. Plugins extend behavior via lifecycle hooks.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -166,7 +166,7 @@ src/
       supabase.adapter.ts     Supabase-backed persistent storage
     mcp/
       ai-sdk-mcp.adapter.ts   @ai-sdk/mcp client bridge
-      onegenui-mcp.adapter.ts @onegenui/mcp registry bridge
+      onegenui-mcp.adapter.ts @giulio-leone/gaussflow-mcp registry bridge
     token-counter/
       approximate.adapter.ts  Character-ratio estimation (~4 chars/token)
       tiktoken.adapter.ts     BPE-accurate counting via tiktoken
@@ -280,7 +280,7 @@ const agent = DeepAgent.minimal({
 Creates a fully-featured agent with planning, subagents, and optional memory/MCP/token counter overrides.
 
 ```typescript
-import { SupabaseMemoryAdapter } from "@onegenui/agent";
+import { SupabaseMemoryAdapter } from "@giulio-leone/gaussflow-agent";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(url, key);
@@ -353,7 +353,7 @@ Plugins are executed in **registration order** and can participate in a determin
 Plugins can also inject tools by exposing a `tools` map.
 
 ```typescript
-import type { DeepAgentPlugin } from "@onegenui/agent";
+import type { DeepAgentPlugin } from "@giulio-leone/gaussflow-agent";
 
 const observabilityPlugin: DeepAgentPlugin = {
   name: "observability",
@@ -385,7 +385,7 @@ const agent = DeepAgent.create({
 | `WorkflowPlugin` | Multi-step workflow execution with retry, rollback, and conditional steps |
 | `ObservabilityPlugin` | Three-pillar observability: distributed tracing, metrics, and structured logging |
 | `OneCrawlPlugin` | Web scraping and search tools via `onecrawl` (tools: `scrape`, `search`, `batch`) |
-| `VectorlessPlugin` | RAG/knowledge tools via `@onegenui/vectorless` (tools: `generate`, `query`, `search-entities`, `list`) |
+| `VectorlessPlugin` | RAG/knowledge tools via `@giulio-leone/gaussflow-vectorless` (tools: `generate`, `query`, `search-entities`, `list`) |
 | `EvalsPlugin` | Evaluation metrics: latency, tokens, tool usage, custom scorers |
 
 `A2APlugin` can consume `AgentCardPlugin` as a discovery provider:
@@ -395,7 +395,7 @@ import {
   DeepAgent,
   AgentCardPlugin,
   A2APlugin,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 
 const agentCard = new AgentCardPlugin();
 const a2a = new A2APlugin({ agentCardProvider: agentCard });
@@ -416,7 +416,7 @@ const a2aHttpHandler = a2a.createHttpHandler(agent);
 Input/output validation and content filtering:
 
 ```typescript
-import { DeepAgent, createGuardrailsPlugin, createPiiFilter } from "@onegenui/agent";
+import { DeepAgent, createGuardrailsPlugin, createPiiFilter } from "@giulio-leone/gaussflow-agent";
 import { z } from "zod";
 
 const agent = DeepAgent.create({
@@ -440,7 +440,7 @@ const agent = DeepAgent.create({
 Web scraping and search tools:
 
 ```typescript
-import { DeepAgent, createOneCrawlPlugin } from "@onegenui/agent";
+import { DeepAgent, createOneCrawlPlugin } from "@giulio-leone/gaussflow-agent";
 
 const agent = DeepAgent.create({
   model: openai("gpt-4o"),
@@ -459,7 +459,7 @@ const agent = DeepAgent.create({
 RAG/knowledge extraction tools (no vector database needed):
 
 ```typescript
-import { DeepAgent, createVectorlessPlugin } from "@onegenui/agent";
+import { DeepAgent, createVectorlessPlugin } from "@giulio-leone/gaussflow-agent";
 
 const agent = DeepAgent.create({
   model: openai("gpt-4o"),
@@ -475,7 +475,7 @@ const agent = DeepAgent.create({
 Evaluation metrics collection:
 
 ```typescript
-import { DeepAgent, createEvalsPlugin } from "@onegenui/agent";
+import { DeepAgent, createEvalsPlugin } from "@giulio-leone/gaussflow-agent";
 
 const evals = createEvalsPlugin({
   persist: true,
@@ -501,8 +501,8 @@ console.log(evals.getLastResult()); // { metrics: { latencyMs, stepCount, toolCa
 Multi-step workflow execution with automatic retry, rollback on failure, and conditional step skipping:
 
 ```typescript
-import { DeepAgent, createWorkflowPlugin } from "@onegenui/agent";
-import type { WorkflowStep } from "@onegenui/agent";
+import { DeepAgent, createWorkflowPlugin } from "@giulio-leone/gaussflow-agent";
+import type { WorkflowStep } from "@giulio-leone/gaussflow-agent";
 
 const steps: WorkflowStep[] = [
   {
@@ -553,7 +553,7 @@ import {
   InMemoryTracingAdapter,
   InMemoryMetricsAdapter,
   ConsoleLoggingAdapter,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 
 const tracer = new InMemoryTracingAdapter();
 const metrics = new InMemoryMetricsAdapter();
@@ -587,8 +587,8 @@ await agent.run("Hello");
 Abstract base class for building plugins. Subclasses provide `name` and implement `buildHooks()`:
 
 ```typescript
-import { BasePlugin } from "@onegenui/agent";
-import type { PluginHooks, PluginContext, BeforeRunParams, BeforeRunResult } from "@onegenui/agent";
+import { BasePlugin } from "@giulio-leone/gaussflow-agent";
+import type { PluginHooks, PluginContext, BeforeRunParams, BeforeRunResult } from "@giulio-leone/gaussflow-agent";
 
 class TimingPlugin extends BasePlugin {
   readonly name = "timing";
@@ -616,7 +616,7 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 Template method pattern for validated builders. Subclasses implement `validate()` and `construct()`:
 
 ```typescript
-import { AbstractBuilder } from "@onegenui/agent";
+import { AbstractBuilder } from "@giulio-leone/gaussflow-agent";
 
 interface AppConfig {
   name: string;
@@ -653,8 +653,8 @@ Used internally by `DeepAgentBuilder` and `AgentGraphBuilder`.
 Engine-agnostic validation contract. The framework ships with `ZodValidationAdapter` (default):
 
 ```typescript
-import { ZodValidationAdapter } from "@onegenui/agent";
-import type { ValidationPort, ValidationResult } from "@onegenui/agent";
+import { ZodValidationAdapter } from "@giulio-leone/gaussflow-agent";
+import type { ValidationPort, ValidationResult } from "@giulio-leone/gaussflow-agent";
 import { z } from "zod";
 
 const validator: ValidationPort = new ZodValidationAdapter();
@@ -829,7 +829,7 @@ interface LearningPort {
 ```
 
 ```typescript
-import { DeepAgent, InMemoryLearningAdapter } from "@onegenui/agent";
+import { DeepAgent, InMemoryLearningAdapter } from "@giulio-leone/gaussflow-agent";
 
 const learning = new InMemoryLearningAdapter();
 await learning.updateProfile("user-1", { style: "concise", language: "en" });
@@ -994,7 +994,7 @@ interface ConsensusResult {
 | Adapter | Description |
 |---------|-------------|
 | `AiSdkMcpAdapter` | Bridges `@ai-sdk/mcp` clients to the `McpPort` interface. Supports stdio, HTTP, and SSE transports. |
-| `OnegenUiMcpAdapter` | Bridges `@onegenui/mcp` `McpRegistry` to the `McpPort` interface. |
+| `OnegenUiMcpAdapter` | Bridges `@giulio-leone/gaussflow-mcp` `McpRegistry` to the `McpPort` interface. |
 
 #### Validation
 
@@ -1113,7 +1113,7 @@ The `TokenTracker` accumulates input and output token usage across the session, 
 ### Basic Planning Agent
 
 ```typescript
-import { DeepAgent } from "@onegenui/agent";
+import { DeepAgent } from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.minimal({
@@ -1131,7 +1131,7 @@ const result = await agent.run(
 ### Agent with MCP Tools
 
 ```typescript
-import { DeepAgent, AiSdkMcpAdapter } from "@onegenui/agent";
+import { DeepAgent, AiSdkMcpAdapter } from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 
 const mcp = new AiSdkMcpAdapter({
@@ -1166,7 +1166,7 @@ import {
   SupabaseMemoryAdapter,
   LocalFilesystem,
   TiktokenTokenCounter,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 import { createClient } from "@supabase/supabase-js";
 
@@ -1267,13 +1267,13 @@ The framework runs on **Node.js**, **Deno**, **Bun**, **Edge** (Cloudflare Worke
 Platform-specific APIs are abstracted behind a `RuntimePort` interface. The framework auto-detects your runtime and selects the appropriate adapter:
 
 ```ts
-import { DeepAgent } from "@onegenui/agent";
+import { DeepAgent } from "@giulio-leone/gaussflow-agent";
 
 // Auto-detect runtime (Node, Deno, Bun, or Edge)
 const agent = DeepAgent.create({ model, instructions: "..." }).build();
 
 // Or specify explicitly
-import { DenoRuntimeAdapter } from "@onegenui/agent";
+import { DenoRuntimeAdapter } from "@giulio-leone/gaussflow-agent";
 const agent = DeepAgent.create({ model, instructions: "..." })
   .withRuntime(new DenoRuntimeAdapter())
   .build();
@@ -1290,17 +1290,17 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 
 ```ts
 // Node.js / Bun — core + Node-specific adapters
-import { DeepAgent } from '@onegenui/agent';
-import { LocalFilesystem, TiktokenTokenCounter } from '@onegenui/agent/node';
+import { DeepAgent } from '@giulio-leone/gaussflow-agent';
+import { LocalFilesystem, TiktokenTokenCounter } from '@giulio-leone/gaussflow-agent/node';
 
 // Deno — Deno.Kv memory, Deno filesystem
-import { DenoFilesystem, DenoKvMemoryAdapter } from '@onegenui/agent/deno';
+import { DenoFilesystem, DenoKvMemoryAdapter } from '@giulio-leone/gaussflow-agent/deno';
 
 // Edge / Cloudflare Workers — OPFS filesystem, IndexedDB memory
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/agent/edge';
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@giulio-leone/gaussflow-agent/edge';
 
 // Browser — same adapters as Edge (OPFS + IndexedDB)
-import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/agent/browser';
+import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@giulio-leone/gaussflow-agent/browser';
 ```
 
 ### Auto-Configuration
@@ -1308,7 +1308,7 @@ import { OpfsFilesystem, IndexedDbMemoryAdapter } from '@onegenui/agent/browser'
 `DeepAgent.auto()` creates an agent using universal adapters (`VirtualFilesystem`, `InMemoryAdapter`, `ApproximateTokenCounter`) that work in any runtime — no platform-specific imports required.
 
 ```ts
-import { DeepAgent } from '@onegenui/agent';
+import { DeepAgent } from '@giulio-leone/gaussflow-agent';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.auto({
@@ -1326,8 +1326,8 @@ For runtime-specific adapters (e.g. `LocalFilesystem`, `DenoKvMemoryAdapter`), u
 Expose agent tools as an MCP-compatible HTTP server for cross-language consumption:
 
 ```ts
-import { DeepAgent } from '@onegenui/agent';
-import { McpServer, createStreamableHttpHandler } from '@onegenui/agent/server';
+import { DeepAgent } from '@giulio-leone/gaussflow-agent';
+import { McpServer, createStreamableHttpHandler } from '@giulio-leone/gaussflow-agent/server';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.minimal({
@@ -1361,7 +1361,7 @@ See [`examples/python-mcp-client/`](./examples/python-mcp-client/) for a working
 Orchestrate multiple agents using a declarative graph API with DAG execution, parallel forking, and consensus:
 
 ```ts
-import { AgentGraph, LlmJudgeConsensus } from '@onegenui/agent';
+import { AgentGraph, LlmJudgeConsensus } from '@giulio-leone/gaussflow-agent';
 import { openai } from '@ai-sdk/openai';
 
 const model = openai('gpt-4o');
@@ -1391,7 +1391,7 @@ console.log(result.nodeResults); // Per-node results
 Stream agent events via SSE for real-time monitoring:
 
 ```ts
-import { DeepAgent, createSseHandler } from '@onegenui/agent';
+import { DeepAgent, createSseHandler } from '@giulio-leone/gaussflow-agent';
 import { openai } from '@ai-sdk/openai';
 
 const agent = DeepAgent.minimal({ model: openai('gpt-4o'), instructions: '...' });
@@ -1412,25 +1412,25 @@ source.addEventListener('tool:call', (e) => console.log(JSON.parse(e.data)));
 
 ```bash
 # Interactive REPL
-oneagent chat --provider openai --api-key sk-...
+gaussflow chat --provider openai --api-key sk-...
 
 # Single-shot
-oneagent run "What is AI?" --provider anthropic
+gaussflow run "What is AI?" --provider anthropic
 
 # Config management
-oneagent config set openai sk-...
-oneagent config list
+gaussflow config set openai sk-...
+gaussflow config list
 
 # Feature demos
-oneagent demo guardrails --provider openai
-oneagent demo workflow --provider openai
-oneagent demo graph --provider openai
+gaussflow demo guardrails --provider openai
+gaussflow demo workflow --provider openai
+gaussflow demo graph --provider openai
 ```
 
 ## REST API
 
 ```typescript
-import { OneAgentServer } from "@onegenui/agent";
+import { OneAgentServer } from "@giulio-leone/gaussflow-agent";
 
 const server = new OneAgentServer({ port: 3456, cors: true });
 await server.listen();

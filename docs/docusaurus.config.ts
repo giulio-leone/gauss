@@ -3,7 +3,7 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'OneAgent',
+  title: 'GaussFlow',
   tagline: 'AI Agent Framework with Hexagonal Architecture',
   favicon: 'img/favicon.ico',
 
@@ -46,7 +46,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'OneAgent',
+      title: 'GaussFlow',
       items: [
         {
           type: 'docSidebar',
@@ -55,7 +55,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://www.npmjs.com/package/@onegenui/agent',
+          href: 'https://www.npmjs.com/package/@giulio-leone/gaussflow-agent',
           label: 'npm',
           position: 'right',
         },
@@ -91,12 +91,12 @@ const config: Config = {
             },
             {
               label: 'npm',
-              href: 'https://www.npmjs.com/package/@onegenui/agent',
+              href: 'https://www.npmjs.com/package/@giulio-leone/gaussflow-agent',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} OneGenUI. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} GaussFlow. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

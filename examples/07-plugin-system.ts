@@ -8,7 +8,7 @@ import {
   AgentCardPlugin,
   DeepAgent,
   type DeepAgentPlugin,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 
 const model = {} as import("ai").LanguageModel;
 

@@ -26,14 +26,14 @@ export async function startRepl(
   const history: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   console.log(bold(color("cyan", "\n  ╔══════════════════════════════════════╗")));
-  console.log(bold(color("cyan", "  ║       🤖 OneAgent Interactive       ║")));
+  console.log(bold(color("cyan", "  ║       🤖 GaussFlow Interactive       ║")));
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
   console.log(color("dim", "  Type /help for commands, /exit to quit\n"));
 
   try {
     while (true) {
-      const input = await rl.question(color("green", `oneagent:${currentProvider}> `));
+      const input = await rl.question(color("green", `gaussflow:${currentProvider}> `));
       const trimmed = input.trim();
       if (!trimmed) continue;
 
@@ -159,7 +159,7 @@ export async function startRepl(
         }
         const key = resolveApiKey(newProvider);
         if (!key) {
-          console.log(color("red", `  ✗ No API key for ${newProvider}. Use: oneagent config set ${newProvider} <key>\n`));
+          console.log(color("red", `  ✗ No API key for ${newProvider}. Use: gaussflow config set ${newProvider} <key>\n`));
           break;
         }
         try {

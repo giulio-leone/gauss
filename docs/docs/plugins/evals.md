@@ -11,7 +11,7 @@ The `EvalsPlugin` automatically collects evaluation metrics for every agent run 
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createEvalsPlugin } from "@onegenui/agent";
+import { DeepAgent, createEvalsPlugin } from "@giulio-leone/gaussflow-agent";
 
 const evals = createEvalsPlugin({
   persist: true,

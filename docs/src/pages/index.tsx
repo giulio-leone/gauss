@@ -33,7 +33,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title="AI Agent Framework"
-      description="OneAgent — AI Agent Framework with Hexagonal Architecture, built on Vercel AI SDK v6">
+      description="GaussFlow — AI Agent Framework with Hexagonal Architecture, built on Vercel AI SDK v6">
       <HomepageHeader />
       <main>
         <section style={{padding: '2rem 0'}}>

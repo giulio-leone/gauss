@@ -17,7 +17,7 @@ import {
   InMemoryTracingAdapter,
   InMemoryMetricsAdapter,
   ConsoleLoggingAdapter,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 
 const tracer = new InMemoryTracingAdapter();
 const metrics = new InMemoryMetricsAdapter();
@@ -132,7 +132,7 @@ interface LoggingPort {
 Implement the port interfaces to integrate with your observability stack:
 
 ```typescript
-import type { TracingPort, Span } from "@onegenui/agent";
+import type { TracingPort, Span } from "@giulio-leone/gaussflow-agent";
 
 class OpenTelemetryAdapter implements TracingPort {
   startSpan(name: string, parentSpan?: Span): Span {

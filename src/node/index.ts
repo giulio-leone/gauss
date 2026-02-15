@@ -1,4 +1,4 @@
-// @onegenui/agent/node — Node.js-specific adapters
+// @giulio-leone/gaussflow-agent/node — Node.js-specific adapters
 export { LocalFilesystem } from "../adapters/filesystem/local-fs.adapter.js";
 export { TiktokenTokenCounter } from "../adapters/token-counter/tiktoken.adapter.js";
 export type { DiskSyncFn } from "../adapters/filesystem/virtual-fs.adapter.js";

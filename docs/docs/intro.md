@@ -1,20 +1,20 @@
 ---
 sidebar_position: 1
 title: Getting Started
-description: Install OneAgent and create your first AI agent
+description: Install GaussFlow and create your first AI agent
 ---
 
 # Getting Started
 
-OneAgent is an AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai/) with hexagonal architecture, a plugin system, multi-runtime support, and multi-agent collaboration.
+GaussFlow is an AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai/) with hexagonal architecture, a plugin system, multi-runtime support, and multi-agent collaboration.
 
 ## Installation
 
 ```bash
-pnpm add @onegenui/agent
+pnpm add @giulio-leone/gaussflow-agent
 ```
 
-OneAgent requires `ai` (v6+) and `zod` (v4+) as direct dependencies.
+GaussFlow requires `ai` (v6+) and `zod` (v4+) as direct dependencies.
 
 ### Optional Peer Dependencies
 
@@ -26,7 +26,7 @@ Install only the packages you need:
 | `tiktoken` | Accurate BPE token counting |
 | `@ai-sdk/mcp` | AI SDK MCP client adapter |
 | `onecrawl` | Web scraping tools (OneCrawlPlugin) |
-| `@onegenui/vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
+| `@giulio-leone/gaussflow-vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
 
 ```bash
 pnpm add @supabase/supabase-js tiktoken
@@ -35,7 +35,7 @@ pnpm add @supabase/supabase-js tiktoken
 ## Quick Start
 
 ```typescript
-import { DeepAgent } from "@onegenui/agent";
+import { DeepAgent } from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.minimal({
@@ -57,7 +57,7 @@ console.log(`Session: ${result.sessionId}`);
 For more control, use the builder pattern:
 
 ```typescript
-import { DeepAgent } from "@onegenui/agent";
+import { DeepAgent } from "@giulio-leone/gaussflow-agent";
 import { openai } from "@ai-sdk/openai";
 
 const agent = DeepAgent.create({
@@ -96,7 +96,7 @@ import {
   createEvalsPlugin,
   createObservabilityPlugin,
   ConsoleLoggingAdapter,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 import { z } from "zod";
 
 const agent = DeepAgent.create({

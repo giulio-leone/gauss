@@ -6,18 +6,18 @@ description: RAG/knowledge extraction without vector databases
 
 # VectorlessPlugin
 
-The `VectorlessPlugin` provides RAG (Retrieval-Augmented Generation) capabilities without requiring a vector database. It uses `@onegenui/vectorless` to extract entities, relations, and quotes from text, then enables querying against the extracted knowledge.
+The `VectorlessPlugin` provides RAG (Retrieval-Augmented Generation) capabilities without requiring a vector database. It uses `@giulio-leone/gaussflow-vectorless` to extract entities, relations, and quotes from text, then enables querying against the extracted knowledge.
 
 ## Installation
 
 ```bash
-pnpm add @onegenui/vectorless
+pnpm add @giulio-leone/gaussflow-vectorless
 ```
 
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createVectorlessPlugin } from "@onegenui/agent";
+import { DeepAgent, createVectorlessPlugin } from "@giulio-leone/gaussflow-agent";
 
 const agent = DeepAgent.create({
   model: openai("gpt-4o"),

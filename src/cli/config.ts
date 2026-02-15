@@ -1,12 +1,12 @@
 // =============================================================================
-// CLI Config — .oneagentrc file management
+// CLI Config — .gaussflowrc file management
 // =============================================================================
 
 import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const CONFIG_FILE = ".oneagentrc";
+const CONFIG_FILE = ".gaussflowrc";
 
 export interface OneAgentConfig {
   keys: Record<string, string>;

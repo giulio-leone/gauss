@@ -17,7 +17,7 @@ pnpm add onecrawl
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createOneCrawlPlugin } from "@onegenui/agent";
+import { DeepAgent, createOneCrawlPlugin } from "@giulio-leone/gaussflow-agent";
 
 const agent = DeepAgent.create({
   model: openai("gpt-4o"),

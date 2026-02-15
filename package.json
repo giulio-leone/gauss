@@ -1,7 +1,7 @@
 {
-  "name": "@onegenui/agent",
+  "name": "@giulio-leone/gaussflow-agent",
   "version": "0.1.0",
-  "description": "OneAgent — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
+  "description": "GaussFlow — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -53,7 +53,7 @@
     "LICENSE"
   ],
   "bin": {
-    "oneagent": "./dist/cli/index.cjs"
+    "gaussflow": "./dist/cli/index.cjs"
   },
   "scripts": {
     "build": "tsup",
@@ -78,7 +78,7 @@
     "@supabase/supabase-js": "^2.0.0",
     "tiktoken": "^1.0.0",
     "onecrawl": ">=1.0.0",
-    "@onegenui/vectorless": ">=1.0.0"
+    "@giulio-leone/gaussflow-vectorless": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "@supabase/supabase-js": {
@@ -108,7 +108,7 @@
     "onecrawl": {
       "optional": true
     },
-    "@onegenui/vectorless": {
+    "@giulio-leone/gaussflow-vectorless": {
       "optional": true
     }
   },

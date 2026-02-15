@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/agent/rest — REST API Server
+// @giulio-leone/gaussflow-agent/rest — REST API Server
 // =============================================================================
 
 export { OneAgentServer } from "./server.js";

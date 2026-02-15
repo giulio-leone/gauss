@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // =============================================================================
-// OneAgent CLI — Main entry point
+// GaussFlow CLI — Main entry point
 // =============================================================================
 
 import { parseArgs } from "node:util";
@@ -15,24 +15,24 @@ import { color, bold } from "./format.js";
 const VERSION = "0.1.0";
 
 const HELP = `
-${bold("OneAgent CLI")} — AI Agent Framework
+${bold("GaussFlow CLI")} — AI Agent Framework
 
 ${bold("Usage:")}
-  oneagent "<prompt>"                         Direct prompt with streaming
-  oneagent chat [--provider <name>] [...]     Interactive REPL
-  oneagent run "<prompt>" [--provider <name>] Single-shot execution
-  oneagent config set <provider> <api-key>    Save API key
-  oneagent config set-provider <name>         Set default provider
-  oneagent config set-model <name>            Set default model
-  oneagent config list                        List API keys
-  oneagent config show                        Show full config
-  oneagent config delete <provider>           Delete API key
-  oneagent demo <type> [--provider <name>]    Feature demos
+  gaussflow "<prompt>"                         Direct prompt with streaming
+  gaussflow chat [--provider <name>] [...]     Interactive REPL
+  gaussflow run "<prompt>" [--provider <name>] Single-shot execution
+  gaussflow config set <provider> <api-key>    Save API key
+  gaussflow config set-provider <name>         Set default provider
+  gaussflow config set-model <name>            Set default model
+  gaussflow config list                        List API keys
+  gaussflow config show                        Show full config
+  gaussflow config delete <provider>           Delete API key
+  gaussflow demo <type> [--provider <name>]    Feature demos
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
   run         Single-shot prompt execution
-  config      Manage API keys and defaults in ~/.oneagentrc
+  config      Manage API keys and defaults in ~/.gaussflowrc
   demo        Run feature demos (guardrails, workflow, graph, observability)
 
 ${bold("Options:")}
@@ -47,11 +47,11 @@ ${bold("Environment Variables:")}
   GROQ_API_KEY, MISTRAL_API_KEY, OPENROUTER_API_KEY
 
 ${bold("Examples:")}
-  oneagent "What is the capital of France?"
-  oneagent chat --provider openai --api-key sk-...
-  oneagent run "What is the capital of France?" --provider anthropic
-  oneagent config set openai sk-...
-  oneagent demo guardrails --provider openai
+  gaussflow "What is the capital of France?"
+  gaussflow chat --provider openai --api-key sk-...
+  gaussflow run "What is the capital of France?" --provider anthropic
+  gaussflow config set openai sk-...
+  gaussflow demo guardrails --provider openai
 `;
 
 async function main(): Promise<void> {
@@ -73,7 +73,7 @@ async function main(): Promise<void> {
   }
 
   if (values.version) {
-    console.log(`oneagent v${VERSION}`);
+    console.log(`gaussflow v${VERSION}`);
     return;
   }
 
@@ -124,7 +124,7 @@ function handleConfig(args: string[]): void {
       const provider = args[1];
       const apiKey = args[2];
       if (!provider || !apiKey) {
-        console.error(color("red", "Usage: oneagent config set <provider> <api-key>"));
+        console.error(color("red", "Usage: gaussflow config set <provider> <api-key>"));
         process.exitCode = 1;
         return;
       }
@@ -143,7 +143,7 @@ function handleConfig(args: string[]): void {
       const keys = listKeys();
       const entries = Object.entries(keys);
       if (entries.length === 0) {
-        console.log(color("dim", "No API keys configured. Use: oneagent config set <provider> <key>"));
+        console.log(color("dim", "No API keys configured. Use: gaussflow config set <provider> <key>"));
         return;
       }
       console.log(bold("\nConfigured API keys:"));
@@ -160,7 +160,7 @@ function handleConfig(args: string[]): void {
     case "delete": {
       const provider = args[1];
       if (!provider) {
-        console.error(color("red", "Usage: oneagent config delete <provider>"));
+        console.error(color("red", "Usage: gaussflow config delete <provider>"));
         process.exitCode = 1;
         return;
       }
@@ -175,7 +175,7 @@ function handleConfig(args: string[]): void {
     case "set-provider": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: oneagent config set-provider <name>"));
+        console.error(color("red", "Usage: gaussflow config set-provider <name>"));
         process.exitCode = 1;
         return;
       }
@@ -193,7 +193,7 @@ function handleConfig(args: string[]): void {
     case "set-model": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: oneagent config set-model <name>"));
+        console.error(color("red", "Usage: gaussflow config set-model <name>"));
         process.exitCode = 1;
         return;
       }
@@ -205,7 +205,7 @@ function handleConfig(args: string[]): void {
     case "show": {
       const config = loadConfig();
       const entries = Object.entries(config.keys);
-      console.log(bold("\nConfiguration (~/.oneagentrc):"));
+      console.log(bold("\nConfiguration (~/.gaussflowrc):"));
       if (entries.length === 0) {
         console.log(color("dim", "  No API keys configured."));
       } else {
@@ -224,7 +224,7 @@ function handleConfig(args: string[]): void {
     }
 
     default:
-      console.error(color("red", "Usage: oneagent config [set|set-provider|set-model|list|show|delete]"));
+      console.error(color("red", "Usage: gaussflow config [set|set-provider|set-model|list|show|delete]"));
       process.exitCode = 1;
   }
 }
@@ -248,7 +248,7 @@ async function handleRun(
   opts: Record<string, string | undefined>,
 ): Promise<void> {
   if (!prompt.trim()) {
-    console.error(color("red", 'Usage: oneagent run "<prompt>" --provider <name>'));
+    console.error(color("red", 'Usage: gaussflow run "<prompt>" --provider <name>'));
     process.exitCode = 1;
     return;
   }
@@ -268,7 +268,7 @@ async function handleDemo(
   opts: Record<string, string | undefined>,
 ): Promise<void> {
   if (!demoType || !(DEMO_TYPES as readonly string[]).includes(demoType)) {
-    console.error(color("red", `Usage: oneagent demo <${DEMO_TYPES.join("|")}> --provider <name>`));
+    console.error(color("red", `Usage: gaussflow demo <${DEMO_TYPES.join("|")}> --provider <name>`));
     process.exitCode = 1;
     return;
   }
@@ -306,7 +306,7 @@ async function resolveProviderAndModel(
   if (!apiKey) {
     console.error(color("red", `No API key for provider "${providerName}".`));
     console.log(color("dim", "Set one with:"));
-    console.log(color("dim", `  oneagent config set ${providerName} <your-api-key>`));
+    console.log(color("dim", `  gaussflow config set ${providerName} <your-api-key>`));
     console.log(color("dim", `  --api-key <your-api-key>`));
     console.log(color("dim", `  Or set ${envVarName(providerName)} environment variable`));
     process.exit(1);

@@ -7,7 +7,7 @@ import {
   A2APlugin,
   AgentCardPlugin,
   DeepAgent,
-} from "@onegenui/agent";
+} from "@giulio-leone/gaussflow-agent";
 
 const model = {} as import("ai").LanguageModel;
 

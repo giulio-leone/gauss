@@ -1,5 +1,5 @@
 // =============================================================================
-// VectorlessPlugin — RAG/knowledge tools via @onegenui/vectorless
+// VectorlessPlugin — RAG/knowledge tools via @giulio-leone/gaussflow-vectorless
 // =============================================================================
 
 import { tool, type Tool } from "ai";
@@ -63,12 +63,12 @@ export class VectorlessPlugin extends BasePlugin {
       return this.options.vectorless;
     }
     try {
-      // @ts-expect-error — @onegenui/vectorless is an optional peer dependency
-      const mod = await import("@onegenui/vectorless");
+      // @ts-expect-error — @giulio-leone/gaussflow-vectorless is an optional peer dependency
+      const mod = await import("@giulio-leone/gaussflow-vectorless");
       return mod.default ?? mod;
     } catch {
       throw new Error(
-        'VectorlessPlugin requires "@onegenui/vectorless" package. Install it: pnpm add @onegenui/vectorless',
+        'VectorlessPlugin requires "@giulio-leone/gaussflow-vectorless" package. Install it: pnpm add @giulio-leone/gaussflow-vectorless',
       );
     }
   }

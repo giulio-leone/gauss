@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/agent — Shared Type Definitions
+// @giulio-leone/gaussflow-agent — Shared Type Definitions
 // =============================================================================
 
 import type { LanguageModel } from "ai";

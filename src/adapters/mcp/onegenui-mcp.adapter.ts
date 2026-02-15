@@ -1,10 +1,10 @@
-// OnegenUiMcpAdapter — Adapter bridging @onegenui/mcp registry to McpPort
+// OnegenUiMcpAdapter — Adapter bridging @giulio-leone/gaussflow-mcp registry to McpPort
 
-import type { McpRegistry } from "@onegenui/mcp";
+import type { McpRegistry } from "@giulio-leone/gaussflow-mcp";
 import type {
   McpServerState,
   McpToolWireFormat,
-} from "@onegenui/mcp";
+} from "@giulio-leone/gaussflow-mcp";
 
 import type {
   McpPort,
@@ -129,7 +129,7 @@ function mapStateToInfo(state: McpServerState): McpServerInfo {
 
 function mapConfigToRegistry(
   config: McpServerConfig,
-): import("@onegenui/mcp").McpServerConfig {
+): import("@giulio-leone/gaussflow-mcp").McpServerConfig {
   if (config.transport === "stdio") {
     return {
       id: config.id,

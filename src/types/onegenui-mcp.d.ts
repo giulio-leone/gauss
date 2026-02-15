@@ -1,4 +1,4 @@
-declare module "@onegenui/mcp" {
+declare module "@giulio-leone/gaussflow-mcp" {
   export interface McpToolWireFormat {
     name: string;
     description?: string;

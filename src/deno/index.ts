@@ -1,5 +1,5 @@
 // =============================================================================
-// @onegenui/agent/deno — Deno-specific adapters
+// @giulio-leone/gaussflow-agent/deno — Deno-specific adapters
 // =============================================================================
 
 export { DenoFilesystem } from "./deno-fs.adapter.js";

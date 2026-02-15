@@ -6,7 +6,7 @@ description: Hexagonal architecture with ports, adapters, and plugins
 
 # Hexagonal Architecture
 
-OneAgent follows **hexagonal architecture** (also known as ports & adapters). The core domain (`DeepAgent`) depends only on port interfaces — never on concrete implementations. Adapters implement those interfaces for specific platforms and services.
+GaussFlow follows **hexagonal architecture** (also known as ports & adapters). The core domain (`DeepAgent`) depends only on port interfaces — never on concrete implementations. Adapters implement those interfaces for specific platforms and services.
 
 ## Architecture Diagram
 
@@ -81,7 +81,7 @@ Adapters are concrete implementations. The framework ships with defaults for eve
 Plugins extend agent behavior through **lifecycle hooks** and **tool injection**. They follow a deterministic execution order based on registration:
 
 ```typescript
-import { DeepAgent, createGuardrailsPlugin, createEvalsPlugin } from "@onegenui/agent";
+import { DeepAgent, createGuardrailsPlugin, createEvalsPlugin } from "@giulio-leone/gaussflow-agent";
 
 const agent = DeepAgent.create({ model, instructions: "..." })
   .use(createGuardrailsPlugin({ /* ... */ }))  // Runs first
@@ -106,7 +106,7 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 The `AbstractBuilder<T>` provides a template method pattern used by `DeepAgentBuilder` and `AgentGraphBuilder`:
 
 ```typescript
-import { AbstractBuilder } from "@onegenui/agent";
+import { AbstractBuilder } from "@giulio-leone/gaussflow-agent";
 
 abstract class AbstractBuilder<T> {
   protected abstract validate(): void;
@@ -126,8 +126,8 @@ This ensures all builders validate their configuration before constructing the t
 The `BasePlugin` abstract class provides the skeleton for plugin development:
 
 ```typescript
-import { BasePlugin } from "@onegenui/agent";
-import type { PluginHooks } from "@onegenui/agent";
+import { BasePlugin } from "@giulio-leone/gaussflow-agent";
+import type { PluginHooks } from "@giulio-leone/gaussflow-agent";
 
 class MyPlugin extends BasePlugin {
   readonly name = "my-plugin";

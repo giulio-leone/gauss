@@ -11,8 +11,8 @@ The `WorkflowPlugin` executes a sequence of steps before the agent runs. Each st
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createWorkflowPlugin } from "@onegenui/agent";
-import type { WorkflowStep } from "@onegenui/agent";
+import { DeepAgent, createWorkflowPlugin } from "@giulio-leone/gaussflow-agent";
+import type { WorkflowStep } from "@giulio-leone/gaussflow-agent";
 
 const steps: WorkflowStep[] = [
   {
@@ -137,7 +137,7 @@ interface WorkflowResult {
 Failed workflows throw a `WorkflowError`:
 
 ```typescript
-import { WorkflowError } from "@onegenui/agent";
+import { WorkflowError } from "@giulio-leone/gaussflow-agent";
 
 try {
   await agent.run("Go");

@@ -11,7 +11,7 @@ The `GuardrailsPlugin` validates agent inputs and outputs using Zod schemas, app
 ## Quick Start
 
 ```typescript
-import { DeepAgent, createGuardrailsPlugin, createPiiFilter } from "@onegenui/agent";
+import { DeepAgent, createGuardrailsPlugin, createPiiFilter } from "@giulio-leone/gaussflow-agent";
 import { z } from "zod";
 
 const agent = DeepAgent.create({
@@ -64,7 +64,7 @@ interface ContentFilter {
 Detects email addresses, SSNs, and credit card numbers:
 
 ```typescript
-import { createPiiFilter } from "@onegenui/agent";
+import { createPiiFilter } from "@giulio-leone/gaussflow-agent";
 
 const piiFilter = createPiiFilter();
 piiFilter.test("user@example.com"); // true
@@ -105,7 +105,7 @@ const agent = DeepAgent.create({ model, instructions: "..." })
 When `onFailure: "throw"` (default), a `GuardrailsError` is thrown:
 
 ```typescript
-import { GuardrailsError } from "@onegenui/agent";
+import { GuardrailsError } from "@giulio-leone/gaussflow-agent";
 
 try {
   await agent.run(prompt);
