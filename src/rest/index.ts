@@ -2,7 +2,7 @@
 // @giulio-leone/gaussflow-agent/rest — REST API Server
 // =============================================================================
 
-export { OneAgentServer } from "./server.js";
+export { GaussFlowServer } from "./server.js";
 export { Router } from "./router.js";
 export type {
   ServerOptions,

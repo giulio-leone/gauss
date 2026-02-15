@@ -106,7 +106,7 @@ GaussFlow follows **hexagonal architecture** (ports & adapters). The core domain
   │Workflow  │  │InMemoryMem│  │InMemory │  │BunRuntime │
   │Observ.   │  │Supabase   │  │ Metrics │  │EdgeRuntime│
   │OneCrawl  │  │AiSdkMcp   │  │Console  │  │ZodValid. │
-  │Vectorless│  │OnegenUiMcp│  │ Logging │  │Approximate│
+  │Vectorless│  │GaussFlowMcp│  │ Logging │  │Approximate│
   │Evals     │  │InMemLearn │  │         │  │Tiktoken   │
   │A2A       │  │           │  │         │  │           │
   └────┬────┘  └───────────┘  └─────────┘  └───────────┘
@@ -166,7 +166,7 @@ src/
       supabase.adapter.ts     Supabase-backed persistent storage
     mcp/
       ai-sdk-mcp.adapter.ts   @ai-sdk/mcp client bridge
-      onegenui-mcp.adapter.ts @giulio-leone/gaussflow-mcp registry bridge
+      gaussflow-mcp.adapter.ts @giulio-leone/gaussflow-mcp registry bridge
     token-counter/
       approximate.adapter.ts  Character-ratio estimation (~4 chars/token)
       tiktoken.adapter.ts     BPE-accurate counting via tiktoken
@@ -994,7 +994,7 @@ interface ConsensusResult {
 | Adapter | Description |
 |---------|-------------|
 | `AiSdkMcpAdapter` | Bridges `@ai-sdk/mcp` clients to the `McpPort` interface. Supports stdio, HTTP, and SSE transports. |
-| `OnegenUiMcpAdapter` | Bridges `@giulio-leone/gaussflow-mcp` `McpRegistry` to the `McpPort` interface. |
+| `GaussFlowMcpAdapter` | Bridges `@giulio-leone/gaussflow-mcp` `McpRegistry` to the `McpPort` interface. |
 
 #### Validation
 
@@ -1430,9 +1430,9 @@ gaussflow demo graph --provider openai
 ## REST API
 
 ```typescript
-import { OneAgentServer } from "@giulio-leone/gaussflow-agent";
+import { GaussFlowServer } from "@giulio-leone/gaussflow-agent";
 
-const server = new OneAgentServer({ port: 3456, cors: true });
+const server = new GaussFlowServer({ port: 3456, cors: true });
 await server.listen();
 ```
 

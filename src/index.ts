@@ -242,7 +242,7 @@ export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtua
 // Adapters — MCP
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { OnegenUiMcpAdapter } from "./adapters/mcp/onegenui-mcp.adapter.js";
+export { GaussFlowMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
 export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -396,7 +396,7 @@ export type { DeltaEncoder } from "./streaming/delta-encoder.js";
 // ---------------------------------------------------------------------------
 // REST API — HTTP Server
 // ---------------------------------------------------------------------------
-export { OneAgentServer } from "./rest/server.js";
+export { GaussFlowServer } from "./rest/server.js";
 export { Router } from "./rest/router.js";
 export type {
   ServerOptions as RestServerOptions,
@@ -408,3 +408,12 @@ export type {
   HealthResponse,
   InfoResponse,
 } from "./rest/types.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Deprecated Aliases (Backward Compatibility)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** @deprecated Use GaussFlowServer */
+export { GaussFlowServer as OneAgentServer } from "./rest/server.js";
+/** @deprecated Use GaussFlowMcpAdapter */
+export { GaussFlowMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";

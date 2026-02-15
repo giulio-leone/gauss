@@ -1,5 +1,5 @@
 // =============================================================================
-// REST API — OneAgentServer (zero-dependency HTTP server using node:http)
+// REST API — GaussFlowServer (zero-dependency HTTP server using node:http)
 // =============================================================================
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
@@ -13,7 +13,7 @@ import {
   handleGraphRun,
 } from "./handlers.js";
 
-export class OneAgentServer {
+export class GaussFlowServer {
   private readonly options: Required<ServerOptions>;
   private readonly router: Router;
   private server: Server | null = null;

@@ -35,7 +35,7 @@ GaussFlow follows **hexagonal architecture** (also known as ports & adapters). T
   │Workflow  │  │InMemoryMem│  │InMemory │  │BunRuntime │
   │Observ.   │  │Supabase   │  │ Metrics │  │EdgeRuntime│
   │OneCrawl  │  │AiSdkMcp   │  │Console  │  │ZodValid. │
-  │Vectorless│  │OnegenUiMcp│  │ Logging │  │Approximate│
+  │Vectorless│  │GaussFlowMcp│  │ Logging │  │Approximate│
   │Evals     │  │InMemLearn │  │         │  │Tiktoken   │
   └─────────┘  └───────────┘  └─────────┘  └───────────┘
 ```

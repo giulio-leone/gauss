@@ -229,14 +229,14 @@ const mcp = new AiSdkMcpAdapter({
 });
 ```
 
-### OnegenUiMcpAdapter
+### GaussFlowMcpAdapter
 
 Bridges `@giulio-leone/gaussflow-mcp` `McpRegistry` to the `McpPort` interface.
 
 ```typescript
-import { OnegenUiMcpAdapter } from "@giulio-leone/gaussflow-agent";
+import { GaussFlowMcpAdapter } from "@giulio-leone/gaussflow-agent";
 
-const mcp = new OnegenUiMcpAdapter(mcpRegistry);
+const mcp = new GaussFlowMcpAdapter(mcpRegistry);
 ```
 
 ## Consensus Adapters

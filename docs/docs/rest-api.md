@@ -9,9 +9,9 @@ GaussFlow includes a zero-dependency HTTP REST API server, enabling any language
 ## Quick Start
 
 ```typescript
-import { OneAgentServer } from "@giulio-leone/gaussflow-agent";
+import { GaussFlowServer } from "@giulio-leone/gaussflow-agent";
 
-const server = new OneAgentServer({
+const server = new GaussFlowServer({
   port: 3456,
   apiKey: "my-secret-token", // Optional Bearer auth
   cors: true,

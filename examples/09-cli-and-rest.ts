@@ -4,9 +4,9 @@
 // Start a REST API server to expose GaussFlow over HTTP.
 // Any language (Python, Go, Ruby) can use GaussFlow via HTTP requests.
 
-import { OneAgentServer } from "@giulio-leone/gaussflow-agent";
+import { GaussFlowServer } from "@giulio-leone/gaussflow-agent";
 
-const server = new OneAgentServer({
+const server = new GaussFlowServer({
   port: 3456,
   cors: true,
   // apiKey: "my-secret-token",  // Uncomment for Bearer auth

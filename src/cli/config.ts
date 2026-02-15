@@ -8,7 +8,7 @@ import { homedir } from "node:os";
 
 const CONFIG_FILE = ".gaussflowrc";
 
-export interface OneAgentConfig {
+export interface GaussFlowConfig {
   keys: Record<string, string>;
   defaultProvider?: string;
   defaultModel?: string;
@@ -18,12 +18,12 @@ function configPath(): string {
   return join(homedir(), CONFIG_FILE);
 }
 
-export function loadConfig(): OneAgentConfig {
+export function loadConfig(): GaussFlowConfig {
   const path = configPath();
   if (!existsSync(path)) return { keys: {} };
   try {
     const raw = readFileSync(path, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<OneAgentConfig>;
+    const parsed = JSON.parse(raw) as Partial<GaussFlowConfig>;
     return {
       keys: parsed.keys ?? {},
       defaultProvider: parsed.defaultProvider,
@@ -34,7 +34,7 @@ export function loadConfig(): OneAgentConfig {
   }
 }
 
-export function saveConfig(config: OneAgentConfig): void {
+export function saveConfig(config: GaussFlowConfig): void {
   const path = configPath();
   writeFileSync(path, JSON.stringify(config, null, 2) + "\n", {
     encoding: "utf-8",

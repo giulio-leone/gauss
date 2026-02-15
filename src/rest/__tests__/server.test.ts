@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import http from "node:http";
 import { Router, parseBody, sendJson, sendError } from "../router.js";
-import { OneAgentServer } from "../server.js";
+import { GaussFlowServer } from "../server.js";
 
 // =============================================================================
 // Mock DeepAgent and CLI providers — prevent real AI calls
@@ -189,13 +189,13 @@ describe("Router", () => {
 // Server integration tests
 // =============================================================================
 
-describe("OneAgentServer", () => {
+describe("GaussFlowServer", () => {
   let server: OneAgentServer;
   const PORT = 0; // Use ephemeral port
   let actualPort: number;
 
   beforeAll(async () => {
-    server = new OneAgentServer({ port: 0, cors: true });
+    server = new GaussFlowServer({ port: 0, cors: true });
     // Listen on port 0 to get a random available port
     await server.listen(0);
     // Get the actual port from the underlying server
@@ -379,13 +379,13 @@ describe("OneAgentServer", () => {
 // Server with auth
 // =============================================================================
 
-describe("OneAgentServer (with auth)", () => {
+describe("GaussFlowServer (with auth)", () => {
   let server: OneAgentServer;
   let actualPort: number;
   const API_KEY = "test-secret-key-123";
 
   beforeAll(async () => {
-    server = new OneAgentServer({ port: 0, apiKey: API_KEY });
+    server = new GaussFlowServer({ port: 0, apiKey: API_KEY });
     await server.listen(0);
     const addr = (server as any).server?.address();
     actualPort = typeof addr === "object" && addr ? addr.port : 3457;

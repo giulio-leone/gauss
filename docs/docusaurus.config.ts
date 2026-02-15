@@ -31,7 +31,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/g97iulio1609/onegenui-deep-agents/tree/main/docs/',
+            'https://github.com/giulio-leone/onegenui-deep-agents/tree/main/docs/',
         },
         blog: false,
         theme: {
@@ -60,7 +60,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/g97iulio1609/onegenui-deep-agents',
+          href: 'https://github.com/giulio-leone/onegenui-deep-agents',
           label: 'GitHub',
           position: 'right',
         },
@@ -87,7 +87,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/g97iulio1609/onegenui-deep-agents',
+              href: 'https://github.com/giulio-leone/onegenui-deep-agents',
             },
             {
               label: 'npm',
