@@ -92,3 +92,9 @@ export {
   createSemanticScrapingPlugin,
   type SemanticScrapingPluginOptions,
 } from "./semantic-scraping.plugin.js";
+
+export {
+  McpServerPlugin,
+  createMcpServerPlugin,
+  type McpServerPluginOptions,
+} from "./mcp-server.plugin.js";

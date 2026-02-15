@@ -63,6 +63,11 @@ export type {
   McpServerConfig,
 } from "./ports/mcp.port.js";
 export type {
+  McpServerPort,
+  McpServerOptions,
+  McpToolServerDefinition,
+} from "./ports/mcp-server.port.js";
+export type {
   ModelPort,
   ModelGenerateOptions,
   ModelGenerateResult,
@@ -266,6 +271,8 @@ export {
   createObservabilityPlugin,
   SemanticScrapingPlugin,
   createSemanticScrapingPlugin,
+  McpServerPlugin,
+  createMcpServerPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -297,6 +304,7 @@ export type {
   ObservabilityPluginConfig,
   AgentMetrics,
   SemanticScrapingPluginOptions,
+  McpServerPluginOptions,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -312,6 +320,13 @@ export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtua
 
 export { GaussFlowMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
 export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — MCP Server
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultMcpServerAdapter } from "./adapters/mcp-server/index.js";
+export type { McpToolExecutor } from "./adapters/mcp-server/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Memory
