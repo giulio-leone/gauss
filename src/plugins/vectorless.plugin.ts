@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import type { PluginHooks } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
+import type { ValidationPort } from "../ports/validation.port.js";
+import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -19,6 +21,8 @@ export interface VectorlessPluginOptions {
   knowledgeBase?: unknown;
   /** Model to use for knowledge generation (default: uses vectorless default) */
   model?: unknown;
+  /** Validation adapter (defaults to ZodValidationAdapter) */
+  validator?: ValidationPort;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -32,11 +36,13 @@ export class VectorlessPlugin extends BasePlugin {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private vectorlessPromise: Promise<any> | null = null;
   private currentKnowledge: unknown = null;
+  private readonly validator: ValidationPort;
 
   constructor(options: VectorlessPluginOptions = {}) {
     super();
     this.options = options;
     this.currentKnowledge = options.knowledgeBase ?? null;
+    this.validator = options.validator ?? new ZodValidationAdapter();
   }
 
   protected buildHooks(): PluginHooks {
@@ -71,6 +77,7 @@ export class VectorlessPlugin extends BasePlugin {
     const getVectorless = this.getVectorless.bind(this);
     const getKnowledge = () => this.currentKnowledge;
     const setKnowledge = (k: unknown) => { this.currentKnowledge = k; };
+    const validator = this.validator;
 
     return {
       generate: tool({
@@ -80,10 +87,13 @@ export class VectorlessPlugin extends BasePlugin {
           topic: z.string().optional().describe("Optional topic to focus extraction on"),
         }),
         execute: async (args: unknown) => {
-          const { text, topic } = z.object({
-            text: z.string(),
-            topic: z.string().optional(),
-          }).parse(args);
+          const { text, topic } = validator.validateOrThrow<{ text: string; topic?: string }>(
+            z.object({
+              text: z.string(),
+              topic: z.string().optional(),
+            }),
+            args,
+          );
           const vl = await getVectorless();
           const generate = vl.generateKnowledge ?? vl.generate ?? vl.extract;
           if (!generate) throw new Error("vectorless: generateKnowledge function not found");
@@ -104,7 +114,10 @@ export class VectorlessPlugin extends BasePlugin {
           question: z.string().describe("The question to answer"),
         }),
         execute: async (args: unknown) => {
-          const { question } = z.object({ question: z.string() }).parse(args);
+          const { question } = validator.validateOrThrow<{ question: string }>(
+            z.object({ question: z.string() }),
+            args,
+          );
           const knowledge = getKnowledge();
           if (!knowledge) return "No knowledge base loaded. Use knowledge:generate first.";
           const vl = await getVectorless();
@@ -122,12 +135,13 @@ export class VectorlessPlugin extends BasePlugin {
           limit: z.number().min(1).max(50).default(10).describe("Max results"),
         }),
         execute: async (args: unknown) => {
-          const { query, limit } = z
-            .object({
+          const { query, limit } = validator.validateOrThrow<{ query: string; limit: number }>(
+            z.object({
               query: z.string(),
               limit: z.number().min(1).max(50).default(10),
-            })
-            .parse(args);
+            }),
+            args,
+          );
           const knowledge = getKnowledge();
           if (!knowledge) return "No knowledge base loaded. Use knowledge:generate first.";
           const vl = await getVectorless();

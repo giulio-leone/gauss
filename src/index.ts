@@ -37,6 +37,10 @@ export type { MemoryPort } from "./ports/memory.port.js";
 export type { LearningPort } from "./ports/learning.port.js";
 export type { FilesystemPort } from "./ports/filesystem.port.js";
 export type {
+  ValidationPort,
+  ValidationResult,
+} from "./ports/validation.port.js";
+export type {
   McpPort,
   McpToolDefinition,
   McpToolResult,
@@ -241,6 +245,12 @@ export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { ZodValidationAdapter } from "./adapters/validation/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Runtime

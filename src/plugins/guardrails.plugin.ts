@@ -13,6 +13,8 @@ import type {
 } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
 import type { ZodType } from "zod";
+import type { ValidationPort } from "../ports/validation.port.js";
+import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -38,6 +40,8 @@ export interface GuardrailsPluginOptions {
   outputValidators?: Array<(output: string) => string | null>;
   /** Action on validation failure: 'throw' (default) or 'warn' */
   onFailure?: "throw" | "warn";
+  /** Validation adapter (defaults to ZodValidationAdapter) */
+  validator?: ValidationPort;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,8 +70,11 @@ export class GuardrailsPlugin extends BasePlugin {
   > &
     Pick<GuardrailsPluginOptions, "inputSchema" | "outputSchema" | "toolSchemas">;
 
+  private readonly validator: ValidationPort;
+
   constructor(options: GuardrailsPluginOptions = {}) {
     super();
+    this.validator = options.validator ?? new ZodValidationAdapter();
     this.options = {
       onFailure: options.onFailure ?? "throw",
       contentFilters: options.contentFilters ?? [],
@@ -106,9 +113,9 @@ export class GuardrailsPlugin extends BasePlugin {
     }
 
     if (this.options.inputSchema) {
-      const result = this.options.inputSchema.safeParse(prompt);
+      const result = this.validator.validate(this.options.inputSchema, prompt);
       if (!result.success) {
-        this.fail("input_validation", `Input schema validation failed: ${result.error.message}`);
+        this.fail("input_validation", `Input schema validation failed: ${result.error}`);
       }
     }
 
@@ -132,9 +139,9 @@ export class GuardrailsPlugin extends BasePlugin {
     }
 
     if (this.options.outputSchema) {
-      const result = this.options.outputSchema.safeParse(text);
+      const result = this.validator.validate(this.options.outputSchema, text);
       if (!result.success) {
-        this.fail("output_validation", `Output schema validation failed: ${result.error.message}`);
+        this.fail("output_validation", `Output schema validation failed: ${result.error}`);
       }
     }
   }
@@ -143,9 +150,9 @@ export class GuardrailsPlugin extends BasePlugin {
     const schema = this.options.toolSchemas?.[params.toolName];
     if (!schema) return;
 
-    const result = schema.safeParse(params.args);
+    const result = this.validator.validate(schema, params.args);
     if (!result.success) {
-      this.fail("tool_validation", `Tool "${params.toolName}" args validation failed: ${result.error.message}`);
+      this.fail("tool_validation", `Tool "${params.toolName}" args validation failed: ${result.error}`);
     }
   }
 

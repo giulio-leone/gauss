@@ -7,6 +7,8 @@ import { z } from "zod";
 
 import type { PluginHooks } from "../ports/plugin.port.js";
 import { BasePlugin } from "./base.plugin.js";
+import type { ValidationPort } from "../ports/validation.port.js";
+import { ZodValidationAdapter } from "../adapters/validation/zod-validation.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -19,6 +21,8 @@ export interface OneCrawlPluginOptions {
   maxContentLength?: number;
   /** Timeout per request in ms (default: 30000) */
   timeout?: number;
+  /** Validation adapter (defaults to ZodValidationAdapter) */
+  validator?: ValidationPort;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,10 +35,12 @@ export class OneCrawlPlugin extends BasePlugin {
   private readonly options: OneCrawlPluginOptions;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private crawlerPromise: Promise<any> | null = null;
+  private readonly validator: ValidationPort;
 
   constructor(options: OneCrawlPluginOptions = {}) {
     super();
     this.options = options;
+    this.validator = options.validator ?? new ZodValidationAdapter();
   }
 
   protected buildHooks(): PluginHooks {
@@ -71,6 +77,7 @@ export class OneCrawlPlugin extends BasePlugin {
   get tools(): Record<string, Tool> {
     const maxLen = this.options.maxContentLength ?? 10000;
     const getCrawler = this.getCrawler.bind(this);
+    const validator = this.validator;
 
     return {
       scrape: tool({
@@ -79,7 +86,10 @@ export class OneCrawlPlugin extends BasePlugin {
           url: z.string().url().describe("The URL to scrape"),
         }),
         execute: async (args: unknown) => {
-          const { url } = z.object({ url: z.string().url() }).parse(args);
+          const { url } = validator.validateOrThrow<{ url: string }>(
+            z.object({ url: z.string().url() }),
+            args,
+          );
           const crawler = await getCrawler();
           const result = await crawler.crawl(url);
           const content =
@@ -99,12 +109,13 @@ export class OneCrawlPlugin extends BasePlugin {
           limit: z.number().min(1).max(20).default(5).describe("Max results to return"),
         }),
         execute: async (args: unknown) => {
-          const { query, limit } = z
-            .object({
+          const { query, limit } = validator.validateOrThrow<{ query: string; limit: number }>(
+            z.object({
               query: z.string(),
               limit: z.number().min(1).max(20).default(5),
-            })
-            .parse(args);
+            }),
+            args,
+          );
           const crawler = await getCrawler();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const results = await crawler.search(query, { limit });
@@ -126,9 +137,10 @@ export class OneCrawlPlugin extends BasePlugin {
           urls: z.array(z.string().url()).min(1).max(10).describe("URLs to scrape"),
         }),
         execute: async (args: unknown) => {
-          const { urls } = z
-            .object({ urls: z.array(z.string().url()).min(1).max(10) })
-            .parse(args);
+          const { urls } = validator.validateOrThrow<{ urls: string[] }>(
+            z.object({ urls: z.array(z.string().url()).min(1).max(10) }),
+            args,
+          );
           const crawler = await getCrawler();
           if (typeof crawler.batchCrawl === "function") {
             const results = await crawler.batchCrawl(urls);
