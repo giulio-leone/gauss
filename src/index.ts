@@ -145,7 +145,27 @@ export type {
   WorkflowStep,
   WorkflowContext,
   WorkflowResult,
+  StepType,
+  ParallelStep,
+  ConditionalStep,
+  LoopStep,
+  AgentStep,
+  AnyStep,
+  WorkflowDefinition,
+  ValidationResult as WorkflowValidationResult,
+  WorkflowEventType,
+  WorkflowEvent,
 } from "./domain/workflow.schema.js";
+
+export type {
+  WorkflowPort,
+  WorkflowEventListener,
+} from "./ports/workflow.port.js";
+
+export {
+  WorkflowBuilder,
+  defineWorkflow,
+} from "./domain/workflow.builder.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utils
@@ -253,6 +273,7 @@ export type {
   EvalsPluginOptions,
   EvalScorer,
   WorkflowPluginConfig,
+  WorkflowPluginInput,
   ObservabilityConfig,
   ObservabilityPluginConfig,
   AgentMetrics,
@@ -285,6 +306,13 @@ export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryLearningAdapter } from "./adapters/learning/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Workflow
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultWorkflowEngine } from "./adapters/workflow/index.js";
+export type { DefaultWorkflowEngineOptions, AgentExecutor } from "./adapters/workflow/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Tracing

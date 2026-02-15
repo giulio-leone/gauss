@@ -13,8 +13,11 @@ import type {
   WorkflowStep,
   WorkflowContext,
   WorkflowResult,
+  WorkflowDefinition,
   RetryConfig,
 } from "../domain/workflow.schema.js";
+import type { WorkflowPort } from "../ports/workflow.port.js";
+import { DefaultWorkflowEngine } from "../adapters/workflow/default-workflow.engine.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -35,6 +38,8 @@ export interface WorkflowPluginConfig {
   initialContext?: WorkflowContext;
 }
 
+export type WorkflowPluginInput = WorkflowPluginConfig | WorkflowDefinition;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Error
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +55,14 @@ export class WorkflowError extends Error {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function isWorkflowDefinition(input: WorkflowPluginInput): input is WorkflowDefinition {
+  return 'id' in input && 'name' in input;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -58,12 +71,21 @@ export class WorkflowPlugin extends BasePlugin {
 
   private readonly steps: WorkflowStep[];
   private readonly initialContext: WorkflowContext;
+  private readonly definition?: WorkflowDefinition;
+  private readonly engine?: WorkflowPort;
   private lastResult: WorkflowResult | undefined;
 
-  constructor(config: WorkflowPluginConfig) {
+  constructor(config: WorkflowPluginInput, engine?: WorkflowPort) {
     super();
-    this.steps = config.steps;
-    this.initialContext = config.initialContext ?? {};
+    if (isWorkflowDefinition(config)) {
+      this.definition = config;
+      this.steps = config.steps as WorkflowStep[];
+      this.initialContext = config.initialContext ?? {};
+      this.engine = engine ?? new DefaultWorkflowEngine();
+    } else {
+      this.steps = config.steps;
+      this.initialContext = config.initialContext ?? {};
+    }
   }
 
   protected buildHooks(): PluginHooks {
@@ -82,7 +104,9 @@ export class WorkflowPlugin extends BasePlugin {
     _ctx: PluginContext,
     params: BeforeRunParams,
   ): Promise<BeforeRunResult> {
-    const result = await this.executeWorkflow();
+    const result = this.definition && this.engine
+      ? await this.engine.execute(this.definition)
+      : await this.executeWorkflow();
     this.lastResult = result;
 
     if (result.status === "failed") {
@@ -101,7 +125,7 @@ export class WorkflowPlugin extends BasePlugin {
     };
   }
 
-  // ── Workflow engine ─────────────────────────────────────────────────────
+  // ── Built-in workflow engine (backward compatible) ──────────────────────
 
   private async executeWorkflow(): Promise<WorkflowResult> {
     const start = Date.now();
@@ -187,7 +211,8 @@ export class WorkflowPlugin extends BasePlugin {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function createWorkflowPlugin(
-  config: WorkflowPluginConfig,
+  config: WorkflowPluginInput,
+  engine?: WorkflowPort,
 ): WorkflowPlugin {
-  return new WorkflowPlugin(config);
+  return new WorkflowPlugin(config, engine);
 }

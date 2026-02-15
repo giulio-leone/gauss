@@ -61,6 +61,7 @@ export {
   WorkflowError,
   createWorkflowPlugin,
   type WorkflowPluginConfig,
+  type WorkflowPluginInput,
 } from "./workflow.plugin.js";
 
 export {
