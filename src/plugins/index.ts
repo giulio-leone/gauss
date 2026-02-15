@@ -54,3 +54,10 @@ export {
   type EvalsPluginOptions,
   type EvalScorer,
 } from "./evals.plugin.js";
+
+export {
+  WorkflowPlugin,
+  WorkflowError,
+  createWorkflowPlugin,
+  type WorkflowPluginConfig,
+} from "./workflow.plugin.js";

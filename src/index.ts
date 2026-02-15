@@ -112,6 +112,13 @@ export {
   type EvalResult,
 } from "./domain/eval.schema.js";
 
+export type {
+  RetryConfig,
+  WorkflowStep,
+  WorkflowContext,
+  WorkflowResult,
+} from "./domain/workflow.schema.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Agent Configuration
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,6 +188,9 @@ export {
   createVectorlessPlugin,
   EvalsPlugin,
   createEvalsPlugin,
+  WorkflowPlugin,
+  WorkflowError,
+  createWorkflowPlugin,
 } from "./plugins/index.js";
 export type {
   AgentCardPluginOptions,
@@ -201,6 +211,7 @@ export type {
   VectorlessPluginOptions,
   EvalsPluginOptions,
   EvalScorer,
+  WorkflowPluginConfig,
 } from "./plugins/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
