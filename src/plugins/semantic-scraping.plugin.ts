@@ -26,10 +26,10 @@ export interface SemanticScrapingPluginOptions {
 const SemanticToolSchema = z.object({
   name: z.string(),
   description: z.string(),
-  inputSchema: z.union([z.string(), z.record(z.unknown())]),
+  inputSchema: z.union([z.string(), z.record(z.string(), z.unknown())]),
   confidence: z.number().optional(),
   category: z.string().optional(),
-  annotations: z.record(z.boolean()).optional(),
+  annotations: z.record(z.string(), z.boolean()).optional(),
 });
 
 const ScanPageInputSchema = z.object({
