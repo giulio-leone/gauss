@@ -15,7 +15,7 @@ import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig
 import type { DeepAgentPlugin, PluginContext, PluginRunMetadata, PluginSetupContext } from "../ports/plugin.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
-import { createRuntimeAdapter } from "../adapters/runtime/detect-runtime.js";
+import { createRuntimeAdapterAsync } from "../adapters/runtime/detect-runtime.js";
 
 import { AbstractBuilder } from "../utils/abstract-builder.js";
 import { EventBus } from "./event-bus.js";
@@ -225,13 +225,14 @@ export class DeepAgent {
   readonly eventBus: EventBus;
 
   private readonly config: DeepAgentInternalConfig;
-  private readonly runtime: RuntimePort;
+  private _runtime: RuntimePort | null;
+  private _runtimePromise: Promise<RuntimePort> | null = null;
   private readonly tokenTracker: TokenTracker;
   private readonly pluginManager: PluginManager;
 
   constructor(config: DeepAgentInternalConfig) {
-    this.runtime = config.runtime ?? createRuntimeAdapter();
-    this.sessionId = config.id ?? this.runtime.randomUUID();
+    this._runtime = config.runtime ?? null;
+    this.sessionId = config.id ?? (this._runtime ? this._runtime.randomUUID() : crypto.randomUUID());
     this.eventBus = new EventBus(this.sessionId);
     this.config = config;
     this.tokenTracker = new TokenTracker(config.tokenCounter, {
@@ -244,6 +245,18 @@ export class DeepAgent {
     for (const plugin of config.plugins ?? []) {
       this.pluginManager.register(plugin);
     }
+  }
+
+  /** Lazy-initialized runtime adapter. Resolves on first use. */
+  private async ensureRuntime(): Promise<RuntimePort> {
+    if (this._runtime) return this._runtime;
+    if (!this._runtimePromise) {
+      this._runtimePromise = createRuntimeAdapterAsync().then((rt) => {
+        this._runtime = rt;
+        return rt;
+      });
+    }
+    return this._runtimePromise;
   }
 
   // ---------------------------------------------------------------------------
@@ -380,7 +393,7 @@ export class DeepAgent {
       this.sessionId,
       (evt) => this.eventBus.emit(evt.type, evt.data),
     );
-    const runtime = this.runtime;
+    const runtime = this._runtime!;
 
     let stepIndex = 0;
     for (const [name, toolDef] of Object.entries(tools)) {
@@ -478,6 +491,7 @@ export class DeepAgent {
     let pluginCtx = this.createPluginContext([], options.pluginMetadata);
 
     try {
+      await this.ensureRuntime();
       const prepared = await this.prepareTools(options.pluginMetadata);
       const tools = prepared.tools;
       pluginCtx = prepared.pluginCtx;
@@ -555,7 +569,7 @@ export class DeepAgent {
 
       if (cpConfig?.enabled) {
         const checkpoint = {
-          id: this.runtime.randomUUID(),
+          id: this._runtime!.randomUUID(),
           sessionId: this.sessionId,
           stepIndex: steps.length,
           conversation: [
@@ -608,6 +622,7 @@ export class DeepAgent {
     let pluginCtx = this.createPluginContext([], options.pluginMetadata);
 
     try {
+      await this.ensureRuntime();
       const prepared = await this.prepareTools(options.pluginMetadata);
       const tools = prepared.tools;
       pluginCtx = prepared.pluginCtx;

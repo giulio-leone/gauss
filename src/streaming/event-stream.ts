@@ -11,6 +11,10 @@ export interface EventStreamOptions {
   eventTypes?: string[];
   /** "full" sends every event as-is; "delta" uses delta encoding. */
   mode?: "full" | "delta";
+  /** How to handle backpressure: 'drop' (default) discards events, 'buffer' keeps last N. */
+  backpressureStrategy?: "drop" | "buffer";
+  /** Max events to buffer when using 'buffer' strategy (default: 100). */
+  bufferSize?: number;
 }
 
 /**
@@ -23,13 +27,21 @@ export function createEventStream(
   const mode = options?.mode ?? "full";
   const eventTypes = options?.eventTypes;
   const encoder = mode === "delta" ? createDeltaEncoder() : null;
+  const backpressureStrategy = options?.backpressureStrategy ?? "drop";
+  const bufferSize = options?.bufferSize ?? 100;
   let id = 0;
+  let droppedEvents = 0;
+  let isEmitting = false;
+  const buffer: string[] = [];
 
   const unsubscribes: (() => void)[] = [];
 
   return new ReadableStream<string>({
     start(controller) {
       const handler = (event: AgentEvent) => {
+        // Re-entrancy guard: skip events triggered by our own emit
+        if (isEmitting) return;
+
         let data: string;
         if (encoder) {
           const encoded = encoder.encode(event);
@@ -39,11 +51,40 @@ export function createEventStream(
           data = JSON.stringify(event);
         }
 
-        // Drop events when the internal queue is saturated (backpressure)
-        if ((controller.desiredSize ?? 1) <= 0) return;
-
         id++;
-        controller.enqueue(`id: ${id}\nevent: ${event.type}\ndata: ${data}\n\n`);
+        const chunk = `id: ${id}\nevent: ${event.type}\ndata: ${data}\n\n`;
+
+        // Backpressure handling
+        if ((controller.desiredSize ?? 1) <= 0) {
+          if (backpressureStrategy === "buffer") {
+            buffer.push(chunk);
+            while (buffer.length > bufferSize) buffer.shift();
+          } else {
+            droppedEvents++;
+            if (droppedEvents % 10 === 0) {
+              isEmitting = true;
+              try {
+                eventBus.emit("stream:warning" as any, {
+                  reason: "backpressure",
+                  droppedEvents,
+                });
+              } finally {
+                isEmitting = false;
+              }
+            }
+          }
+          return;
+        }
+
+        // Flush buffer first, respecting backpressure
+        while (buffer.length > 0 && (controller.desiredSize ?? 1) > 0) {
+          controller.enqueue(buffer.shift()!);
+        }
+        if ((controller.desiredSize ?? 1) > 0) {
+          controller.enqueue(chunk);
+        } else {
+          buffer.push(chunk);
+        }
       };
 
       if (eventTypes && eventTypes.length > 0) {

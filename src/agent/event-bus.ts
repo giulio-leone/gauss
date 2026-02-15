@@ -14,12 +14,19 @@ type EventKey = AgentEventType | "*";
  * Portable event bus for agent lifecycle events.
  * Supports typed subscriptions, wildcard listeners, and auto-filled metadata.
  */
+export interface EventBusOptions {
+  /** Maximum listeners allowed per event type (default: 100). */
+  maxListenersPerEvent?: number;
+}
+
 export class EventBus {
   private readonly sessionId: string;
   private readonly listeners = new Map<EventKey, Set<AgentEventHandler>>();
+  private readonly maxListenersPerEvent: number;
 
-  constructor(sessionId: string) {
+  constructor(sessionId: string, options?: EventBusOptions) {
     this.sessionId = sessionId;
+    this.maxListenersPerEvent = options?.maxListenersPerEvent ?? 100;
   }
 
   /** Subscribe to a specific event type or '*' for all events. Returns unsubscribe fn. */
@@ -28,6 +35,11 @@ export class EventBus {
     if (!set) {
       set = new Set();
       this.listeners.set(eventType, set);
+    }
+    if (set.size >= this.maxListenersPerEvent) {
+      throw new Error(
+        `EventBus: max listeners (${this.maxListenersPerEvent}) reached for "${String(eventType)}"`,
+      );
     }
     set.add(handler);
     return () => this.off(eventType, handler);

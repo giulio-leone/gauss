@@ -3,7 +3,7 @@ import { NodeRuntimeAdapter } from "../node-runtime.adapter.js";
 import { DenoRuntimeAdapter } from "../deno-runtime.adapter.js";
 import { BunRuntimeAdapter } from "../bun-runtime.adapter.js";
 import { EdgeRuntimeAdapter } from "../edge-runtime.adapter.js";
-import { detectRuntimeName, createRuntimeAdapter } from "../detect-runtime.js";
+import { detectRuntimeName, createRuntimeAdapter, createRuntimeAdapterAsync } from "../detect-runtime.js";
 
 describe("NodeRuntimeAdapter", () => {
   const adapter = new NodeRuntimeAdapter();
@@ -159,5 +159,31 @@ describe("createRuntimeAdapter", () => {
 
   it("returns NodeRuntimeAdapter for unknown (fallback)", () => {
     expect(createRuntimeAdapter("unknown")).toBeInstanceOf(NodeRuntimeAdapter);
+  });
+});
+
+describe("createRuntimeAdapterAsync", () => {
+  it("returns NodeRuntimeAdapter by default", async () => {
+    expect(await createRuntimeAdapterAsync()).toBeInstanceOf(NodeRuntimeAdapter);
+  });
+
+  it("returns NodeRuntimeAdapter for explicit node", async () => {
+    expect(await createRuntimeAdapterAsync("node")).toBeInstanceOf(NodeRuntimeAdapter);
+  });
+
+  it("returns DenoRuntimeAdapter for deno", async () => {
+    expect(await createRuntimeAdapterAsync("deno")).toBeInstanceOf(DenoRuntimeAdapter);
+  });
+
+  it("returns BunRuntimeAdapter for bun", async () => {
+    expect(await createRuntimeAdapterAsync("bun")).toBeInstanceOf(BunRuntimeAdapter);
+  });
+
+  it("returns EdgeRuntimeAdapter for edge", async () => {
+    expect(await createRuntimeAdapterAsync("edge")).toBeInstanceOf(EdgeRuntimeAdapter);
+  });
+
+  it("returns NodeRuntimeAdapter for unknown (fallback)", async () => {
+    expect(await createRuntimeAdapterAsync("unknown")).toBeInstanceOf(NodeRuntimeAdapter);
   });
 });

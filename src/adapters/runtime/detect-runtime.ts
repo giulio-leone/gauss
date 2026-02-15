@@ -16,6 +16,7 @@ export function detectRuntimeName(): RuntimeName {
   return "unknown";
 }
 
+/** Synchronous factory — eagerly imports all adapters (backward compatible). */
 export function createRuntimeAdapter(name?: RuntimeName): RuntimePort {
   const resolved = name ?? detectRuntimeName();
   switch (resolved) {
@@ -29,5 +30,30 @@ export function createRuntimeAdapter(name?: RuntimeName): RuntimePort {
     case "unknown":
     default:
       return new NodeRuntimeAdapter();
+  }
+}
+
+/** Async factory — lazy-loads only the needed adapter. */
+export async function createRuntimeAdapterAsync(name?: RuntimeName): Promise<RuntimePort> {
+  const resolved = name ?? detectRuntimeName();
+  switch (resolved) {
+    case "deno": {
+      const { DenoRuntimeAdapter: D } = await import("./deno-runtime.adapter.js");
+      return new D();
+    }
+    case "bun": {
+      const { BunRuntimeAdapter: B } = await import("./bun-runtime.adapter.js");
+      return new B();
+    }
+    case "edge": {
+      const { EdgeRuntimeAdapter: E } = await import("./edge-runtime.adapter.js");
+      return new E();
+    }
+    case "node":
+    case "unknown":
+    default: {
+      const { NodeRuntimeAdapter: N } = await import("./node-runtime.adapter.js");
+      return new N();
+    }
   }
 }

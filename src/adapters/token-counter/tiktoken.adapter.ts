@@ -22,8 +22,10 @@ export class TiktokenTokenCounter implements TokenCounterPort {
   private encodingCache = new Map<string, TiktokenEncoding>();
   private initPromise: Promise<void> | null = null;
   private available = false;
+  private readonly maxCacheSize: number;
 
-  constructor() {
+  constructor(options?: { maxCacheSize?: number }) {
+    this.maxCacheSize = options?.maxCacheSize ?? 50;
     this.initPromise = this.init();
   }
 
@@ -36,12 +38,23 @@ export class TiktokenTokenCounter implements TokenCounterPort {
     }
   }
 
+  private evictIfNeeded(): void {
+    while (this.encodingCache.size >= this.maxCacheSize) {
+      const oldest = this.encodingCache.keys().next().value as string;
+      const enc = this.encodingCache.get(oldest);
+      this.encodingCache.delete(oldest);
+      try { enc?.free(); } catch { /* ignore */ }
+    }
+  }
+
   private getEncoding(model?: string): TiktokenEncoding | null {
     if (!this.available || !this.tiktokenModule) return null;
 
     const key = model ?? "cl100k_base";
     const cached = this.encodingCache.get(key);
     if (cached) return cached;
+
+    this.evictIfNeeded();
 
     try {
       const enc = model

@@ -11,7 +11,13 @@ export interface DeltaEncoder {
   reset(): void;
 }
 
-export function createDeltaEncoder(): DeltaEncoder {
+export interface DeltaEncoderOptions {
+  /** Maximum number of entries to track (default: 1000). */
+  maxEntries?: number;
+}
+
+export function createDeltaEncoder(options?: DeltaEncoderOptions): DeltaEncoder {
+  const maxEntries = options?.maxEntries ?? 1000;
   const lastSeen = new Map<string, string>();
 
   return {
@@ -21,6 +27,11 @@ export function createDeltaEncoder(): DeltaEncoder {
 
       if (prev === serialized) return null;
 
+      // Evict oldest entry when at capacity and inserting new key
+      if (prev === undefined && lastSeen.size >= maxEntries) {
+        const oldest = lastSeen.keys().next().value as string;
+        lastSeen.delete(oldest);
+      }
       lastSeen.set(event.type, serialized);
 
       if (prev === undefined) return serialized;

@@ -7,6 +7,7 @@ export default defineConfig([
       index: "src/index.ts",
       "node/index": "src/node/index.ts",
       "rest/index": "src/rest/index.ts",
+      "plugins/index": "src/plugins/index.ts",
     },
     format: ["cjs", "esm"],
     dts: true,
