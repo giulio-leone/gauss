@@ -12,15 +12,35 @@ import type { Message } from "../../types.js";
  * Good for testing and standalone use.
  */
 export class InMemoryAdapter implements MemoryPort {
+  private static readonly MAX_SESSIONS = 1000;
+
+  private readonly sessionOrder: string[] = [];
   private readonly todosMap = new Map<string, Todo[]>();
   private readonly checkpointsMap = new Map<string, Checkpoint[]>();
   private readonly conversationMap = new Map<string, Message[]>();
   private readonly metadataMap = new Map<string, Map<string, unknown>>();
 
+  private trackSession(sessionId: string): void {
+    const idx = this.sessionOrder.indexOf(sessionId);
+    if (idx === -1) {
+      this.sessionOrder.push(sessionId);
+    }
+    while (this.sessionOrder.length > InMemoryAdapter.MAX_SESSIONS) {
+      const oldest = this.sessionOrder.shift();
+      if (oldest !== undefined) {
+        this.todosMap.delete(oldest);
+        this.checkpointsMap.delete(oldest);
+        this.conversationMap.delete(oldest);
+        this.metadataMap.delete(oldest);
+      }
+    }
+  }
+
   // -- Todos ------------------------------------------------------------------
 
   async saveTodos(sessionId: string, todos: Todo[]): Promise<void> {
     this.todosMap.set(sessionId, [...todos]);
+    this.trackSession(sessionId);
   }
 
   async loadTodos(sessionId: string): Promise<Todo[]> {
@@ -36,6 +56,7 @@ export class InMemoryAdapter implements MemoryPort {
     const list = this.checkpointsMap.get(sessionId) ?? [];
     list.push(checkpoint);
     this.checkpointsMap.set(sessionId, list);
+    this.trackSession(sessionId);
   }
 
   async loadLatestCheckpoint(
@@ -66,6 +87,7 @@ export class InMemoryAdapter implements MemoryPort {
     messages: Message[],
   ): Promise<void> {
     this.conversationMap.set(sessionId, [...messages]);
+    this.trackSession(sessionId);
   }
 
   async loadConversation(sessionId: string): Promise<Message[]> {
@@ -85,6 +107,7 @@ export class InMemoryAdapter implements MemoryPort {
       this.metadataMap.set(sessionId, map);
     }
     map.set(key, value);
+    this.trackSession(sessionId);
   }
 
   async loadMetadata<T = unknown>(
@@ -108,6 +131,8 @@ export class InMemoryAdapter implements MemoryPort {
     this.checkpointsMap.delete(sessionId);
     this.conversationMap.delete(sessionId);
     this.metadataMap.delete(sessionId);
+    const idx = this.sessionOrder.indexOf(sessionId);
+    if (idx !== -1) this.sessionOrder.splice(idx, 1);
   }
 
   /** Clear all sessions */
@@ -116,5 +141,6 @@ export class InMemoryAdapter implements MemoryPort {
     this.checkpointsMap.clear();
     this.conversationMap.clear();
     this.metadataMap.clear();
+    this.sessionOrder.length = 0;
   }
 }

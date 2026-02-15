@@ -55,7 +55,8 @@ export class ObservabilityPlugin extends BasePlugin {
   private activeSpans: Map<string, Span> = new Map(); // sessionId → current root span
   private sessionMetrics: Map<string, AgentMetrics> = new Map(); // sessionId → metrics
   private sessionStartTimes: Map<string, number> = new Map(); // sessionId → run start time
-  private toolStartTimes: Map<string, number> = new Map(); // sessionId:toolName → start time
+  private toolStartTimes = new Map<string, number[]>(); // sessionId:toolName → start time stack (LIFO)
+  private readonly toolSpanStack = new Map<string, string[]>(); // sessionId:toolName → spanId stack (LIFO)
   private readonly maxSpans: number;
 
   constructor(config: ObservabilityConfig = {}) {
@@ -214,7 +215,10 @@ export class ObservabilityPlugin extends BasePlugin {
     }
 
     if (this.config.enableMetrics) {
-      this.toolStartTimes.set(`${ctx.sessionId}:${params.toolName}`, Date.now());
+      const metricsKey = `${ctx.sessionId}:${params.toolName}`;
+      const stack = this.toolStartTimes.get(metricsKey) ?? [];
+      stack.push(Date.now());
+      this.toolStartTimes.set(metricsKey, stack);
     }
 
     if (this.config.enableTracing) {
@@ -225,6 +229,10 @@ export class ObservabilityPlugin extends BasePlugin {
         toolName: params.toolName,
         args: params.args
       };
+      const stackKey = `${ctx.sessionId}:${params.toolName}`;
+      const stack = this.toolSpanStack.get(stackKey) ?? [];
+      stack.push(toolSpan.id);
+      this.toolSpanStack.set(stackKey, stack);
     }
   }
 
@@ -234,23 +242,29 @@ export class ObservabilityPlugin extends BasePlugin {
     }
 
     if (this.config.enableTracing) {
-      const rootSpan = this.activeSpans.get(ctx.sessionId);
-      const toolSpans = Array.from(this.spans.values())
-        .filter(s => s.name === `tool.${params.toolName}` && !s.endTime && s.traceId === rootSpan?.traceId)
-        .sort((a, b) => b.startTime - a.startTime);
-
-      if (toolSpans.length > 0) {
-        const toolSpan = toolSpans[0];
-        this.endSpan(toolSpan.id);
-        toolSpan.attributes.result = params.result;
+      const spanKey = `${ctx.sessionId}:${params.toolName}`;
+      const stack = this.toolSpanStack.get(spanKey);
+      const spanId = stack?.pop();
+      if (spanId) {
+        const toolSpan = this.spans.get(spanId);
+        if (toolSpan) {
+          this.endSpan(toolSpan.id);
+          toolSpan.attributes.result = params.result;
+        }
+        if (stack && stack.length === 0) {
+          this.toolSpanStack.delete(spanKey);
+        }
       }
     }
 
     if (this.config.enableMetrics) {
       const key = `${ctx.sessionId}:${params.toolName}`;
-      const startTime = this.toolStartTimes.get(key);
+      const stack = this.toolStartTimes.get(key);
+      const startTime = stack?.pop();
       const latencyMs = startTime ? Date.now() - startTime : 0;
-      this.toolStartTimes.delete(key);
+      if (stack && stack.length === 0) {
+        this.toolStartTimes.delete(key);
+      }
 
       const metrics = this.getOrCreateMetrics(ctx.sessionId);
       metrics.toolCalls.push({
@@ -372,6 +386,7 @@ export class ObservabilityPlugin extends BasePlugin {
     this.sessionMetrics.clear();
     this.sessionStartTimes.clear();
     this.toolStartTimes.clear();
+    this.toolSpanStack.clear();
   }
 }
 

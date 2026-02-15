@@ -137,7 +137,7 @@ export class ToolManager {
   }
 
   // ---------------------------------------------------------------------------
-  // Wrapping
+  // Wrapping — delegates to standalone pure functions
   // ---------------------------------------------------------------------------
 
   wrapToolsWithApproval(
@@ -154,119 +154,18 @@ export class ToolManager {
       (evt) => eventBus.emit(evt.type, evt.data),
     );
 
-    let stepIndex = 0;
-    for (const [name, toolDef] of Object.entries(tools)) {
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]) => {
-        const { approved, reason } = await approval.checkAndApprove(
-          name,
-          runtime.randomUUID(),
-          args[0],
-          stepIndex++,
-        );
-
-        if (!approved) {
-          return `Tool call denied: ${reason ?? "not approved"}`;
-        }
-
-        return originalExecute(...args);
-      };
-    }
+    applyApprovalWrapping(tools, approval, runtime);
   }
 
   wrapToolsWithResilience(tools: Record<string, Tool>): void {
-    if (this.circuitBreaker) {
-      this.wrapToolsWithCircuitBreaker(tools);
-    }
-    if (this.toolCache) {
-      this.wrapToolsWithCaching(tools);
-    }
-  }
-
-  private wrapToolsWithCircuitBreaker(tools: Record<string, Tool>): void {
-    const circuitBreaker = this.circuitBreaker!;
-
-    for (const [name, toolDef] of Object.entries(tools)) {
-      if (!toolDef) continue;
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
-        return circuitBreaker.execute(async () => originalExecute(...args));
-      };
-    }
-  }
-
-  private wrapToolsWithCaching(tools: Record<string, Tool>): void {
-    const toolCache = this.toolCache!;
-
-    for (const [name, toolDef] of Object.entries(tools)) {
-      if (!toolDef) continue;
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
-        const cacheKey = `${name}:${JSON.stringify(args)}`;
-        if (toolCache.has(cacheKey)) {
-          return toolCache.get(cacheKey);
-        }
-        const result = await originalExecute(...args);
-        toolCache.set(cacheKey, result);
-        return result;
-      };
-    }
+    applyResilienceWrapping(tools, this.circuitBreaker, this.toolCache);
   }
 
   wrapToolsWithPlugins(
     tools: Record<string, Tool>,
     pluginCtx: PluginContext,
   ): void {
-    if (this.pluginManager.count === 0) return;
-
-    for (const [name, toolDef] of Object.entries(tools)) {
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]) => {
-        const beforeResult = await this.pluginManager.runBeforeTool(pluginCtx, {
-          toolName: name,
-          args: args[0],
-        });
-
-        if (beforeResult.skip) {
-          return beforeResult.result;
-        }
-
-        const finalArgs = beforeResult.args !== undefined ? beforeResult.args : args[0];
-
-        try {
-          const result = await originalExecute(finalArgs, ...args.slice(1));
-          await this.pluginManager.runAfterTool(pluginCtx, {
-            toolName: name,
-            args: finalArgs,
-            result,
-          });
-          return result;
-        } catch (error) {
-          const onErrorResult = await this.pluginManager.runOnError(pluginCtx, {
-            error,
-            phase: "tool",
-          });
-          if (onErrorResult.suppress) return undefined;
-          throw error;
-        }
-      };
-    }
+    applyPluginWrapping(tools, this.pluginManager, pluginCtx);
   }
 
   createRateLimitedModel(): LanguageModel {
@@ -355,6 +254,127 @@ export class ToolManager {
     return {
       ...this.createPluginContext(sessionId, toolNames),
       on: (eventType, handler) => eventBus.on(eventType, handler),
+    };
+  }
+}
+
+// =============================================================================
+// Standalone wrapping functions (SRP extraction)
+// =============================================================================
+
+/** Wraps each tool's execute with approval gating. */
+function applyApprovalWrapping(
+  tools: Record<string, Tool>,
+  approval: ApprovalManager,
+  runtime: RuntimePort,
+): void {
+  let stepIndex = 0;
+  for (const [name, toolDef] of Object.entries(tools)) {
+    const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+    if (!maybeExecutable.execute) continue;
+
+    const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+
+    maybeExecutable.execute = async (...args: unknown[]) => {
+      const { approved, reason } = await approval.checkAndApprove(
+        name,
+        runtime.randomUUID(),
+        args[0],
+        stepIndex++,
+      );
+
+      if (!approved) {
+        return `Tool call denied: ${reason ?? "not approved"}`;
+      }
+
+      return originalExecute(...args);
+    };
+  }
+}
+
+/** Wraps each tool's execute with circuit breaker and/or caching. */
+function applyResilienceWrapping(
+  tools: Record<string, Tool>,
+  circuitBreaker?: CircuitBreaker,
+  toolCache?: ToolCache,
+): void {
+  if (circuitBreaker) {
+    for (const [_name, toolDef] of Object.entries(tools)) {
+      if (!toolDef) continue;
+      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+      if (!maybeExecutable.execute) continue;
+
+      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+
+      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
+        return circuitBreaker.execute(async () => originalExecute(...args));
+      };
+    }
+  }
+
+  if (toolCache) {
+    for (const [name, toolDef] of Object.entries(tools)) {
+      if (!toolDef) continue;
+      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+      if (!maybeExecutable.execute) continue;
+
+      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+
+      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
+        const cacheKey = `${name}:${JSON.stringify(args)}`;
+        if (toolCache.has(cacheKey)) {
+          return toolCache.get(cacheKey);
+        }
+        const result = await originalExecute(...args);
+        toolCache.set(cacheKey, result);
+        return result;
+      };
+    }
+  }
+}
+
+/** Wraps each tool's execute with plugin before/after/onError hooks. */
+function applyPluginWrapping(
+  tools: Record<string, Tool>,
+  pluginManager: PluginManager,
+  pluginCtx: PluginContext,
+): void {
+  if (pluginManager.count === 0) return;
+
+  for (const [name, toolDef] of Object.entries(tools)) {
+    const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+    if (!maybeExecutable.execute) continue;
+
+    const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+
+    maybeExecutable.execute = async (...args: unknown[]) => {
+      const beforeResult = await pluginManager.runBeforeTool(pluginCtx, {
+        toolName: name,
+        args: args[0],
+      });
+
+      if (beforeResult.skip) {
+        return beforeResult.result;
+      }
+
+      const finalArgs = beforeResult.args !== undefined ? beforeResult.args : args[0];
+
+      try {
+        const result = await originalExecute(finalArgs, ...args.slice(1));
+        await pluginManager.runAfterTool(pluginCtx, {
+          toolName: name,
+          args: finalArgs,
+          result,
+        });
+        return result;
+      } catch (error) {
+        const onErrorResult = await pluginManager.runOnError(pluginCtx, {
+          error,
+          phase: "tool",
+        });
+        if (onErrorResult.suppress) return undefined;
+        throw error;
+      }
     };
   }
 }

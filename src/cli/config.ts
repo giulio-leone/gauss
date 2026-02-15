@@ -2,7 +2,7 @@
 // CLI Config — .gaussflowrc file management
 // =============================================================================
 
-import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { McpServerConfig } from "../ports/mcp.port.js";
@@ -126,4 +126,46 @@ export function removeMcpServer(serverId: string): boolean {
   cfg.mcpServers = filtered;
   saveConfig(cfg);
   return true;
+}
+
+// =============================================================================
+// Persistent REPL History
+// =============================================================================
+
+const HISTORY_FILE = ".gaussflow_history";
+
+function historyPath(): string {
+  return join(homedir(), HISTORY_FILE);
+}
+
+export function loadHistory(): string[] {
+  const path = historyPath();
+  if (!existsSync(path)) return [];
+  try {
+    const lines = readFileSync(path, "utf-8").split("\n").filter(Boolean);
+    if (lines.length > 1000) {
+      const trimmed = lines.slice(-1000);
+      writeFileSync(path, trimmed.join("\n") + "\n", { encoding: "utf-8", mode: 0o600 });
+      chmodSync(path, 0o600);
+      return trimmed;
+    }
+    return lines;
+  } catch {
+    return [];
+  }
+}
+
+let historyPermsFixed = false;
+
+export function appendHistory(line: string): void {
+  try {
+    const path = historyPath();
+    appendFileSync(path, line + "\n", { encoding: "utf-8", mode: 0o600 });
+    if (!historyPermsFixed) {
+      chmodSync(path, 0o600);
+      historyPermsFixed = true;
+    }
+  } catch {
+    // Silently fail
+  }
 }

@@ -83,8 +83,10 @@ export class ExecutionEngine {
       // Inject learning context if available
       if (this.config.learning) {
         const userId = this.config.userId ?? sessionId;
-        const profile = await this.config.learning.getProfile(userId);
-        const memories = await this.config.learning.getMemories(userId, { limit: 10 });
+        const [profile, memories] = await Promise.all([
+          this.config.learning.getProfile(userId),
+          this.config.learning.getMemories(userId, { limit: 10 }),
+        ]);
         const learningContext = this.buildLearningContext(profile, memories);
         if (learningContext) prompt = `${learningContext}\n\n${prompt}`;
       }

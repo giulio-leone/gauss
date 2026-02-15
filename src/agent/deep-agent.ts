@@ -19,9 +19,7 @@ import { EventBus } from "./event-bus.js";
 import { PluginManager } from "../plugins/plugin-manager.js";
 import { resolveApprovalConfig, resolveCheckpointConfig } from "./agent-config.js";
 import { TokenTracker } from "../context/token-tracker.js";
-import { VirtualFilesystem } from "../adapters/filesystem/virtual-fs.adapter.js";
-import { InMemoryAdapter } from "../adapters/memory/in-memory.adapter.js";
-import { ApproximateTokenCounter } from "../adapters/token-counter/approximate.adapter.js";
+import { defaultFilesystem, defaultMemory, defaultTokenCounter } from "./defaults.js";
 import { CircuitBreaker, RateLimiter, ToolCache, DEFAULT_CIRCUIT_BREAKER_CONFIG, DEFAULT_RATE_LIMITER_CONFIG, DEFAULT_TOOL_CACHE_CONFIG } from "../adapters/resilience/index.js";
 import type { CircuitBreakerConfig, RateLimiterConfig, ToolCacheConfig } from "../adapters/resilience/index.js";
 import { ToolManager } from "./tool-manager.js";
@@ -198,11 +196,11 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       id: this.agentConfig.id,
       name: this.agentConfig.name,
       maxSteps: this.maxStepsOverride ?? this.agentConfig.maxSteps ?? 30,
-      fs: this.fs ?? new VirtualFilesystem(),
-      memory: this.memory ?? new InMemoryAdapter(),
+      fs: this.fs ?? defaultFilesystem(),
+      memory: this.memory ?? defaultMemory(),
       learning: this.learning,
       userId: this.userId,
-      tokenCounter: this.tokenCounter ?? new ApproximateTokenCounter(),
+      tokenCounter: this.tokenCounter ?? defaultTokenCounter(),
       mcp: this.mcp,
       runtime: this.runtime,
       planning: this.planning,

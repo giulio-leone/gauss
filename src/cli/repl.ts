@@ -10,13 +10,15 @@ import { z } from "zod";
 import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
-import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMcpServer } from "./config.js";
+import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMcpServer, loadHistory, appendHistory } from "./config.js";
 import { color, bold, createSpinner, formatDuration, maskKey, formatMarkdown } from "./format.js";
 import { createCliTools } from "./tools.js";
 import { readFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
 import { AiSdkMcpAdapter } from "../adapters/mcp/ai-sdk-mcp.adapter.js";
 import type { McpServerConfig } from "../ports/mcp.port.js";
+
+const MAX_HISTORY = 200;
 
 const DEFAULT_SYSTEM_PROMPT =
   "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
@@ -27,7 +29,44 @@ export async function startRepl(
   apiKey: string,
   modelId?: string,
 ): Promise<void> {
-  const rl = createInterface({ input: stdin, output: stdout });
+  const SLASH_COMMANDS = [
+    "/help", "/exit", "/quit", "/clear", "/model", "/provider",
+    "/info", "/settings", "/system", "/yolo", "/read", "/bash",
+    "/history", "/clear-history", "/mcp",
+  ];
+  const MCP_SUBCOMMANDS = ["add", "list", "remove", "connect", "disconnect"];
+
+  function completer(line: string): [string[], string] {
+    if (line.startsWith("/mcp ")) {
+      const rest = line.slice(5);
+      const hits = MCP_SUBCOMMANDS.filter((s) => s.startsWith(rest)).map((s) => `/mcp ${s}`);
+      return [hits.length ? hits : [], line];
+    }
+    if (line.startsWith("/provider ")) {
+      const rest = line.slice(10);
+      const hits = (SUPPORTED_PROVIDERS as readonly string[])
+        .filter((p) => p.startsWith(rest))
+        .map((p) => `/provider ${p}`);
+      return [hits.length ? hits : [], line];
+    }
+    if (line.startsWith("/")) {
+      const hits = SLASH_COMMANDS.filter((c) => c.startsWith(line));
+      return [hits.length ? hits : SLASH_COMMANDS, line];
+    }
+    return [[], line];
+  }
+
+  const savedHistory = loadHistory();
+  const rl = createInterface({
+    input: stdin,
+    output: stdout,
+    completer,
+  } as Parameters<typeof createInterface>[0]);
+
+  // Load persistent history into readline
+  if (Array.isArray((rl as unknown as { history: string[] }).history)) {
+    (rl as unknown as { history: string[] }).history = [...savedHistory].reverse();
+  }
   let currentModel = initialModel;
   let currentProvider = providerName;
   let currentModelId = modelId ?? getDefaultModel(providerName);
@@ -55,8 +94,17 @@ export async function startRepl(
   console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
   console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
   console.log(color("dim", "  Tools: readFile, writeFile, bash, listFiles, searchFiles"));
-  if (savedServers.length > 0) {
-    console.log(color("dim", `  MCP Servers: ${savedServers.length} configured`));
+  {
+    let mcpToolCount = 0;
+    try {
+      const mcpDefs = await mcpAdapter.discoverTools();
+      mcpToolCount = Object.keys(mcpDefs).length;
+    } catch {
+      // MCP discovery may fail
+    }
+    if (savedServers.length > 0) {
+      console.log(color("dim", `  MCP Servers: ${savedServers.length} configured${mcpToolCount > 0 ? ` (${mcpToolCount} tools)` : ""}`));
+    }
   }
   console.log(color("dim", "  Type /help for commands, /exit to quit\n"));
 
@@ -84,6 +132,7 @@ export async function startRepl(
         continue;
       }
 
+      appendHistory(trimmed);
       await chat(trimmed);
     }
   } catch (err: unknown) {
@@ -208,6 +257,9 @@ export async function startRepl(
 
       if (response) {
         history.push({ role: "assistant", content: response });
+        if (history.length > MAX_HISTORY) {
+          history.splice(0, history.length - MAX_HISTORY);
+        }
       }
 
       const elapsed = formatDuration(Date.now() - startTime);

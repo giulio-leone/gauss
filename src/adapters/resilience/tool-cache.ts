@@ -56,7 +56,10 @@ export class ToolCache<T = any> {
       return undefined;
     }
 
-    // Update last accessed time for LRU
+    // Move to end for LRU ordering
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+
     entry.lastAccessed = now;
     this.hitCount++;
     
@@ -90,6 +93,8 @@ export class ToolCache<T = any> {
       this.evictLRU();
     }
 
+    // Delete before set to move existing key to end of insertion order (LRU)
+    this.cache.delete(key);
     this.cache.set(key, entry);
   }
 
@@ -139,18 +144,9 @@ export class ToolCache<T = any> {
   private missCount = 0;
 
   private evictLRU(): void {
-    let oldestKey: string | undefined;
-    let oldestTime = Infinity;
-
-    for (const [key, entry] of this.cache.entries()) {
-      if (entry.lastAccessed < oldestTime) {
-        oldestTime = entry.lastAccessed;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey) {
-      this.cache.delete(oldestKey);
+    const firstKey = this.cache.keys().next().value;
+    if (firstKey !== undefined) {
+      this.cache.delete(firstKey);
     }
   }
 
