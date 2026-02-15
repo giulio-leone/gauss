@@ -20,13 +20,27 @@ export {
 export {
   createA2AJsonRpcHandler,
   createA2AHttpHandler,
+  createA2ASseHandler,
   type A2AJsonRpcRequest,
   type A2AJsonRpcResponse,
   type A2ATask,
   type A2ATaskStatus,
   type A2ATasksSendParams,
   type A2ARequestHandlers,
+  type A2ATaskEvent,
+  type TaskEventListener,
 } from "./a2a-handler.js";
+
+export {
+  A2ADelegationManager,
+  type AgentCapability,
+  type DelegationResult,
+} from "./a2a-delegation.js";
+
+export {
+  A2APushNotifier,
+  type PushNotificationConfig,
+} from "./a2a-push.js";
 
 export {
   GuardrailsPlugin,

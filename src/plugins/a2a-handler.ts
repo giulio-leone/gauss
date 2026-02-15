@@ -42,12 +42,22 @@ export interface A2ATasksSendParams {
   metadata?: Record<string, unknown>;
 }
 
+export interface A2ATaskEvent {
+  type: 'task:queued' | 'task:running' | 'task:completed' | 'task:failed' | 'task:cancelled';
+  taskId: string;
+  task: A2ATask;
+  timestamp: string;
+}
+
+export type TaskEventListener = (event: A2ATaskEvent) => void;
+
 export interface A2ARequestHandlers {
   sendTask(params: A2ATasksSendParams): Promise<A2ATask>;
   getTask(taskId: string): Promise<A2ATask | null>;
   listTasks?(): Promise<A2ATask[]>;
   cancelTask?(taskId: string): Promise<A2ATask | null>;
   getAgentCard?(): Promise<unknown>;
+  sendTaskSubscribe?(params: A2ATasksSendParams): AsyncIterable<A2ATaskEvent>;
 }
 
 function createError(
@@ -196,6 +206,41 @@ export function createA2AJsonRpcHandler(
           };
         }
 
+        case "tasks/sendSubscribe": {
+          if (!handlers.sendTaskSubscribe) {
+            return createError(id, -32601, "Method not found: tasks/sendSubscribe");
+          }
+
+          const params = asRecord(request.params);
+          if (!params) {
+            return createError(id, -32602, "Invalid params: expected object");
+          }
+
+          const prompt = asString(params.prompt);
+          if (!prompt) {
+            return createError(id, -32602, "Invalid params: prompt is required");
+          }
+
+          const parsedTaskId = params.taskId === undefined ? undefined : asString(params.taskId);
+          if (params.taskId !== undefined && !parsedTaskId) {
+            return createError(id, -32602, "Invalid params: taskId must be a non-empty string");
+          }
+          const taskId = parsedTaskId ?? undefined;
+
+          const metadata = params.metadata === undefined ? undefined : asRecord(params.metadata);
+          if (params.metadata !== undefined && !metadata) {
+            return createError(id, -32602, "Invalid params: metadata must be an object");
+          }
+
+          // Return initial task creation result, SSE stream is handled separately
+          const eventStream = handlers.sendTaskSubscribe({ prompt, taskId, metadata: metadata ?? undefined });
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: { message: "Task subscription started", stream: true },
+          };
+        }
+
         case "health": {
           return {
             jsonrpc: "2.0",
@@ -219,8 +264,92 @@ export function createA2AJsonRpcHandler(
 
 export function createA2AHttpHandler(
   jsonRpcHandler: (request: A2AJsonRpcRequest) => Promise<A2AJsonRpcResponse>,
+  sseHandlers?: {
+    sendTaskSubscribe?: (params: A2ATasksSendParams) => AsyncIterable<A2ATaskEvent>;
+  }
 ): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
+    const url = new URL(request.url);
+    
+    // Handle agent discovery endpoint
+    if (request.method === "GET" && url.pathname === "/.well-known/agent.json") {
+      try {
+        const cardResponse = await jsonRpcHandler({
+          jsonrpc: "2.0",
+          id: "agent-discovery",
+          method: "agent/card"
+        });
+        
+        if (cardResponse.error) {
+          return new Response(
+            JSON.stringify({ error: "Agent card not available" }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        const agentCard = cardResponse.result as any;
+        const discoveryCard = {
+          name: agentCard?.name ?? "Agent",
+          description: agentCard?.instructions ?? "A2A-compatible agent",
+          url: url.origin + "/a2a",
+          version: "1.0.0",
+          capabilities: {
+            streaming: true,
+            pushNotifications: true
+          },
+          skills: agentCard?.tools?.map((tool: string, index: number) => ({
+            id: `skill-${index}`,
+            name: tool,
+            description: `Skill: ${tool}`
+          })) ?? [],
+          authentication: { schemes: ["none"] }
+        };
+
+        return new Response(JSON.stringify(discoveryCard), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      } catch (error) {
+        return new Response(
+          JSON.stringify({ error: "Failed to generate agent card" }),
+          { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Handle SSE subscription endpoint
+    if (request.method === "POST" && sseHandlers?.sendTaskSubscribe) {
+      try {
+        const parsed = await request.json();
+        const requestObject = asRecord(parsed);
+        
+        if (requestObject?.method === "tasks/sendSubscribe") {
+          const params = asRecord(requestObject.params);
+          if (!params) {
+            return new Response("Invalid params", { status: 400 });
+          }
+
+          const prompt = asString(params.prompt);
+          if (!prompt) {
+            return new Response("Prompt required", { status: 400 });
+          }
+
+          const taskId = params.taskId ? asString(params.taskId) : undefined;
+          const metadata = params.metadata ? asRecord(params.metadata) : undefined;
+
+          const eventStream = sseHandlers.sendTaskSubscribe({
+            prompt,
+            taskId: taskId ?? undefined,
+            metadata: metadata ?? undefined
+          });
+
+          return createSseResponse(eventStream);
+        }
+      } catch {
+        // Fall through to regular JSON-RPC handling
+      }
+    }
+
     if (request.method !== "POST") {
       return new Response(null, { status: 405 });
     }
@@ -252,7 +381,7 @@ export function createA2AHttpHandler(
 
     const normalizedRequest: A2AJsonRpcRequest = {
       jsonrpc: requestObject.jsonrpc as "2.0",
-      id: (requestObject.id as string | number | null | undefined),
+      id: (requestObject.id as string | number | null | undefined) ?? null,
       method: requestObject.method as string,
       params: requestObject.params,
     };
@@ -270,5 +399,47 @@ export function createA2AHttpHandler(
         headers: { "Content-Type": "application/json" },
       },
     );
+  };
+}
+
+function createSseResponse(eventStream: AsyncIterable<A2ATaskEvent>): Response {
+  const encoder = new TextEncoder();
+  
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const event of eventStream) {
+          const sseData = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+          controller.enqueue(encoder.encode(sseData));
+        }
+        controller.close();
+      } catch (error) {
+        const errorEvent = `event: error\ndata: ${JSON.stringify({ error: String(error) })}\n\n`;
+        controller.enqueue(encoder.encode(errorEvent));
+        controller.close();
+      }
+    }
+  });
+
+  return new Response(readableStream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+
+export function createA2ASseHandler(
+  handlers: Pick<A2ARequestHandlers, 'sendTaskSubscribe'>
+): (params: A2ATasksSendParams) => AsyncIterable<A2ATaskEvent> {
+  return (params: A2ATasksSendParams) => {
+    if (!handlers.sendTaskSubscribe) {
+      throw new Error("sendTaskSubscribe handler not available");
+    }
+    return handlers.sendTaskSubscribe(params);
   };
 }

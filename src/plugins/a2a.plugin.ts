@@ -14,11 +14,16 @@ import type {
 import {
   createA2AHttpHandler,
   createA2AJsonRpcHandler,
+  createA2ASseHandler,
   type A2AJsonRpcRequest,
   type A2AJsonRpcResponse,
   type A2ATask,
+  type A2ATaskEvent,
+  type A2ATasksSendParams,
 } from "./a2a-handler.js";
 import type { AgentCardProvider } from "./agent-card.plugin.js";
+import { A2ADelegationManager, type AgentCapability, type DelegationResult } from "./a2a-delegation.js";
+import { A2APushNotifier, type PushNotificationConfig } from "./a2a-push.js";
 
 export interface A2AAgentRuntime {
   sessionId: string;
@@ -39,6 +44,21 @@ const A2A_CALL_SCHEMA = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 
+const A2A_DELEGATE_SCHEMA = z.object({
+  prompt: z.string(),
+  requiredSkills: z.array(z.string()).default([]),
+});
+
+const A2A_DISCOVER_SCHEMA = z.object({
+  endpoint: z.string().url(),
+});
+
+const A2A_SUBSCRIBE_SCHEMA = z.object({
+  endpoint: z.string().url(),
+  prompt: z.string(),
+  taskId: z.string().optional(),
+});
+
 export class A2APlugin implements DeepAgentPlugin {
   readonly name = "a2a";
   readonly version = "1.0.0";
@@ -48,6 +68,9 @@ export class A2APlugin implements DeepAgentPlugin {
   private readonly requestTimeoutMs: number;
   private readonly agentCardProvider?: AgentCardProvider;
   private readonly tasks = new Map<string, A2ATask>();
+  private readonly delegationManager: A2ADelegationManager;
+  private readonly pushNotifier: A2APushNotifier;
+  private readonly taskEventListeners = new Set<(event: A2ATaskEvent) => void>();
 
   private setupCtx?: PluginSetupContext;
   private latestCtx?: PluginContext;
@@ -87,6 +110,8 @@ export class A2APlugin implements DeepAgentPlugin {
     this.fetchImpl = fetchImpl;
     this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000;
     this.agentCardProvider = options.agentCardProvider;
+    this.delegationManager = new A2ADelegationManager(fetchImpl);
+    this.pushNotifier = new A2APushNotifier(fetchImpl);
 
     this.tools = {
       "a2a:call": tool({
@@ -114,6 +139,30 @@ export class A2APlugin implements DeepAgentPlugin {
           return response.result;
         },
       }),
+      "a2a:delegate": tool({
+        description: "Delegate a task to a registered agent based on required skills.",
+        inputSchema: A2A_DELEGATE_SCHEMA,
+        execute: async (input: unknown) => {
+          const args = A2A_DELEGATE_SCHEMA.parse(input ?? {});
+          return await this.delegationManager.delegate(args.prompt, args.requiredSkills, this.fetchImpl);
+        },
+      }),
+      "a2a:discover": tool({
+        description: "Discover agent capabilities at an A2A endpoint.",
+        inputSchema: A2A_DISCOVER_SCHEMA,
+        execute: async (input: unknown) => {
+          const args = A2A_DISCOVER_SCHEMA.parse(input ?? {});
+          return await this.discoverAgent(args.endpoint);
+        },
+      }),
+      "a2a:subscribe": tool({
+        description: "Subscribe to task status updates via Server-Sent Events.",
+        inputSchema: A2A_SUBSCRIBE_SCHEMA,
+        execute: async (input: unknown) => {
+          const args = A2A_SUBSCRIBE_SCHEMA.parse(input ?? {});
+          return await this.subscribeToTask(args.endpoint, args.prompt, args.taskId);
+        },
+      }),
     };
   }
 
@@ -123,13 +172,86 @@ export class A2APlugin implements DeepAgentPlugin {
 
   createJsonRpcHandler(
     agent: A2AAgentRuntime,
-  ): (request: A2AJsonRpcRequest) => Promise<A2AJsonRpcResponse> {
-    return createA2AJsonRpcHandler({
+  ): (request: A2AJsonRpcRequest) => Promise<A2AJsonRpcResponse> & { sendTaskSubscribe?: (params: A2ATasksSendParams) => AsyncGenerator<A2ATaskEvent, void, unknown> } {
+    const plugin = this;
+    
+    const sendTaskSubscribe = async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
+      const taskId = params.taskId ?? crypto.randomUUID();
+      
+      plugin.queueTask(taskId, params.prompt, params.metadata);
+      
+      const events: A2ATaskEvent[] = [];
+      let completed = false;
+      
+      const eventListener = (event: A2ATaskEvent) => {
+        if (event.taskId === taskId) {
+          events.push(event);
+          if (event.type === 'task:completed' || event.type === 'task:failed' || event.type === 'task:cancelled') {
+            completed = true;
+          }
+        }
+      };
+      
+      plugin.taskEventListeners.add(eventListener);
+      
+      try {
+        const runMetadata: Record<string, unknown> = {
+          ...(params.metadata ?? {}),
+          a2aTaskId: taskId,
+        };
+
+        // Start the task
+        plugin.markTaskRunning(taskId);
+        
+        const runPromise = agent.run(params.prompt, { pluginMetadata: runMetadata })
+          .then(result => {
+            const task = plugin.tasks.get(taskId);
+            if (task && (task.status === "queued" || task.status === "running")) {
+              plugin.markTaskCompleted(taskId, result.text);
+            }
+          })
+          .catch(error => {
+            const task = plugin.tasks.get(taskId);
+            if (task && task.status !== "failed") {
+              plugin.markTaskFailed(taskId, error);
+            }
+          });
+
+        // Emit events as they occur
+        let lastEventIndex = 0;
+        while (!completed) {
+          if (events.length > lastEventIndex) {
+            for (let i = lastEventIndex; i < events.length; i++) {
+              yield events[i];
+            }
+            lastEventIndex = events.length;
+          }
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Wait for task completion
+        await runPromise;
+        
+        // Emit any remaining events
+        if (events.length > lastEventIndex) {
+          for (let i = lastEventIndex; i < events.length; i++) {
+            yield events[i];
+          }
+        }
+        
+      } finally {
+        plugin.taskEventListeners.delete(eventListener);
+      }
+    };
+
+    const jsonRpcHandler = createA2AJsonRpcHandler({
       sendTask: async (params) => {
         const taskId = params.taskId ?? crypto.randomUUID();
-        this.queueTask(taskId, params.prompt, params.metadata);
+        plugin.queueTask(taskId, params.prompt, params.metadata);
 
         try {
+          plugin.markTaskRunning(taskId);
+          
           const runMetadata: Record<string, unknown> = {
             ...(params.metadata ?? {}),
             a2aTaskId: taskId,
@@ -137,28 +259,29 @@ export class A2APlugin implements DeepAgentPlugin {
 
           const result = await agent.run(params.prompt, { pluginMetadata: runMetadata });
 
-          const task = this.tasks.get(taskId);
+          const task = plugin.tasks.get(taskId);
           if (task && (task.status === "queued" || task.status === "running")) {
-            this.markTaskCompleted(taskId, result.text);
+            plugin.markTaskCompleted(taskId, result.text);
           }
         } catch (error) {
-          const task = this.tasks.get(taskId);
+          const task = plugin.tasks.get(taskId);
           if (task && task.status !== "failed") {
-            this.markTaskFailed(taskId, error);
+            plugin.markTaskFailed(taskId, error);
           }
         }
 
-        return this.cloneTask(taskId);
+        return plugin.cloneTask(taskId);
       },
+      sendTaskSubscribe,
       getTask: async (taskId) => {
-        const task = this.tasks.get(taskId);
-        return task ? this.cloneTask(task.id) : null;
+        const task = plugin.tasks.get(taskId);
+        return task ? plugin.cloneTask(task.id) : null;
       },
       listTasks: async () => {
-        return [...this.tasks.values()].map((task) => this.cloneTask(task.id));
+        return [...plugin.tasks.values()].map((task) => plugin.cloneTask(task.id));
       },
       cancelTask: async (taskId) => {
-        const task = this.tasks.get(taskId);
+        const task = plugin.tasks.get(taskId);
         if (!task) return null;
 
         if (task.status !== "completed" && task.status !== "failed") {
@@ -166,18 +289,32 @@ export class A2APlugin implements DeepAgentPlugin {
           task.status = "cancelled";
           task.updatedAt = now;
           task.completedAt = now;
+          plugin.emitTaskEvent("task:cancelled", taskId);
         }
 
-        return this.cloneTask(taskId);
+        return plugin.cloneTask(taskId);
       },
       getAgentCard: async () => {
-        return this.resolveAgentCard();
+        return plugin.resolveAgentCard();
       },
     });
+
+    // Expose sendTaskSubscribe for direct access
+    (jsonRpcHandler as any).sendTaskSubscribe = sendTaskSubscribe;
+    
+    return jsonRpcHandler as any;
   }
 
   createHttpHandler(agent: A2AAgentRuntime): (request: Request) => Promise<Response> {
-    return createA2AHttpHandler(this.createJsonRpcHandler(agent));
+    const plugin = this;
+    return createA2AHttpHandler(plugin.createJsonRpcHandler(agent), {
+      sendTaskSubscribe: async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
+        const handler = plugin.createJsonRpcHandler(agent) as any;
+        for await (const event of handler.sendTaskSubscribe(params)) {
+          yield event;
+        }
+      }
+    });
   }
 
   getTask(taskId: string): A2ATask | null {
@@ -187,6 +324,32 @@ export class A2APlugin implements DeepAgentPlugin {
 
   listTasks(): A2ATask[] {
     return [...this.tasks.values()].map((task) => this.cloneTask(task.id));
+  }
+
+  // Delegation methods
+  registerAgent(agent: AgentCapability): void {
+    this.delegationManager.register(agent);
+  }
+
+  unregisterAgent(name: string): void {
+    this.delegationManager.unregister(name);
+  }
+
+  listAgents(): AgentCapability[] {
+    return this.delegationManager.listAgents();
+  }
+
+  async delegateTask(prompt: string, requiredSkills: string[]): Promise<DelegationResult> {
+    return await this.delegationManager.delegate(prompt, requiredSkills, this.fetchImpl);
+  }
+
+  // Push notification methods
+  subscribeToTaskNotifications(taskId: string, config: PushNotificationConfig): void {
+    this.pushNotifier.subscribe(taskId, config);
+  }
+
+  unsubscribeFromTaskNotifications(taskId: string, url: string): void {
+    this.pushNotifier.unsubscribe(taskId, url);
   }
 
   private normalizeCallParams(args: z.infer<typeof A2A_CALL_SCHEMA>): Record<string, unknown> {
@@ -258,6 +421,7 @@ export class A2APlugin implements DeepAgentPlugin {
       createdAt: now,
       updatedAt: now,
     });
+    this.emitTaskEvent("task:queued", taskId);
   }
 
   private markTaskRunning(taskId: string): void {
@@ -265,6 +429,7 @@ export class A2APlugin implements DeepAgentPlugin {
     if (!task) return;
     task.status = "running";
     task.updatedAt = new Date().toISOString();
+    this.emitTaskEvent("task:running", taskId);
   }
 
   private markTaskCompleted(taskId: string, output: string): void {
@@ -277,6 +442,7 @@ export class A2APlugin implements DeepAgentPlugin {
     task.updatedAt = now;
     task.completedAt = now;
     task.error = undefined;
+    this.emitTaskEvent("task:completed", taskId);
   }
 
   private markTaskFailed(taskId: string, error: unknown): void {
@@ -288,6 +454,138 @@ export class A2APlugin implements DeepAgentPlugin {
     task.error = error instanceof Error ? error.message : String(error);
     task.updatedAt = now;
     task.completedAt = now;
+    this.emitTaskEvent("task:failed", taskId);
+  }
+
+  private emitTaskEvent(type: A2ATaskEvent['type'], taskId: string): void {
+    const task = this.tasks.get(taskId);
+    if (!task) return;
+
+    const event: A2ATaskEvent = {
+      type,
+      taskId,
+      task: this.cloneTask(taskId),
+      timestamp: new Date().toISOString()
+    };
+
+    // Emit to event listeners
+    for (const listener of this.taskEventListeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.warn("Task event listener error:", error);
+      }
+    }
+
+    // Send push notifications
+    this.pushNotifier.notify(event).catch(error => {
+      console.warn("Push notification error:", error);
+    });
+  }
+
+  private async discoverAgent(endpoint: string): Promise<AgentCapability> {
+    try {
+      // Try .well-known discovery first
+      const discoveryUrl = new URL('/.well-known/agent.json', endpoint).toString();
+      const discoveryResponse = await this.fetchImpl(discoveryUrl);
+      
+      if (discoveryResponse.ok) {
+        const discoveryData = await discoveryResponse.json() as any;
+        return {
+          name: discoveryData.name,
+          description: discoveryData.description,
+          skills: discoveryData.skills?.map((s: any) => s.name) ?? [],
+          endpoint: endpoint
+        };
+      }
+    } catch {
+      // Fall back to agent/card method
+    }
+
+    // Fallback to JSON-RPC agent/card
+    const payload: A2AJsonRpcRequest = {
+      jsonrpc: "2.0",
+      id: crypto.randomUUID(),
+      method: "agent/card"
+    };
+
+    const response = await this.callRemoteEndpoint(endpoint, payload);
+    
+    if (response.error) {
+      throw new Error(`Failed to discover agent: ${response.error.message}`);
+    }
+
+    const card = response.result as any;
+    return {
+      name: card?.name ?? "Unknown Agent",
+      description: card?.instructions ?? "No description",
+      skills: card?.tools ?? [],
+      endpoint: endpoint
+    };
+  }
+
+  private async subscribeToTask(endpoint: string, prompt: string, taskId?: string): Promise<{ message: string; events: A2ATaskEvent[] }> {
+    const sseUrl = endpoint; // SSE endpoint is same as JSON-RPC endpoint
+    const payload = {
+      jsonrpc: "2.0",
+      id: crypto.randomUUID(),
+      method: "tasks/sendSubscribe",
+      params: { prompt, taskId }
+    };
+
+    const response = await this.fetchImpl(sseUrl, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`SSE subscription failed with HTTP ${response.status}`);
+    }
+
+    const events: A2ATaskEvent[] = [];
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      throw new Error("No response body for SSE stream");
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const eventData = JSON.parse(line.substring(6));
+              events.push(eventData);
+            } catch {
+              // Ignore invalid JSON
+            }
+          }
+        }
+        
+        // Break on completion/failure
+        if (events.some(e => ['task:completed', 'task:failed', 'task:cancelled'].includes(e.type))) {
+          break;
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return { 
+      message: "Task subscription completed",
+      events 
+    };
   }
 
   private getTaskIdFromContext(ctx: PluginContext): string | undefined {
