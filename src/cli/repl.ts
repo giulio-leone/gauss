@@ -9,7 +9,7 @@ import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
 import { resolveApiKey } from "./config.js";
-import { color, bold } from "./format.js";
+import { color, bold, createSpinner, formatDuration } from "./format.js";
 
 export async function startRepl(
   initialModel: LanguageModel,
@@ -23,13 +23,17 @@ export async function startRepl(
   let currentModelId = modelId ?? getDefaultModel(providerName);
   let currentApiKey = apiKey;
 
-  console.log(bold(color("cyan", "\n🤖 OneAgent Interactive REPL")));
-  console.log(color("dim", `   Provider: ${currentProvider} | Model: ${currentModelId}`));
-  console.log(color("dim", "   Type /help for commands, /exit to quit\n"));
+  const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+  console.log(bold(color("cyan", "\n  ╔══════════════════════════════════════╗")));
+  console.log(bold(color("cyan", "  ║       🤖 OneAgent Interactive       ║")));
+  console.log(bold(color("cyan", "  ╚══════════════════════════════════════╝")));
+  console.log(color("dim", `  Provider: ${currentProvider} | Model: ${currentModelId}`));
+  console.log(color("dim", "  Type /help for commands, /exit to quit\n"));
 
   try {
     while (true) {
-      const input = await rl.question(color("green", "oneagent> "));
+      const input = await rl.question(color("green", `oneagent:${currentProvider}> `));
       const trimmed = input.trim();
       if (!trimmed) continue;
 
@@ -53,25 +57,42 @@ export async function startRepl(
   }
 
   async function chat(prompt: string): Promise<void> {
+    history.push({ role: "user", content: prompt });
+
     const agent = DeepAgent.create({
       model: currentModel,
       instructions: "You are a helpful assistant. Answer clearly and concisely.",
     }).build();
 
+    const startTime = Date.now();
+    const spinner = createSpinner("Thinking");
+
     try {
-      process.stdout.write(color("cyan", "\n🤖 "));
       const stream = await agent.stream({
-        messages: [{ role: "user", content: prompt }],
+        messages: history,
       });
 
+      let response = "";
+      let firstChunk = true;
       for await (const chunk of stream.textStream) {
+        if (firstChunk) {
+          spinner.stop();
+          process.stdout.write(color("cyan", "\n🤖 "));
+          firstChunk = false;
+        }
         process.stdout.write(chunk);
+        response += chunk;
       }
-      process.stdout.write("\n\n");
+
+      history.push({ role: "assistant", content: response });
+      const elapsed = formatDuration(Date.now() - startTime);
+      process.stdout.write(color("dim", `\n\n  ⏱ ${elapsed} | ${history.length} messages\n\n`));
     } catch (err) {
+      history.pop(); // remove failed user message
       const msg = err instanceof Error ? err.message : String(err);
       console.error(color("red", `\n✗ Error: ${msg}\n`));
     } finally {
+      spinner.stop();
       await agent.dispose();
     }
   }
@@ -93,7 +114,9 @@ export async function startRepl(
         console.log("  /clear             Clear the screen");
         console.log("  /model <name>      Switch model (e.g. /model gpt-4o-mini)");
         console.log("  /provider <name>   Switch provider (openai, anthropic, google, groq, mistral, openrouter)");
-        console.log("  /info              Show current provider and model\n");
+        console.log("  /info              Show current provider and model");
+        console.log("  /history           Show conversation history");
+        console.log("  /clear-history     Clear conversation history\n");
         break;
 
       case "/clear":
@@ -152,6 +175,25 @@ export async function startRepl(
         }
         break;
       }
+
+      case "/history":
+        if (history.length === 0) {
+          console.log(color("dim", "  No conversation history.\n"));
+        } else {
+          console.log(bold("\n  Conversation History:"));
+          for (const msg of history) {
+            const prefix = msg.role === "user" ? color("green", "  You: ") : color("cyan", "  AI:  ");
+            const content = msg.content.length > 80 ? msg.content.slice(0, 77) + "..." : msg.content;
+            console.log(`${prefix}${content}`);
+          }
+          console.log("");
+        }
+        break;
+
+      case "/clear-history":
+        history.length = 0;
+        console.log(color("green", "  ✓ Conversation history cleared.\n"));
+        break;
 
       default:
         console.log(color("yellow", `  Unknown command: ${command}. Type /help for available commands.\n`));
