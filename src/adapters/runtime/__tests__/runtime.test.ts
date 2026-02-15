@@ -8,6 +8,10 @@ import { detectRuntimeName, createRuntimeAdapter, createRuntimeAdapterAsync } fr
 describe("NodeRuntimeAdapter", () => {
   const adapter = new NodeRuntimeAdapter();
 
+  it('has name "node"', () => {
+    expect(adapter.name).toBe("node");
+  });
+
   it("randomUUID returns a valid UUID v4", () => {
     const uuid = adapter.randomUUID();
     expect(uuid).toMatch(
@@ -54,6 +58,10 @@ describe("NodeRuntimeAdapter", () => {
 describe("DenoRuntimeAdapter", () => {
   const adapter = new DenoRuntimeAdapter();
 
+  it('has name "deno"', () => {
+    expect(adapter.name).toBe("deno");
+  });
+
   it("randomUUID returns a valid UUID", () => {
     expect(adapter.randomUUID()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -87,6 +95,10 @@ describe("DenoRuntimeAdapter", () => {
 describe("BunRuntimeAdapter", () => {
   const adapter = new BunRuntimeAdapter();
 
+  it('has name "bun"', () => {
+    expect(adapter.name).toBe("bun");
+  });
+
   it("randomUUID returns a valid UUID", () => {
     expect(adapter.randomUUID()).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -106,6 +118,10 @@ describe("BunRuntimeAdapter", () => {
 
 describe("EdgeRuntimeAdapter", () => {
   const adapter = new EdgeRuntimeAdapter();
+
+  it('has name "edge"', () => {
+    expect(adapter.name).toBe("edge");
+  });
 
   it("randomUUID returns a valid UUID", () => {
     expect(adapter.randomUUID()).toMatch(
@@ -186,4 +202,42 @@ describe("createRuntimeAdapterAsync", () => {
   it("returns NodeRuntimeAdapter for unknown (fallback)", async () => {
     expect(await createRuntimeAdapterAsync("unknown")).toBeInstanceOf(NodeRuntimeAdapter);
   });
+});
+
+describe("RuntimePort interface compliance", () => {
+  const adapters = [
+    { Adapter: NodeRuntimeAdapter, expectedName: "node" as const },
+    { Adapter: DenoRuntimeAdapter, expectedName: "deno" as const },
+    { Adapter: BunRuntimeAdapter, expectedName: "bun" as const },
+    { Adapter: EdgeRuntimeAdapter, expectedName: "edge" as const },
+  ];
+
+  for (const { Adapter, expectedName } of adapters) {
+    describe(Adapter.name, () => {
+      const adapter = new Adapter();
+
+      it(`has name "${expectedName}"`, () => {
+        expect(adapter.name).toBe(expectedName);
+      });
+
+      it("implements randomUUID", () => {
+        expect(typeof adapter.randomUUID).toBe("function");
+        expect(adapter.randomUUID()).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        );
+      });
+
+      it("implements fetch", () => {
+        expect(typeof adapter.fetch).toBe("function");
+      });
+
+      it("implements getEnv", () => {
+        expect(typeof adapter.getEnv).toBe("function");
+      });
+
+      it("implements setTimeout", () => {
+        expect(typeof adapter.setTimeout).toBe("function");
+      });
+    });
+  }
 });

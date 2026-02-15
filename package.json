@@ -60,6 +60,18 @@
       "types": "./dist/a2a/index.d.ts",
       "import": "./dist/a2a/index.js",
       "require": "./dist/a2a/index.cjs"
+    },
+    "./runtime/node": {
+      "types": "./dist/runtime-node.d.ts",
+      "import": "./dist/runtime-node.js"
+    },
+    "./runtime/deno": {
+      "types": "./dist/runtime-deno.d.ts",
+      "import": "./dist/runtime-deno.js"
+    },
+    "./runtime/edge": {
+      "types": "./dist/runtime-edge.d.ts",
+      "import": "./dist/runtime-edge.js"
     }
   },
   "files": [

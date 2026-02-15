@@ -1,6 +1,9 @@
 // RuntimePort — Platform-agnostic runtime contract
 
 export interface RuntimePort {
+  /** Human-readable runtime identifier */
+  readonly name: 'node' | 'deno' | 'bun' | 'edge' | 'unknown';
+
   /** Generate a unique identifier */
   randomUUID(): string;
 

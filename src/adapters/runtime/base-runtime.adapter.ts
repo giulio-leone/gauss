@@ -2,9 +2,11 @@ import type { RuntimePort } from "../../ports/runtime.port.js";
 
 /**
  * Base implementation of RuntimePort using Web Standard APIs.
- * Subclasses only need to override getEnv() for runtime-specific env access.
+ * Subclasses only need to override name and getEnv() for runtime-specific access.
  */
 export abstract class BaseRuntimeAdapter implements RuntimePort {
+  abstract readonly name: RuntimePort['name'];
+
   randomUUID(): string {
     return crypto.randomUUID();
   }
