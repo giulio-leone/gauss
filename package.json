@@ -33,6 +33,11 @@
     "./server": {
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
+    },
+    "./rest": {
+      "types": "./dist/rest/index.d.ts",
+      "import": "./dist/rest/index.js",
+      "require": "./dist/rest/index.cjs"
     }
   },
   "files": [

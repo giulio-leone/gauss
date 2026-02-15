@@ -1,0 +1,18 @@
+// =============================================================================
+// @onegenui/agent/rest — REST API Server
+// =============================================================================
+
+export { OneAgentServer } from "./server.js";
+export { Router } from "./router.js";
+export type {
+  ServerOptions,
+  RunRequest,
+  RunResponse,
+  StreamEvent,
+  GraphRunRequest,
+  GraphNodeDef,
+  GraphEdgeDef,
+  ErrorResponse,
+  HealthResponse,
+  InfoResponse,
+} from "./types.js";

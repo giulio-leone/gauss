@@ -392,3 +392,19 @@ export type { EventStreamOptions } from "./streaming/event-stream.js";
 export type { SseHandlerOptions } from "./streaming/sse-handler.js";
 export type { WsCommand, WsHandlerOptions, WebSocketLike } from "./streaming/ws-handler.js";
 export type { DeltaEncoder } from "./streaming/delta-encoder.js";
+
+// ---------------------------------------------------------------------------
+// REST API — HTTP Server
+// ---------------------------------------------------------------------------
+export { OneAgentServer } from "./rest/server.js";
+export { Router } from "./rest/router.js";
+export type {
+  ServerOptions as RestServerOptions,
+  RunRequest,
+  RunResponse,
+  StreamEvent,
+  GraphRunRequest,
+  ErrorResponse,
+  HealthResponse,
+  InfoResponse,
+} from "./rest/types.js";

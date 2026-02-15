@@ -6,6 +6,7 @@ export default defineConfig([
     entry: {
       index: "src/index.ts",
       "node/index": "src/node/index.ts",
+      "rest/index": "src/rest/index.ts",
     },
     format: ["cjs", "esm"],
     dts: true,
@@ -18,6 +19,11 @@ export default defineConfig([
       "@supabase/supabase-js",
       "tiktoken",
       "@ai-sdk/mcp",
+      "@ai-sdk/openai",
+      "@ai-sdk/anthropic",
+      "@ai-sdk/google",
+      "@ai-sdk/groq",
+      "@ai-sdk/mistral",
     ],
   },
   // CLI (CJS only — Node.js executable)
