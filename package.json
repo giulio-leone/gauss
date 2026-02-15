@@ -45,6 +45,11 @@
       "types": "./dist/rest/index.d.ts",
       "import": "./dist/rest/index.js",
       "require": "./dist/rest/index.cjs"
+    },
+    "./scraping": {
+      "types": "./dist/scraping/index.d.ts",
+      "import": "./dist/scraping/index.js",
+      "require": "./dist/scraping/index.cjs"
     }
   },
   "files": [

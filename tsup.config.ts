@@ -8,6 +8,7 @@ export default defineConfig([
       "node/index": "src/node/index.ts",
       "rest/index": "src/rest/index.ts",
       "plugins/index": "src/plugins/index.ts",
+      "scraping/index": "src/scraping/index.ts",
     },
     format: ["cjs", "esm"],
     dts: true,
