@@ -10,9 +10,9 @@ import type { ProviderName } from "./providers.js";
 import { runChat } from "./commands/chat.js";
 import { demoGuardrails, demoWorkflow, demoGraph, demoObservability } from "./commands/demo.js";
 import { startRepl } from "./repl.js";
-import { color, bold } from "./format.js";
+import { color, bold, maskKey } from "./format.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.1";
 
 const HELP = `
 ${bold("GaussFlow CLI")} — AI Agent Framework
@@ -148,10 +148,7 @@ function handleConfig(args: string[]): void {
       }
       console.log(bold("\nConfigured API keys:"));
       for (const [provider, key] of entries) {
-        const masked = key.length > 16
-          ? key.slice(0, 8) + "..." + key.slice(-4)
-          : key.slice(0, 4) + "****";
-        console.log(`  ${provider}: ${color("dim", masked)}`);
+        console.log(`  ${provider}: ${color("dim", maskKey(key))}`);
       }
       console.log();
       break;
@@ -211,10 +208,7 @@ function handleConfig(args: string[]): void {
       } else {
         console.log(bold("  API Keys:"));
         for (const [provider, key] of entries) {
-          const masked = key.length > 16
-            ? key.slice(0, 8) + "..." + key.slice(-4)
-            : key.slice(0, 4) + "****";
-          console.log(`    ${provider}: ${color("dim", masked)}`);
+          console.log(`    ${provider}: ${color("dim", maskKey(key))}`);
         }
       }
       console.log(`  Default provider: ${config.defaultProvider ?? color("dim", "(not set)")}`);

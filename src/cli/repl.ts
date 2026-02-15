@@ -8,8 +8,8 @@ import type { LanguageModel } from "ai";
 import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
-import { resolveApiKey } from "./config.js";
-import { color, bold, createSpinner, formatDuration } from "./format.js";
+import { resolveApiKey, listKeys, ENV_MAP } from "./config.js";
+import { color, bold, createSpinner, formatDuration, maskKey } from "./format.js";
 
 export async function startRepl(
   initialModel: LanguageModel,
@@ -115,6 +115,7 @@ export async function startRepl(
         console.log("  /model <name>      Switch model (e.g. /model gpt-4o-mini)");
         console.log("  /provider <name>   Switch provider (openai, anthropic, google, groq, mistral, openrouter)");
         console.log("  /info              Show current provider and model");
+        console.log("  /settings          Show all current settings");
         console.log("  /history           Show conversation history");
         console.log("  /clear-history     Clear conversation history\n");
         break;
@@ -175,6 +176,36 @@ export async function startRepl(
         }
         break;
       }
+
+      case "/settings":
+        console.log(bold("\n  ⚙ Settings:"));
+        console.log(`  Provider:  ${color("cyan", currentProvider)}`);
+        console.log(`  Model:     ${color("cyan", currentModelId)}`);
+        console.log(`  API Key:   ${color("dim", maskKey(currentApiKey))}`);
+        console.log(`  Available: ${color("dim", SUPPORTED_PROVIDERS.join(", "))}`);
+        {
+          const allKeys = listKeys();
+          const providerSources: Array<{ name: string; source: string }> = [];
+          for (const p of SUPPORTED_PROVIDERS) {
+            if (allKeys[p]) {
+              providerSources.push({ name: p, source: "config" });
+            } else if (ENV_MAP[p] && process.env[ENV_MAP[p]!]) {
+              providerSources.push({ name: p, source: "env" });
+            }
+          }
+          if (providerSources.length > 0) {
+            console.log(bold("  Configured providers:"));
+            for (const { name, source } of providerSources) {
+              const k = allKeys[name] ?? process.env[ENV_MAP[name]!] ?? "";
+              const masked = maskKey(k);
+              const active = name === currentProvider ? color("green", " (active)") : "";
+              const srcLabel = source === "env" ? color("yellow", " [env]") : "";
+              console.log(`    ${name}: ${color("dim", masked)}${active}${srcLabel}`);
+            }
+          }
+        }
+        console.log();
+        break;
 
       case "/history":
         if (history.length === 0) {

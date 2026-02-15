@@ -46,6 +46,12 @@ export function createSpinner(text: string): { stop: (finalText?: string) => voi
   };
 }
 
+// Mask API key for display — shared masking logic
+export function maskKey(key: string): string {
+  if (key.length <= 12) return key.slice(0, 4) + "****";
+  return key.slice(0, 8) + "..." + key.slice(-4);
+}
+
 // Format elapsed time
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;

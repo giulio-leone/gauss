@@ -61,8 +61,8 @@ export async function createModel(
       return createMistral({ apiKey })(model);
     }
     case "openrouter": {
-      const { createOpenAI } = await import("@ai-sdk/openai");
-      return createOpenAI({ apiKey, baseURL: "https://openrouter.ai/api/v1" })(model);
+      const { createOpenRouter } = await import("@openrouter/ai-sdk-provider");
+      return createOpenRouter({ apiKey })(model);
     }
   }
 }

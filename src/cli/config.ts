@@ -30,6 +30,7 @@ export function loadConfig(): GaussFlowConfig {
       defaultModel: parsed.defaultModel,
     };
   } catch {
+    console.error("Warning: ~/.gaussflowrc is corrupted or unreadable. Using empty config.");
     return { keys: {} };
   }
 }
