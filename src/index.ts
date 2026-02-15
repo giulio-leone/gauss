@@ -167,6 +167,8 @@ export {
 
 export { DeepAgent, DeepAgentBuilder } from "./agent/deep-agent.js";
 export type { DeepAgentResult, DeepAgentRunOptions } from "./agent/deep-agent.js";
+export { ToolManager } from "./agent/tool-manager.js";
+export { ExecutionEngine } from "./agent/execution-engine.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Agent — Approval & Events

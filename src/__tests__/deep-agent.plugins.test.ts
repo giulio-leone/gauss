@@ -49,7 +49,7 @@ describe("DeepAgent + Plugins integration", () => {
       model: mockModel,
       instructions: "Test plugin lifecycle",
     })
-      .use({
+      .withPlugin({
         name: "lifecycle-plugin",
         hooks: {
           beforeRun: async (_ctx, params) => ({ prompt: `[plugin] ${params.prompt}` }),
@@ -96,7 +96,7 @@ describe("DeepAgent + Plugins integration", () => {
       model: mockModel,
       instructions: "Test tool hooks",
     })
-      .use({
+      .withPlugin({
         name: "math-plugin",
         tools: {
           "math:add": {
@@ -125,7 +125,7 @@ describe("DeepAgent + Plugins integration", () => {
       model: mockModel,
       instructions: "Suppress errors",
     })
-      .use({
+      .withPlugin({
         name: "error-plugin",
         hooks: {
           onError: async () => ({ suppress: true }),

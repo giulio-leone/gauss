@@ -37,7 +37,7 @@ export async function demoGuardrails(model: LanguageModel): Promise<void> {
     model,
     instructions: "You are a helpful assistant.",
   })
-    .use(plugin)
+    .withPlugin(plugin)
     .build();
 
   try {
@@ -106,7 +106,7 @@ export async function demoWorkflow(model: LanguageModel): Promise<void> {
     model,
     instructions: "You are a helpful assistant.",
   })
-    .use(plugin)
+    .withPlugin(plugin)
     .build();
 
   try {
@@ -202,7 +202,7 @@ export async function demoObservability(model: LanguageModel): Promise<void> {
     model,
     instructions: "You are a helpful assistant. Answer briefly.",
   })
-    .use(plugin)
+    .withPlugin(plugin)
     .build();
 
   try {
