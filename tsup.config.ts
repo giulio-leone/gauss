@@ -20,6 +20,29 @@ export default defineConfig([
       "@ai-sdk/mcp",
     ],
   },
+  // CLI (CJS only — Node.js executable)
+  {
+    entry: {
+      "cli/index": "src/cli/index.ts",
+    },
+    format: ["cjs"],
+    dts: false,
+    clean: false,
+    sourcemap: true,
+    external: [
+      "@onegenui/mcp",
+      "@onegenui/providers",
+      "@onegenui/jobs",
+      "@supabase/supabase-js",
+      "tiktoken",
+      "@ai-sdk/mcp",
+      "@ai-sdk/openai",
+      "@ai-sdk/anthropic",
+      "@ai-sdk/google",
+      "@ai-sdk/groq",
+      "@ai-sdk/mistral",
+    ],
+  },
   // Deno, Edge, Browser, Server (ESM only)
   {
     entry: {
