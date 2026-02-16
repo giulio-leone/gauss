@@ -5,10 +5,13 @@
 import { z } from "zod";
 import { tool } from "ai";
 import { readFileSync, readdirSync, realpathSync, existsSync } from "node:fs";
+import { execSync, spawnSync } from "node:child_process";
 import { resolve, join, relative } from "node:path";
 import { readFile, writeFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
 import { generateUnifiedDiff } from "./diff-utils.js";
+
+const GIT_EXEC_OPTS = { encoding: "utf8" as const, maxBuffer: 10 * 1024 * 1024 };
 
 function listDir(dirPath: string, pattern?: string): string[] {
   const absDir = resolve(dirPath);
@@ -213,6 +216,136 @@ export function createCliTools(options: {
 
         const written = writeFile(path, content);
         return { path: written, bytesWritten: content.length };
+      },
+    }),
+
+    // ─── Git tools ────────────────────────────────────────────────────────
+
+    gitStatus: tool({
+      description: "Show git repository status including staged, unstaged, and untracked files",
+      parameters: z.object({}),
+      execute: async () => {
+        try {
+          const raw = execSync("git status --porcelain=v1", GIT_EXEC_OPTS).trim();
+          if (!raw) return { staged: [], unstaged: [], untracked: [], summary: "Clean working tree" };
+          const staged: string[] = [];
+          const unstaged: string[] = [];
+          const untracked: string[] = [];
+          for (const line of raw.split("\n")) {
+            const x = line[0]!;
+            const y = line[1]!;
+            const file = line.slice(3);
+            if (x === "?") { untracked.push(file); continue; }
+            if (x !== " " && x !== "?") staged.push(`${x} ${file}`);
+            if (y !== " " && y !== "?") unstaged.push(`${y} ${file}`);
+          }
+          return { staged, unstaged, untracked, summary: `${staged.length} staged, ${unstaged.length} unstaged, ${untracked.length} untracked` };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
+      },
+    }),
+
+    gitDiff: tool({
+      description: "Show git diff. By default shows unstaged changes. Use staged:true for staged changes, or provide a file path.",
+      parameters: z.object({
+        staged: z.boolean().optional().describe("Show staged changes instead of unstaged"),
+        path: z.string().optional().describe("Limit diff to a specific file"),
+      }),
+      execute: async ({ staged, path: filePath }) => {
+        try {
+          const args = ["diff"];
+          if (staged) args.push("--cached");
+          if (filePath) args.push("--", filePath);
+          const output = execSync(`git ${args.join(" ")}`, GIT_EXEC_OPTS).trim();
+          return { diff: output || "(no changes)" };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
+      },
+    }),
+
+    gitCommit: tool({
+      description: "Stage files and create a git commit. Requires confirmation unless in yolo mode.",
+      parameters: z.object({
+        message: z.string().describe("Commit message"),
+        files: z.array(z.string()).optional().describe("Files to stage. If omitted, stages all changes."),
+      }),
+      execute: async ({ message, files }) => {
+        try {
+          // Stage
+          if (files && files.length > 0) {
+            execSync(`git add -- ${files.map((f) => `'${f.replace(/'/g, "'\\''")}'`).join(" ")}`, GIT_EXEC_OPTS);
+          } else {
+            execSync("git add -A", GIT_EXEC_OPTS);
+          }
+
+          const stagedSummary = execSync("git diff --cached --stat", GIT_EXEC_OPTS).trim();
+          if (!stagedSummary) return { error: "Nothing to commit after staging" };
+
+          if (!options.yolo) {
+            const ok = await options.confirm(`Git commit: "${message}"\n${stagedSummary}`);
+            if (!ok) {
+              execSync("git reset HEAD", GIT_EXEC_OPTS);
+              return { error: "User cancelled" };
+            }
+          }
+
+          // Use spawnSync to avoid shell injection with the message
+          const result = spawnSync("git", ["commit", "-m", message], { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 });
+          if (result.status !== 0) return { error: result.stderr || result.stdout || "Commit failed" };
+          return { output: result.stdout.trim() };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
+      },
+    }),
+
+    gitLog: tool({
+      description: "Show recent git commit history",
+      parameters: z.object({
+        count: z.number().optional().default(10).describe("Number of commits to show"),
+      }),
+      execute: async ({ count = 10 }) => {
+        try {
+          const output = execSync(`git log --oneline -${count}`, GIT_EXEC_OPTS).trim();
+          return { log: output || "(no commits)" };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
+      },
+    }),
+
+    gitBranch: tool({
+      description: "List, create, or switch git branches",
+      parameters: z.object({
+        action: z.enum(["list", "create", "switch"]).optional().default("list"),
+        name: z.string().optional().describe("Branch name (required for create/switch)"),
+      }),
+      execute: async ({ action = "list", name }) => {
+        try {
+          if (action === "list") {
+            const output = execSync("git branch -a", GIT_EXEC_OPTS).trim();
+            return { branches: output };
+          }
+          if (!name) return { error: "Branch name is required for create/switch" };
+
+          if (!options.yolo) {
+            const desc = action === "create" ? `Create branch: ${name}` : `Switch to branch: ${name}`;
+            const ok = await options.confirm(desc);
+            if (!ok) return { error: "User cancelled" };
+          }
+
+          if (action === "create") {
+            execSync(`git checkout -b '${name.replace(/'/g, "'\\''")}'`, GIT_EXEC_OPTS);
+            return { output: `Created and switched to branch '${name}'` };
+          }
+          // switch
+          execSync(`git checkout '${name.replace(/'/g, "'\\''")}'`, GIT_EXEC_OPTS);
+          return { output: `Switched to branch '${name}'` };
+        } catch (err) {
+          return { error: (err as Error).message };
+        }
       },
     }),
   };
