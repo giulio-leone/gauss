@@ -10,10 +10,11 @@ import { resolve, join, relative } from "node:path";
 import { readFile, writeFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
 import { generateUnifiedDiff } from "./diff-utils.js";
+import { loadIgnorePatterns, shouldIgnore } from "./gaussflow-ignore.js";
 
 const GIT_EXEC_OPTS = { encoding: "utf8" as const, maxBuffer: 10 * 1024 * 1024 };
 
-function listDir(dirPath: string, pattern?: string): string[] {
+function listDir(dirPath: string, pattern?: string, ignorePatterns?: string[]): string[] {
   const absDir = resolve(dirPath);
   const results: string[] = [];
   try {
@@ -21,6 +22,7 @@ function listDir(dirPath: string, pattern?: string): string[] {
     for (const entry of entries) {
       if (pattern && !entry.name.includes(pattern)) continue;
       const rel = relative(process.cwd(), join(absDir, entry.name));
+      if (ignorePatterns && shouldIgnore(rel, ignorePatterns)) continue;
       results.push(entry.isDirectory() ? `${rel}/` : rel);
     }
   } catch {
@@ -29,7 +31,7 @@ function listDir(dirPath: string, pattern?: string): string[] {
   return results.slice(0, 50);
 }
 
-function searchInFiles(searchPattern: string, dirPath: string, maxResults = 50): string[] {
+function searchInFiles(searchPattern: string, dirPath: string, maxResults = 50, ignorePatterns?: string[]): string[] {
   const absDir = resolve(dirPath);
   const results: string[] = [];
   const visited = new Set<string>();
@@ -46,7 +48,9 @@ function searchInFiles(searchPattern: string, dirPath: string, maxResults = 50):
       for (const entry of entries) {
         if (results.length >= maxResults) return;
         const fullPath = join(dir, entry.name);
+        const relPath = relative(process.cwd(), fullPath);
         if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+        if (ignorePatterns && shouldIgnore(relPath, ignorePatterns)) continue;
         if (entry.isDirectory()) {
           walk(fullPath, depth + 1);
         } else if (entry.isFile()) {
@@ -77,6 +81,8 @@ export function createCliTools(options: {
   yolo: boolean;
   confirm: (description: string) => Promise<boolean>;
 }) {
+  const ignorePatterns = loadIgnorePatterns();
+
   return {
     readFile: tool({
       description: "Read a file from the filesystem",
@@ -137,7 +143,7 @@ export function createCliTools(options: {
         pattern: z.string().describe("Filename substring filter").optional(),
       }),
       execute: async ({ path, pattern }) => {
-        const files = listDir(path, pattern);
+        const files = listDir(path, pattern, ignorePatterns);
         return { files, count: files.length };
       },
     }),
@@ -148,7 +154,7 @@ export function createCliTools(options: {
         path: z.string().describe("Directory to search in").default("."),
       }),
       execute: async ({ pattern, path }) => {
-        const matches = searchInFiles(pattern, path);
+        const matches = searchInFiles(pattern, path, 50, ignorePatterns);
         return { matches, count: matches.length };
       },
     }),
