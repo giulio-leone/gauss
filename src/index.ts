@@ -62,6 +62,10 @@ export type {
   PluginSource,
 } from "./ports/plugin-registry.port.js";
 export type {
+  MarketplacePluginManifest,
+  MarketplacePort,
+} from "./ports/plugin-manifest.port.js";
+export type {
   ValidationPort,
   ValidationResult,
 } from "./ports/validation.port.js";
@@ -378,6 +382,13 @@ export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { DefaultPluginRegistryAdapter } from "./adapters/plugin-registry/default-plugin-registry.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Plugin Marketplace
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { GitHubRegistryAdapter } from "./adapters/plugin-marketplace/github-registry.adapter.js";
+export type { GitHubRegistryOptions } from "./adapters/plugin-marketplace/github-registry.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Learning
