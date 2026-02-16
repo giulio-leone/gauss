@@ -45,7 +45,7 @@ export function createDeltaEncoder(options?: DeltaEncoderOptions): DeltaEncoder 
       if (prev === undefined) return serialized;
 
       // Delta: only changed fields (structural comparison, no re-serialization)
-      const prevEvent = prev.event as Record<string, unknown>;
+      const prevEvent = prev.event as unknown as Record<string, unknown>;
       const delta: Record<string, unknown> = { type: event.type };
       for (const key of Object.keys(event) as (keyof AgentEvent)[]) {
         if (!fieldsEqual(event[key], prevEvent[key])) {
