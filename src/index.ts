@@ -570,6 +570,14 @@ export { LifecycleManager } from "./agent/lifecycle.js";
 export type { LifecycleHooks, HealthStatus } from "./agent/lifecycle.js";
 
 // ---------------------------------------------------------------------------
+// Hot-Reload — Watch config files and reload agents
+// ---------------------------------------------------------------------------
+export type { HotReloadPort, AgentConfig } from "./ports/hot-reload.port.js";
+export { FileWatcherAdapter } from "./adapters/hot-reload/index.js";
+export { AgentConfigLoader } from "./agent/agent-config-loader.js";
+export type { ModelResolver } from "./agent/agent-config-loader.js";
+
+// ---------------------------------------------------------------------------
 // Streaming — Real-Time Event Streaming
 // ---------------------------------------------------------------------------
 export { createEventStream } from "./streaming/event-stream.js";
