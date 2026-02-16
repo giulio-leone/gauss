@@ -31,6 +31,9 @@ A hexagonal-architecture agent framework with built-in planning, context managem
 - **CLI** — interactive REPL and single-shot mode with `gaussflow chat/run/demo` commands
 - **REST API** — zero-dependency HTTP server for multi-language access (Python, Go, Ruby, etc.)
 - **Resilience patterns** — circuit breaker, rate limiter, and tool cache for robust agent operations
+- **Template engine** — Handlebars-style `PromptTemplate` with conditionals, loops, filters, and partials
+- **Partial JSON streaming** — incremental JSON parsing for LLM streams via `streamJson<T>()` and `JsonAccumulator`
+- **Tool composition pipeline** — sequential `.pipe()`, automatic `.withFallback()`, and `.withMiddleware()` hooks
 
 ## Resilience Patterns
 
@@ -393,6 +396,8 @@ src/
     metrics.port.ts           MetricsPort interface
     logging.port.ts           LoggingPort / LogLevel / LogEntry
     consensus.port.ts         ConsensusPort for fork evaluation
+    partial-json.port.ts      PartialJsonPort / JsonAccumulator interfaces
+    tool-composition.port.ts  ToolCompositionPort / ToolPipeline / ToolMiddleware
   adapters/
     filesystem/
       virtual-fs.adapter.ts   In-memory VFS with optional disk sync
@@ -406,6 +411,10 @@ src/
     token-counter/
       approximate.adapter.ts  Character-ratio estimation (~4 chars/token)
       tiktoken.adapter.ts     BPE-accurate counting via tiktoken
+    partial-json/
+      default-partial-json.adapter.ts  Incremental JSON parser for LLM streams
+    tool-composition/
+      default-tool-composition.adapter.ts  Pipe, fallback, and middleware for tools
     learning/
       in-memory-learning.adapter.ts  Map-based learning storage
     runtime/
@@ -463,6 +472,7 @@ src/
     sse-handler.ts            Server-Sent Events handler
     ws-handler.ts             WebSocket handler
     delta-encoder.ts          Delta encoding for efficient streaming
+    stream-json.ts            streamJson<T>() async generator
     graph-stream.ts           Graph event streaming
   domain/
     todo.schema.ts            Todo Zod schemas
@@ -475,6 +485,8 @@ src/
     graph.schema.ts           Graph configuration and result schemas
   utils/
     abstract-builder.ts       Template method builder base class
+  templates/
+    prompt-template.ts        PromptTemplate with conditionals, loops, filters, partials
 ```
 
 ## API Reference
@@ -1360,6 +1372,149 @@ When messages exceed `truncationThreshold` (default: 85% of context window), the
 #### Token Tracking
 
 The `TokenTracker` accumulates input and output token usage across the session, providing budget awareness and cost estimation.
+
+## Template Engine
+
+`PromptTemplate` provides Handlebars-style templating for dynamic prompt construction with conditionals, loops, filters, and partials.
+
+### Syntax
+
+| Feature | Syntax |
+|---------|--------|
+| Variables | `{{name}}` |
+| Conditionals | `{{#if condition}}...{{else}}...{{/if}}` |
+| Unless | `{{#unless condition}}...{{else}}...{{/unless}}` |
+| Loops | `{{#each items}}{{this}} / {{@index}} / {{this.prop}}{{/each}}` |
+| Filters | `{{variable \| uppercase}}`, `{{variable \| lowercase}}`, `{{variable \| trim}}`, `{{variable \| default('fallback')}}` |
+| Partials | `{{>partialName}}` |
+
+Nested blocks are fully supported — conditionals inside loops, loops inside conditionals, etc.
+
+### `requiredVariables`
+
+The `requiredVariables` getter introspects the template and returns all variable names (from `{{var}}`, block tags, and filter expressions) sorted alphabetically:
+
+```typescript
+const tpl = PromptTemplate.from("Hello {{name}}, you have {{count}} items.");
+console.log(tpl.requiredVariables); // ["count", "name"]
+```
+
+### Example
+
+```typescript
+import { PromptTemplate } from "@giulio-leone/gaussflow-agent";
+
+const prompt = new PromptTemplate({
+  template: `You are a {{role | uppercase}} assistant.
+{{#if context}}Use this context: {{context}}{{/if}}
+{{#each tools}}
+- {{@index}}. {{this.name}}: {{this.description}}
+{{/each}}
+{{#unless verbose}}Be concise.{{/unless}}`,
+  variables: {
+    role: "coding",
+    context: "TypeScript project",
+    tools: [
+      { name: "grep", description: "Search files" },
+      { name: "edit", description: "Edit files" },
+    ],
+    verbose: false,
+  },
+});
+
+const result = prompt.compile();
+```
+
+## Partial JSON Streaming
+
+Parse incomplete JSON from LLM streaming responses as they arrive, yielding typed partial objects incrementally.
+
+### Components
+
+| Export | Description |
+|--------|-------------|
+| `DefaultPartialJsonAdapter` | Adapter that repairs and parses incomplete JSON strings |
+| `streamJson<T>()` | Async generator that yields `Partial<T>` objects from a token stream |
+| `JsonAccumulator<T>` | Stateful accumulator — feed chunks via `.push()`, read via `.current()` |
+
+### Example
+
+```typescript
+import { streamJson } from "@giulio-leone/gaussflow-agent";
+
+interface ToolCall {
+  name: string;
+  args: Record<string, string>;
+}
+
+// tokens is an AsyncIterable<string> from your LLM stream
+for await (const partial of streamJson<ToolCall>(tokens)) {
+  console.log(partial);
+  // { name: "grep" }
+  // { name: "grep", args: {} }
+  // { name: "grep", args: { pattern: "TODO" } }
+}
+```
+
+Lower-level usage with `JsonAccumulator`:
+
+```typescript
+import { DefaultPartialJsonAdapter } from "@giulio-leone/gaussflow-agent";
+
+const adapter = DefaultPartialJsonAdapter.create();
+const accumulator = adapter.createAccumulator<{ status: string }>();
+
+accumulator.push('{"statu');
+accumulator.push('s":"ok"}');
+
+console.log(accumulator.current());    // { status: "ok" }
+console.log(accumulator.isComplete()); // true
+```
+
+## Tool Composition Pipeline
+
+Compose, chain, and wrap AI SDK tools using a fluent pipeline API with sequential execution, automatic fallbacks, and middleware hooks.
+
+### API
+
+| Method | Description |
+|--------|-------------|
+| `.pipe(["tool1", "tool2"])` | Sequential execution — output of each tool feeds into the next |
+| `.withFallback("primary", "backup")` | If `primary` throws, automatically retry with `backup` |
+| `.withMiddleware(middleware)` | Register `before`, `after`, and `onError` hooks on every tool |
+
+### Example
+
+```typescript
+import { DefaultToolCompositionAdapter } from "@giulio-leone/gaussflow-agent";
+import type { ToolMiddleware } from "@giulio-leone/gaussflow-agent";
+
+const composer = new DefaultToolCompositionAdapter();
+const tools = { /* your AI SDK tools */ };
+
+const logging: ToolMiddleware = {
+  name: "logging",
+  before: async (toolName, args) => {
+    console.log(`[${toolName}] called with`, args);
+    return args;
+  },
+  after: async (toolName, result) => {
+    console.log(`[${toolName}] returned`, result);
+    return result;
+  },
+  onError: async (toolName, error) => {
+    console.error(`[${toolName}] failed:`, error.message);
+    return null; // re-throw; return a value to swallow the error
+  },
+};
+
+const composed = composer
+  .createPipeline(tools)
+  .pipe(["fetch_data", "transform", "save"])
+  .withFallback("fetch_data", "fetch_data_cached")
+  .withMiddleware(logging)
+  .build();
+```
 
 ## Examples
 
