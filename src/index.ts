@@ -553,6 +553,9 @@ export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
 export { MajorityVoteConsensus } from "./adapters/consensus/majority-vote.adapter.js";
 export { DebateConsensus } from "./adapters/consensus/debate.adapter.js";
 export type { GraphConfig, GraphResult, GraphStreamEvent } from "./domain/graph.schema.js";
+export type { GraphVisualizationPort, GraphDescriptor } from "./ports/graph-visualization.port.js";
+export { AsciiGraphAdapter } from "./adapters/graph-visualization/ascii-graph.adapter.js";
+export { MermaidGraphAdapter } from "./adapters/graph-visualization/mermaid-graph.adapter.js";
 
 // ---------------------------------------------------------------------------
 // Templates — Prompt Template System

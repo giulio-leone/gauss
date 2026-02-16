@@ -14,6 +14,9 @@ import { AgentNode } from "./agent-node.js";
 import { GraphExecutor } from "./graph-executor.js";
 import { SharedContext } from "./shared-context.js";
 import { VirtualFilesystem } from "../adapters/filesystem/virtual-fs.adapter.js";
+import type { GraphDescriptor } from "../ports/graph-visualization.port.js";
+import { AsciiGraphAdapter } from "../adapters/graph-visualization/ascii-graph.adapter.js";
+import { MermaidGraphAdapter } from "../adapters/graph-visualization/mermaid-graph.adapter.js";
 
 export class AgentGraph {
   constructor(
@@ -28,6 +31,44 @@ export class AgentGraph {
     private readonly eventBus?: EventBus,
     private readonly telemetry?: TelemetryPort,
   ) {}
+
+  getNodes(): ReadonlyMap<string, AgentNode> {
+    return this.nodes;
+  }
+
+  getEdges(): ReadonlyMap<string, readonly string[]> {
+    return this.edges;
+  }
+
+  getForks(): ReadonlyMap<string, { nodes: readonly AgentNode[]; consensus?: ConsensusPort }> {
+    return this.forks;
+  }
+
+  describe(): GraphDescriptor {
+    const nodes = [...this.nodes.values()].map((n) => ({
+      id: n.id,
+      type: n.type,
+    }));
+    const edges: GraphDescriptor["edges"] = [];
+    for (const [to, sources] of this.edges) {
+      for (const from of sources) {
+        edges.push({ from, to });
+      }
+    }
+    const forks = [...this.forks.entries()].map(([id, f]) => ({
+      id,
+      nodeIds: f.nodes.map((n) => n.id),
+    }));
+    return { nodes, edges, forks };
+  }
+
+  visualize(format: "ascii" | "mermaid" = "ascii"): string {
+    const descriptor = this.describe();
+    if (format === "mermaid") {
+      return new MermaidGraphAdapter().toMermaid(descriptor);
+    }
+    return new AsciiGraphAdapter().toAscii(descriptor);
+  }
 
   static create(config?: Partial<GraphConfig>): AgentGraphBuilder {
     return new AgentGraphBuilder(config);
