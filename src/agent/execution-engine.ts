@@ -61,6 +61,24 @@ export class ExecutionEngine {
   }
 
   // ---------------------------------------------------------------------------
+  // Telemetry helper — DRY span lifecycle (try/catch/finally)
+  // ---------------------------------------------------------------------------
+
+  private async withSpan<T>(name: string, attrs: Record<string, string | number | boolean>, fn: () => Promise<T>): Promise<T> {
+    const span = this.config.telemetry?.startSpan(name, attrs);
+    try {
+      const result = await fn();
+      span?.setStatus("OK");
+      return result;
+    } catch (error) {
+      span?.setStatus("ERROR", error instanceof Error ? error.message : String(error));
+      throw error;
+    } finally {
+      span?.end();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Run
   // ---------------------------------------------------------------------------
 
@@ -113,10 +131,11 @@ export class ExecutionEngine {
         stopWhen: stepCountIs(this.config.maxSteps),
       });
 
-      // Wrap LLM call in telemetry span
-      const llmSpan = this.config.telemetry?.startSpan("llm.generate", { "llm.model": String(this.config.model) });
-      const result = await agent.generate({ prompt });
-      
+      // Wrap LLM call in telemetry span (safe on exception via withSpan)
+      const result = await this.withSpan("llm.generate", { "llm.model": String(this.config.model) }, () =>
+        agent.generate({ prompt }),
+      );
+
       // Track token usage
       const resultObj = result as unknown as { usage?: { promptTokens?: number; completionTokens?: number } };
       const usage = resultObj.usage;
@@ -129,11 +148,7 @@ export class ExecutionEngine {
           this.tokenTracker.addOutput(usage.completionTokens);
           this.config.telemetry?.recordMetric("llm.tokens.output", usage.completionTokens);
         }
-        llmSpan?.setAttribute("llm.tokens.input", usage.promptTokens ?? 0);
-        llmSpan?.setAttribute("llm.tokens.output", usage.completionTokens ?? 0);
       }
-      llmSpan?.setStatus("OK");
-      llmSpan?.end();
 
       const steps = (result.steps ?? []) as unknown[];
       for (let i = 0; i < steps.length; i++) {
@@ -141,39 +156,32 @@ export class ExecutionEngine {
         const stepObj = step as Record<string, unknown> | undefined;
         const toolName = (stepObj?.toolName as string) ?? `step.${i}`;
         const toolSpanStart = Date.now();
-        const toolSpan = this.config.telemetry?.startSpan(`tool.${toolName}`, { "tool.name": toolName, "step.index": i });
 
         try {
-          const beforeStepResult = await this.pluginManager.runBeforeStep(pluginCtx, {
-            stepIndex: i,
-            step,
+          await this.withSpan(`tool.${toolName}`, { "tool.name": toolName, "step.index": i }, async () => {
+            const beforeStepResult = await this.pluginManager.runBeforeStep(pluginCtx, {
+              stepIndex: i,
+              step,
+            });
+
+            if (beforeStepResult.skip) return;
+            if (beforeStepResult.step !== undefined) {
+              step = beforeStepResult.step;
+              steps[i] = step;
+            }
+
+            this.eventBus.emit("step:start", { stepIndex: i, step });
+            this.eventBus.emit("step:end", { stepIndex: i, step });
+
+            await this.pluginManager.runAfterStep(pluginCtx, {
+              stepIndex: i,
+              step,
+            });
+
+            const toolDurationMs = Date.now() - toolSpanStart;
+            this.config.telemetry?.recordMetric("tool.duration_ms", toolDurationMs, { tool: toolName });
           });
-
-          if (beforeStepResult.skip) {
-            toolSpan?.setStatus("OK");
-            toolSpan?.end();
-            continue;
-          }
-          if (beforeStepResult.step !== undefined) {
-            step = beforeStepResult.step;
-            steps[i] = step;
-          }
-
-          this.eventBus.emit("step:start", { stepIndex: i, step });
-          this.eventBus.emit("step:end", { stepIndex: i, step });
-
-          await this.pluginManager.runAfterStep(pluginCtx, {
-            stepIndex: i,
-            step,
-          });
-
-          const toolDurationMs = Date.now() - toolSpanStart;
-          this.config.telemetry?.recordMetric("tool.duration_ms", toolDurationMs, { tool: toolName });
-          toolSpan?.setStatus("OK");
-          toolSpan?.end();
         } catch (error) {
-          toolSpan?.setStatus("ERROR", error instanceof Error ? error.message : String(error));
-          toolSpan?.end();
           const onStepError = await this.pluginManager.runOnError(pluginCtx, {
             error,
             phase: "step",
@@ -269,14 +277,16 @@ export class ExecutionEngine {
 
       this.eventBus.emit("agent:start", { messages: params.messages });
 
-      const agent = new ToolLoopAgent({
-        model: this.toolManager.createRateLimitedModel(),
-        instructions: this.config.instructions,
-        tools,
-        stopWhen: stepCountIs(this.config.maxSteps),
-      });
+      return this.withSpan("stream", { "stream.messages": params.messages.length }, async () => {
+        const agent = new ToolLoopAgent({
+          model: this.toolManager.createRateLimitedModel(),
+          instructions: this.config.instructions,
+          tools,
+          stopWhen: stepCountIs(this.config.maxSteps),
+        });
 
-      return agent.stream(params as Parameters<typeof agent.stream>[0]);
+        return agent.stream(params as Parameters<typeof agent.stream>[0]);
+      });
     } catch (error: unknown) {
       const onErrorResult = await this.pluginManager.runOnError(pluginCtx, {
         error,

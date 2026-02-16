@@ -93,7 +93,7 @@ export class DeepAgent {
   private readonly toolCache?: ToolCache;
   
   // Telemetry
-  readonly telemetry?: TelemetryPort;
+  private readonly telemetry?: TelemetryPort;
 
   constructor(config: DeepAgentInternalConfig) {
     this._runtime = config.runtime ?? null;
@@ -271,6 +271,12 @@ export class DeepAgent {
       // Continue with cleanup even if shutdown fails
     }
     
+    try {
+      await this.config.telemetry?.flush();
+    } catch {
+      // Continue with cleanup even if telemetry flush fails
+    }
+
     try {
       await this.pluginManager.dispose();
     } finally {

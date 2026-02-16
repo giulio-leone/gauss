@@ -18,6 +18,9 @@ import type { TelemetryPort, TelemetrySpan } from "../../ports/telemetry.port.js
  * ```
  */
 export class OtelTelemetryAdapter implements TelemetryPort {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private readonly histograms = new Map<string, any>();
+
   // Using `any` to avoid hard dependency on @opentelemetry/api types
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private readonly tracer: any, private readonly meter?: any) {}
@@ -29,7 +32,11 @@ export class OtelTelemetryAdapter implements TelemetryPort {
 
   recordMetric(name: string, value: number, attributes?: Record<string, string>): void {
     if (!this.meter) return;
-    const histogram = this.meter.createHistogram(name);
+    let histogram = this.histograms.get(name);
+    if (!histogram) {
+      histogram = this.meter.createHistogram(name);
+      this.histograms.set(name, histogram);
+    }
     histogram.record(value, attributes);
   }
 
