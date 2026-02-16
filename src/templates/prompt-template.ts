@@ -1,31 +1,75 @@
 const PARTIAL_RE = /\{\{>(\w+)\}\}/g;
 const VARIABLE_RE = /\{\{(\w+)\}\}/g;
+const BLOCK_VAR_RE = /\{\{#(?:each|if|unless)\s+(\w+)\}\}/g;
 
 const FILTER_RE = /\{\{(\w+(?:\.\w+)*)\s*\|([^}]+)\}\}/g;
 
 const BLOCKED_PROPS = new Set(['__proto__', 'constructor', 'prototype']);
 const KEYWORDS = new Set(['if', 'else', 'unless', 'each', 'this']);
 
-function findMatchingClose(template: string, openTag: string, closeTag: string, startIndex: number): number {
-  let depth = 1;
+function isWordChar(ch: string | undefined): boolean {
+  return ch !== undefined && /\w/.test(ch);
+}
+
+type ScanTarget = 'close' | 'else';
+
+/**
+ * Generic depth-tracking scanner used by both findMatchingClose and findElseAtDepth0.
+ * Walks `template` from `startIndex`, tracking depth via open/close tags that use
+ * exact tag-name matching (no prefix matches).
+ * - target='close': returns the index where the matching close tag brings depth to 0.
+ * - target='else': starts at depth 0 and returns the index of `{{else}}` at depth 0.
+ */
+function scanAtDepth0(
+  template: string,
+  openTags: string[],
+  closeTags: string[],
+  startIndex: number,
+  target: ScanTarget,
+): number {
+  let depth = target === 'close' ? 1 : 0;
   let i = startIndex;
   while (i < template.length) {
-    if (template.startsWith(openTag, i)) {
-      depth++;
-      i += openTag.length;
-    } else if (template.startsWith(closeTag, i)) {
-      depth--;
-      if (depth === 0) return i;
-      i += closeTag.length;
-    } else {
-      i++;
+    // Check for {{else}} at depth 0 when searching for else
+    if (target === 'else' && template.startsWith('{{else}}', i) && depth === 0) {
+      return i;
     }
+    let matched = false;
+    for (const tag of openTags) {
+      if (template.startsWith(tag, i) && !isWordChar(template[i + tag.length])) {
+        depth++;
+        i += tag.length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      for (const tag of closeTags) {
+        if (template.startsWith(tag, i)) {
+          depth--;
+          if (target === 'close' && depth === 0) return i;
+          i += tag.length;
+          matched = true;
+          break;
+        }
+      }
+    }
+    if (!matched) i++;
   }
   return -1;
 }
 
+function findMatchingClose(template: string, openTag: string, closeTag: string, startIndex: number): number {
+  return scanAtDepth0(template, [openTag], [closeTag], startIndex, 'close');
+}
+
+function findElseAtDepth0(body: string): number {
+  return scanAtDepth0(body, ['{{#if', '{{#unless'], ['{{/if}}', '{{/unless}}'], 0, 'else');
+}
+
 function replaceAtDepth0(body: string, regex: RegExp, replacement: string | ((match: string, ...args: string[]) => string)): string {
   // Protect nested {{#each}}...{{/each}} blocks from replacement
+  const id = Math.random().toString(36).slice(2, 10);
   const nested: string[] = [];
   let protected_ = body;
   const eachOpenRe = /\{\{#each\s+\w+\}\}/;
@@ -37,7 +81,7 @@ function replaceAtDepth0(body: string, regex: RegExp, replacement: string | ((ma
     if (closeIndex === -1) break;
     const end = closeIndex + '{{/each}}'.length;
     const block = protected_.slice(start, end);
-    const placeholder = `__NESTED_EACH_${nested.length}__`;
+    const placeholder = `\x00${id}_NESTED_${nested.length}\x00`;
     nested.push(block);
     protected_ = protected_.slice(0, start) + placeholder + protected_.slice(end);
   }
@@ -49,28 +93,9 @@ function replaceAtDepth0(body: string, regex: RegExp, replacement: string | ((ma
   }
   // Restore nested blocks
   for (let i = nested.length - 1; i >= 0; i--) {
-    protected_ = protected_.replace(`__NESTED_EACH_${i}__`, nested[i]);
+    protected_ = protected_.replace(`\x00${id}_NESTED_${i}\x00`, nested[i]);
   }
   return protected_;
-}
-
-function findElseAtDepth0(body: string): number {
-  let depth = 0;
-  let i = 0;
-  while (i < body.length) {
-    if (body.startsWith('{{#if', i) || body.startsWith('{{#unless', i)) {
-      depth++;
-      i += body.startsWith('{{#if', i) ? 5 : 9;
-    } else if (body.startsWith('{{/if}}', i) || body.startsWith('{{/unless}}', i)) {
-      depth--;
-      i += body.startsWith('{{/if}}', i) ? 7 : 11;
-    } else if (body.startsWith('{{else}}', i) && depth === 0) {
-      return i;
-    } else {
-      i++;
-    }
-  }
-  return -1;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,6 +109,25 @@ export interface PromptTemplateConfig {
 
 type FilterFn = (value: string, ...args: string[]) => string;
 
+function splitFilterChain(chain: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let depth = 0;
+  for (let i = 0; i < chain.length; i++) {
+    const ch = chain[i];
+    if (ch === '(') { depth++; current += ch; }
+    else if (ch === ')') { depth--; current += ch; }
+    else if (ch === '|' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
 const BUILTIN_FILTERS: Record<string, FilterFn> = {
   uppercase: (v) => v.toUpperCase(),
   lowercase: (v) => v.toLowerCase(),
@@ -93,6 +137,21 @@ const BUILTIN_FILTERS: Record<string, FilterFn> = {
   },
   default: (v, fallback) => (v === '' || v === 'undefined' || v === 'null') ? fallback : v,
 };
+
+function applyFilterChain(value: string, filterChain: string): string {
+  let result = value;
+  const filters = splitFilterChain(filterChain);
+  for (const filterExpr of filters) {
+    const parenMatch = filterExpr.match(/^(\w+)\(([^)]*)\)$/);
+    const filterName = parenMatch ? parenMatch[1] : filterExpr;
+    const args = parenMatch ? [parenMatch[2].replace(/^['"]|['"]$/g, '')] : [];
+    const filterFn = BUILTIN_FILTERS[filterName];
+    if (filterFn) {
+      result = filterFn(result, ...args);
+    }
+  }
+  return result;
+}
 
 export class PromptTemplate {
   constructor(private readonly config: PromptTemplateConfig) {}
@@ -121,6 +180,7 @@ export class PromptTemplate {
 
     // 5. Handle variables {{var}}
     compiled = compiled.replace(VARIABLE_RE, (_match, varName) => {
+      if (KEYWORDS.has(varName)) return '';
       if (!(varName in variables)) {
         throw new Error(`Required variable "${varName}" is missing`);
       }
@@ -146,6 +206,16 @@ export class PromptTemplate {
         replacement = items.map((item, index) => {
           let r = body;
           r = replaceAtDepth0(r, /\{\{@index\}\}/g, String(index));
+          r = replaceAtDepth0(r, /\{\{this\.(\w+)\s*\|([^}]+)\}\}/g, (_m: string, prop: string, filterChain: string) => {
+            let value = '';
+            if (item != null && typeof item === 'object' && Object.hasOwn(item as object, prop)) {
+              value = String(item[prop]);
+            }
+            return applyFilterChain(value, filterChain);
+          });
+          r = replaceAtDepth0(r, /\{\{this\s*\|([^}]+)\}\}/g, (_m: string, filterChain: string) => {
+            return applyFilterChain(String(item), filterChain);
+          });
           r = replaceAtDepth0(r, /\{\{this\.(\w+)\}\}/g, (_m: string, prop: string) => {
             if (item != null && typeof item === 'object' && Object.hasOwn(item as object, prop)) {
               return String(item[prop]);
@@ -175,7 +245,15 @@ export class PromptTemplate {
       if (closeIndex === -1) break;
       const body = compiled.slice(bodyStart, closeIndex);
       const value = variables[varName];
-      const replacement = !value ? body : '';
+      const elseIndex = findElseAtDepth0(body);
+      let replacement: string;
+      if (elseIndex !== -1) {
+        const falseBranch = body.slice(0, elseIndex);
+        const trueBranch = body.slice(elseIndex + '{{else}}'.length);
+        replacement = !value ? falseBranch : trueBranch;
+      } else {
+        replacement = !value ? body : '';
+      }
       compiled = compiled.slice(0, match.index!) + replacement + compiled.slice(closeIndex + '{{/unless}}'.length);
     }
 
@@ -206,9 +284,17 @@ export class PromptTemplate {
   private processFilters(template: string, variables: Record<string, TemplateValue>): string {
     return template.replace(FILTER_RE, (_match, varPath, filterChain) => {
       // Resolve variable value (supports dot notation for nested access)
+      const rootVar = varPath.includes('.') ? varPath.split('.')[0] : varPath;
+
+      // Throw for missing root variable (consistent with compile step 5)
+      if (!(rootVar in variables)) {
+        throw new Error(`Required variable "${rootVar}" is missing`);
+      }
+
       let value: TemplateValue;
       if (varPath.includes('.')) {
         const parts = varPath.split('.');
+        if (BLOCKED_PROPS.has(parts[0])) { return ''; }
         value = variables[parts[0]];
         for (let i = 1; i < parts.length && value != null; i++) {
           if (BLOCKED_PROPS.has(parts[i])) { return ''; }
@@ -218,21 +304,8 @@ export class PromptTemplate {
         value = variables[varPath];
       }
 
-      let result = value != null ? String(value) : '';
-
-      // Apply filter chain
-      const filters = (filterChain as string).split('|').map((f: string) => f.trim());
-      for (const filterExpr of filters) {
-        const parenMatch = filterExpr.match(/^(\w+)\(([^)]*)\)$/);
-        const filterName = parenMatch ? parenMatch[1] : filterExpr;
-        const args = parenMatch ? [parenMatch[2].replace(/^['"]|['"]$/g, '')] : [];
-        const filterFn = BUILTIN_FILTERS[filterName];
-        if (filterFn) {
-          result = filterFn(result, ...args);
-        }
-      }
-
-      return result;
+      const result = value != null ? String(value) : '';
+      return applyFilterChain(result, filterChain as string);
     });
   }
 
@@ -247,7 +320,7 @@ export class PromptTemplate {
   get requiredVariables(): string[] {
     const variables = new Set<string>();
     
-    // Extract variables from template
+    // Extract variables from simple {{var}} tags
     const variableMatches = this.config.template.match(VARIABLE_RE) || [];
     variableMatches.forEach(match => {
       const varName = match.slice(2, -2);
@@ -255,6 +328,23 @@ export class PromptTemplate {
         variables.add(varName);
       }
     });
+
+    // Extract variables from block tags {{#each items}}, {{#if show}}, {{#unless hidden}}
+    const blockMatches = this.config.template.matchAll(BLOCK_VAR_RE);
+    for (const bm of blockMatches) {
+      if (!KEYWORDS.has(bm[1])) {
+        variables.add(bm[1]);
+      }
+    }
+
+    // Extract root variables from filter expressions {{var | filter}} or {{var.prop | filter}}
+    const filterMatches = this.config.template.matchAll(FILTER_RE);
+    for (const fm of filterMatches) {
+      const rootVar = fm[1].split('.')[0];
+      if (!KEYWORDS.has(rootVar)) {
+        variables.add(rootVar);
+      }
+    }
 
     // Extract variables from partials
     if (this.config.partials) {

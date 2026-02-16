@@ -179,6 +179,73 @@ describe("PromptTemplate", () => {
       
       expect(template.requiredVariables).toEqual(["var"]);
     });
+
+    it("should include variables from {{#each items}} block tags", () => {
+      const template = new PromptTemplate({
+        template: "{{#each items}}{{this}}{{/each}}"
+      });
+      
+      expect(template.requiredVariables).toEqual(["items"]);
+    });
+
+    it("should include variables from {{#if show}} block tags", () => {
+      const template = new PromptTemplate({
+        template: "{{#if show}}visible{{/if}}"
+      });
+      
+      expect(template.requiredVariables).toEqual(["show"]);
+    });
+
+    it("should include variables from both simple and block tags", () => {
+      const template = new PromptTemplate({
+        template: "{{#each items}}{{this.name}}{{/each}} {{#if show}}{{label}}{{/if}}"
+      });
+      
+      expect(template.requiredVariables).toEqual(["items", "label", "show"]);
+    });
+  });
+
+  describe("filters inside each loops", () => {
+    it("should apply filter to {{this | filter}} inside each", () => {
+      const template = new PromptTemplate({
+        template: "{{#each items}}{{this | uppercase}}{{/each}}"
+      });
+      expect(template.compile({ items: ["hello", "world"] })).toBe("HELLOWORLD");
+    });
+
+    it("should apply filter to {{this.prop | filter}} inside each", () => {
+      const template = new PromptTemplate({
+        template: "{{#each users}}{{this.name | uppercase}}{{/each}}"
+      });
+      expect(template.compile({ users: [{ name: "alice" }] })).toBe("ALICE");
+    });
+  });
+
+  describe("exact tag-name matching", () => {
+    it("should not confuse {{#eachItem}} with {{#each}}", () => {
+      // {{#eachItem ...}} is not a valid each block; it should not interfere
+      const template = new PromptTemplate({
+        template: "{{#each items}}{{this}}{{/each}}"
+      });
+      expect(template.compile({ items: ["a", "b"] })).toBe("ab");
+    });
+  });
+
+  describe("R8 fixes", () => {
+    it("{{this}} surviving to step 5 should return empty string, not throw", () => {
+      expect(PromptTemplate.from('{{this}}').compile({})).toBe('');
+    });
+
+    it("nested each with outer item containing null bytes does not corrupt output", () => {
+      const t = new PromptTemplate({
+        template: '{{#each outer}}{{this}}[{{#each inner}}{{this}}{{/each}}]{{/each}}'
+      });
+      const result = t.compile({
+        outer: ['\x00NESTED_EACH_0\x00', 'b'],
+        inner: ['1', '2']
+      });
+      expect(result).toBe('\x00NESTED_EACH_0\x00[12]b[12]');
+    });
   });
 
   describe("static factory method", () => {
