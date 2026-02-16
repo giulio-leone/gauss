@@ -45,8 +45,8 @@ export function shouldIgnore(filePath: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
     // Check if any path segment matches the pattern exactly
     if (segments.includes(pattern)) return true;
-    // Check if the full path starts with the pattern
-    if (filePath.startsWith(pattern)) return true;
+    // Check if the full path starts with the pattern as a complete segment
+    if (filePath === pattern || filePath.startsWith(pattern + "/") || filePath.startsWith(pattern + "\\")) return true;
   }
   return false;
 }

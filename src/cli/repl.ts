@@ -24,7 +24,14 @@ const MAX_DELTA_DISPLAY_LENGTH = 200;
 /** Max characters shown for tool output summaries */
 const MAX_TOOL_OUTPUT_DISPLAY_LENGTH = 500;
 
-const DEFAULT_SYSTEM_PROMPT = `You are GaussFlow, an AI coding assistant. ${contextToSystemPrompt(detectProjectContext())} You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.`;
+function getDefaultSystemPrompt(): string {
+  try {
+    const ctx = contextToSystemPrompt(detectProjectContext());
+    return `You are GaussFlow, an AI coding assistant. ${ctx} You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.`;
+  } catch {
+    return "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
+  }
+}
 
 export async function startRepl(
   initialModel: LanguageModel,
@@ -76,7 +83,7 @@ export async function startRepl(
   let currentProvider = providerName;
   let currentModelId = modelId ?? getDefaultModel(providerName);
   let currentApiKey = apiKey;
-  let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+  let systemPrompt = getDefaultSystemPrompt();
   let yoloMode = yolo ?? false;
   const sessionCostTracker = new DefaultCostTrackerAdapter();
 
