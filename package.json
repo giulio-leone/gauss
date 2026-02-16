@@ -1,6 +1,6 @@
 {
   "name": "@giulio-leone/gaussflow-agent",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "GaussFlow — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
   "license": "MIT",
   "type": "module",
