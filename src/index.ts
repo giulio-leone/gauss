@@ -548,6 +548,23 @@ export type {
   InfoResponse,
 } from "./rest/types.js";
 
+// ---------------------------------------------------------------------------
+// Testing — Agent Test Harness
+// ---------------------------------------------------------------------------
+export { createMockProvider } from "./testing/mock-provider.js";
+export type { MockResponse } from "./testing/mock-provider.js";
+export { runAgentTest } from "./testing/agent-test-runner.js";
+export type { AgentTestResult } from "./testing/agent-test-runner.js";
+export {
+  assertToolCalled,
+  assertToolNotCalled,
+  assertResponseContains,
+  assertResponseMatches,
+  assertMaxSteps,
+  assertMaxTokens,
+} from "./testing/assertions.js";
+export { createSnapshot, compareSnapshots } from "./testing/snapshot.js";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Deprecated Aliases (Backward Compatibility)
 // ─────────────────────────────────────────────────────────────────────────────

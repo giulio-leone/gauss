@@ -28,6 +28,7 @@ export default defineConfig([
       "scraping/index": "src/scraping/index.ts",
       "workflow/index": "src/workflow/index.ts",
       "a2a/index": "src/a2a/index.ts",
+      "testing/index": "src/testing/index.ts",
     },
     format: ["cjs", "esm"],
     splitting: true,

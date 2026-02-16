@@ -61,6 +61,11 @@
       "import": "./dist/a2a/index.js",
       "require": "./dist/a2a/index.cjs"
     },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "require": "./dist/testing/index.cjs"
+    },
     "./runtime/node": {
       "types": "./dist/runtime-node.d.ts",
       "import": "./dist/runtime-node.js"
