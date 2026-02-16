@@ -3,15 +3,27 @@
 // =============================================================================
 
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, existsSync } from "node:fs";
 
 import type { MarketplacePluginManifest } from "../../ports/plugin-manifest.port.js";
 
 const PLUGINS_ROOT = join(homedir(), ".gaussflow", "plugins");
 
+/** Validates plugin name to prevent path traversal */
+function assertSafeName(name: string): void {
+  if (!name || /[/\\]/.test(name) || name.includes("..") || name === "." || name === "..") {
+    throw new Error(`Invalid plugin name: "${name}" — must not contain path separators or traversal`);
+  }
+  const resolved = resolve(PLUGINS_ROOT, name);
+  if (!resolved.startsWith(PLUGINS_ROOT + sep)) {
+    throw new Error(`Invalid plugin name: "${name}" — path escapes plugins directory`);
+  }
+}
+
 /** Returns the directory for a named plugin */
 export function getPluginDir(name: string): string {
+  assertSafeName(name);
   return join(PLUGINS_ROOT, name);
 }
 

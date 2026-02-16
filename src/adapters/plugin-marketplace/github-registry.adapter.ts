@@ -87,6 +87,13 @@ export class GitHubRegistryAdapter implements MarketplacePort {
       throw new Error("Registry JSON is not an array.");
     }
 
-    return data as MarketplacePluginManifest[];
+    return data.filter(
+      (item): item is MarketplacePluginManifest =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as Record<string, unknown>).name === "string" &&
+        typeof (item as Record<string, unknown>).description === "string" &&
+        typeof (item as Record<string, unknown>).version === "string",
+    );
   }
 }
