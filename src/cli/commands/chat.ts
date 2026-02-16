@@ -1,15 +1,15 @@
 // =============================================================================
-// CLI Chat Command — Single-shot agentic prompt execution
+// CLI Chat Command — Single-shot agentic prompt execution (streaming)
 // =============================================================================
 
 import type { LanguageModel } from "ai";
-import { color, createSpinner, formatDuration, formatMarkdown } from "../format.js";
+import { color, createSpinner, formatDuration } from "../format.js";
 import { createCliTools } from "../tools.js";
 
-/** Max characters shown for tool call arguments in console output */
-const MAX_ARGS_DISPLAY_LENGTH = 200;
-/** Max characters shown for tool results in console output */
-const MAX_RESULT_DISPLAY_LENGTH = 500;
+/** Max characters shown for streaming tool-input deltas */
+const MAX_DELTA_DISPLAY_LENGTH = 200;
+/** Max characters shown for tool output summaries */
+const MAX_TOOL_OUTPUT_DISPLAY_LENGTH = 500;
 
 export async function runChat(
   prompt: string,
@@ -52,39 +52,48 @@ export async function runChat(
   const spinner = createSpinner("Thinking");
 
   try {
-    const result = await agent.run(prompt, {});
+    const stream = await agent.stream({
+      messages: [{ role: "user", content: prompt }],
+    });
 
-    spinner.stop();
-
-    // Display tool calls
-    const steps = result.steps as Array<{
-      toolCalls?: Array<{ toolName: string; args: unknown }>;
-      toolResults?: Array<{ toolName: string; result: unknown }>;
-    }>;
-    if (steps) {
-      for (const step of steps) {
-        if (step.toolCalls) {
-          for (const tc of step.toolCalls) {
-            console.log(color("magenta", `\n  🔧 ${tc.toolName}`));
-            const argsStr = JSON.stringify(tc.args);
-            console.log(color("dim", `     ${argsStr.length > MAX_ARGS_DISPLAY_LENGTH ? argsStr.slice(0, MAX_ARGS_DISPLAY_LENGTH - 3) + "..." : argsStr}`));
+    let firstChunk = true;
+    for await (const part of stream.fullStream) {
+      switch (part.type) {
+        case "text-delta":
+          if (firstChunk) {
+            spinner.stop();
+            process.stdout.write(color("cyan", "\n🤖 "));
+            firstChunk = false;
           }
-        }
-        if (step.toolResults) {
-          for (const tr of step.toolResults) {
-            const resStr = typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result);
-            const truncated = resStr.length > MAX_RESULT_DISPLAY_LENGTH ? resStr.slice(0, MAX_RESULT_DISPLAY_LENGTH - 3) + "..." : resStr;
-            console.log(color("dim", `     → ${truncated}`));
+          process.stdout.write(part.text);
+          break;
+        case "tool-input-start":
+          if (firstChunk) { spinner.stop(); firstChunk = false; }
+          process.stdout.write(color("magenta", `\n  🔧 ${part.toolName} `));
+          break;
+        case "tool-input-delta":
+          process.stdout.write(color("dim", part.delta.length > MAX_DELTA_DISPLAY_LENGTH ? part.delta.slice(0, MAX_DELTA_DISPLAY_LENGTH) + "…" : part.delta));
+          break;
+        case "tool-input-end":
+          process.stdout.write("\n");
+          break;
+        case "tool-result":
+          {
+            const raw = (part as Record<string, unknown>).output ?? (part as Record<string, unknown>).result;
+            const summary = typeof raw === "string" ? raw : (JSON.stringify(raw) ?? "(no output)");
+            process.stdout.write(color("dim", `  ↳ ${summary.length > MAX_TOOL_OUTPUT_DISPLAY_LENGTH ? summary.slice(0, MAX_TOOL_OUTPUT_DISPLAY_LENGTH) + "…" : summary}\n`));
           }
-        }
+          break;
+        case "tool-error":
+          process.stdout.write(color("red", `  ✗ Tool error (${(part as Record<string, unknown>).toolName}): ${(part as Record<string, unknown>).error}\n`));
+          break;
+        case "error":
+          if (firstChunk) { spinner.stop(); firstChunk = false; }
+          process.stdout.write(color("red", `\n  ✗ Stream error: ${(part as Record<string, unknown>).error}\n`));
+          break;
+        default:
+          break;
       }
-    }
-
-    // Display response
-    const response = result.text ?? "";
-    if (response) {
-      process.stdout.write(color("cyan", "\n🤖 "));
-      process.stdout.write(formatMarkdown(response));
     }
 
     const elapsed = formatDuration(Date.now() - startTime);

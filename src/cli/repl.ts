@@ -37,6 +37,7 @@ export async function startRepl(
     "/help", "/exit", "/quit", "/clear", "/model", "/provider",
     "/info", "/settings", "/system", "/yolo", "/read", "/bash",
     "/history", "/clear-history", "/mcp", "/git",
+    "/test", "/lint", "/fix",
   ];
   const MCP_SUBCOMMANDS = ["add", "list", "remove", "connect", "disconnect"];
 
@@ -138,6 +139,10 @@ export async function startRepl(
       if (trimmed.startsWith("/")) {
         const handled = await handleSlashCommand(trimmed);
         if (handled === "exit") break;
+        if (handled && handled !== "exit") {
+          // Slash command returned a prompt to send to the agent (e.g. /fix)
+          await chat(handled);
+        }
         continue;
       }
 
@@ -341,6 +346,11 @@ export async function startRepl(
         console.log(bold("  Git:"));
         console.log("  /git               Show git status");
         console.log("");
+        console.log(bold("  Dev:"));
+        console.log("  /test [cmd]        Run tests (default: npm test)");
+        console.log("  /lint [cmd]        Run linter (default: npm run lint)");
+        console.log("  /fix               Ask agent to fix the last error");
+        console.log("");
         console.log(bold("  History:"));
         console.log("  /history           Show conversation history");
         console.log("  /clear-history     Clear conversation history");
@@ -528,6 +538,37 @@ export async function startRepl(
           console.log(output || "(clean working tree)");
         } catch { console.log("Not a git repository"); }
         break;
+
+      case "/test": {
+        const testCmd = parts.slice(1).join(" ") || "npm test";
+        console.log(color("dim", `Running: ${testCmd}`));
+        try {
+          const output = execSync(testCmd, { encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 120000 });
+          console.log(output);
+        } catch (err: unknown) {
+          const e = err as { stdout?: string; stderr?: string; message?: string };
+          console.log(e.stdout || "");
+          console.error(color("red", e.stderr || e.message || "Test failed"));
+        }
+        break;
+      }
+
+      case "/lint": {
+        const lintCmd = parts.slice(1).join(" ") || "npm run lint";
+        console.log(color("dim", `Running: ${lintCmd}`));
+        try {
+          const output = execSync(lintCmd, { encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 120000 });
+          console.log(output);
+        } catch (err: unknown) {
+          const e = err as { stdout?: string; stderr?: string; message?: string };
+          console.log(e.stdout || "");
+          console.error(color("red", e.stderr || e.message || "Lint failed"));
+        }
+        break;
+      }
+
+      case "/fix":
+        return "Please analyze the last error and fix it. Look at the error output above in our conversation and determine what went wrong, then use the available tools to fix it.";
 
       default:
         console.log(color("yellow", `  Unknown command: ${command}. Type /help for available commands.\n`));
