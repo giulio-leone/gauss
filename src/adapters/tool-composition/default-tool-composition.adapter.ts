@@ -77,7 +77,8 @@ class DefaultToolPipeline implements ToolPipeline {
     for (const { primary, fallback } of this.fallbacks) {
       const primaryTool = result[primary];
       const fallbackTool = result[fallback];
-      if (!primaryTool || !fallbackTool) continue;
+      if (!primaryTool) throw new Error(`Fallback composition failed: primary tool "${primary}" not found`);
+      if (!fallbackTool) throw new Error(`Fallback composition failed: fallback tool "${fallback}" not found`);
 
       result[primary] = this.wrapWithFallback(primary, primaryTool, fallbackTool);
     }
@@ -88,7 +89,7 @@ class DefaultToolPipeline implements ToolPipeline {
 
       const pipelineName = names.join("_pipe_");
       const firstTool = result[names[0]];
-      if (!firstTool) continue;
+      if (!firstTool) throw new Error(`Pipe composition failed: first tool "${names[0]}" not found`);
 
       result[pipelineName] = this.buildPipeTool(pipelineName, names, result);
     }
@@ -189,7 +190,7 @@ class DefaultToolPipeline implements ToolPipeline {
             const mw = middlewares[i];
             if (mw.onError) {
               const fallback = await mw.onError(name, err as Error);
-              if (fallback !== null) return fallback;
+              if (fallback != null) return fallback;
             }
           }
           throw err;

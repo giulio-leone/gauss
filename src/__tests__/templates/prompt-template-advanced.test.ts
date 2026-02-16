@@ -64,6 +64,16 @@ describe("PromptTemplate Advanced Features", () => {
       const t = new PromptTemplate({ template: "{{#unless hidden}}shown{{/unless}}" });
       expect(t.compile({})).toBe("shown");
     });
+
+    it("should support {{else}} with falsy condition", () => {
+      const t = new PromptTemplate({ template: "{{#unless hidden}}A{{else}}B{{/unless}}" });
+      expect(t.compile({ hidden: false })).toBe("A");
+    });
+
+    it("should support {{else}} with truthy condition", () => {
+      const t = new PromptTemplate({ template: "{{#unless hidden}}A{{else}}B{{/unless}}" });
+      expect(t.compile({ hidden: true })).toBe("B");
+    });
   });
 
   describe("loops - each", () => {
@@ -173,6 +183,23 @@ describe("PromptTemplate Advanced Features", () => {
         template: "{{#if show}}{{#each items}}{{this}} {{/each}}{{/if}}"
       });
       expect(t.compile({ show: false, items: ["x", "y"] })).toBe("");
+    });
+  });
+
+  describe("filter edge cases (R5 fixes)", () => {
+    it("requiredVariables includes variables from filter expressions", () => {
+      const t = new PromptTemplate({ template: "{{name | uppercase}}" });
+      expect(t.requiredVariables).toContain("name");
+    });
+
+    it("filter with pipe in argument uses the default", () => {
+      const t = new PromptTemplate({ template: "{{x | default('a|b')}}" });
+      expect(t.compile({ x: undefined })).toBe("a|b");
+    });
+
+    it("missing filter variable throws an error", () => {
+      const t = new PromptTemplate({ template: "{{missing | uppercase}}" });
+      expect(() => t.compile({})).toThrow('Required variable "missing" is missing');
     });
   });
 

@@ -171,6 +171,14 @@ describe("PartialJsonAdapter.parse — edge cases", () => {
     expect(complete).toBe(true);
   });
 
+  it("handles trailing backslash at escape boundary (R1)", () => {
+    // Buffer cut mid-escape: the trailing backslash must be stripped
+    // so the appended closing quote isn't interpreted as an escaped quote.
+    const { value, complete } = adapter().parse('{"msg":"hello\\');
+    expect(value).toEqual({ msg: "hello" });
+    expect(complete).toBe(false);
+  });
+
   it("handles partial key (no value yet)", () => {
     // '{"ke' → closes string → '{"ke"}' which is invalid JSON, so value is undefined
     const { value, complete } = adapter().parse('{"ke');

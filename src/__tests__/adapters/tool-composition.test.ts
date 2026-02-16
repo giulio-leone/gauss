@@ -212,6 +212,20 @@ describe("DefaultToolCompositionAdapter", () => {
       ).rejects.toThrow("unrecoverable");
     });
 
+    it("should rethrow when onError returns undefined", async () => {
+      const failing = makeTool("failing", async () => { throw new Error("swallowed"); });
+
+      const mw: ToolMiddleware = {
+        name: "returns-undefined",
+        onError: async () => undefined as any,
+      };
+
+      const composed = adapter.createPipeline({ failing }).withMiddleware(mw).build();
+      await expect(
+        composed["failing"].execute!({} as any, { toolCallId: "", messages: [], abortSignal: undefined as any }),
+      ).rejects.toThrow("swallowed");
+    });
+
     it("should pass error details to onError", async () => {
       const failing = makeTool("failing", async () => { throw new Error("detail-err"); });
 

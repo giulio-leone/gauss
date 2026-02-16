@@ -8,7 +8,7 @@ export interface ToolMiddleware {
   name: string;
   before?(toolName: string, args: unknown): Promise<unknown>;
   after?(toolName: string, result: unknown): Promise<unknown>;
-  onError?(toolName: string, error: Error): Promise<unknown | null>;
+  onError?(toolName: string, error: Error): Promise<unknown> | null;
 }
 
 export interface ToolPipeline {

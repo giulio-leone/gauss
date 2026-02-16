@@ -45,8 +45,12 @@ function completePartialJson(partial: string): string {
     else if (ch === "}" || ch === "]") stack.pop();
   }
 
-  // Close unclosed string
+  // Close unclosed string — strip a dangling backslash so the added
+  // closing quote isn't interpreted as an escaped quote (R1 fix).
   if (inString) {
+    if (escaped) {
+      s = s.slice(0, -1);
+    }
     s += '"';
   }
 
