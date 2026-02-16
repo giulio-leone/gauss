@@ -4,13 +4,16 @@
 
 import { execSync } from "node:child_process";
 
+/** Default timeout for shell command execution in ms (30 seconds) */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export interface BashResult {
   stdout: string;
   stderr: string;
   exitCode: number;
 }
 
-export function runBash(command: string, timeout = 30000): BashResult {
+export function runBash(command: string, timeout = DEFAULT_TIMEOUT_MS): BashResult {
   try {
     const stdout = execSync(command, {
       encoding: "utf-8",

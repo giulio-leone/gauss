@@ -13,6 +13,9 @@ import type {
 } from "../../ports/agent-memory.port.js";
 import { calculateMemoryStats } from "./memory-utils.js";
 
+/** Max characters kept when summarizing memory entries */
+const SUMMARY_MAX_LENGTH = 500;
+
 export interface FileMemoryAdapterOptions {
   directory?: string; // default: .gaussflow/memory/
 }
@@ -133,7 +136,7 @@ export class FileMemoryAdapter implements AgentMemoryPort {
 
   async summarize(entries: MemoryEntry[]): Promise<string> {
     const combined = entries.map((e) => e.content).join("\n");
-    return combined.length > 500 ? combined.slice(0, 500) + "..." : combined;
+    return combined.length > SUMMARY_MAX_LENGTH ? combined.slice(0, SUMMARY_MAX_LENGTH) + "..." : combined;
   }
 
   async clear(): Promise<void> {

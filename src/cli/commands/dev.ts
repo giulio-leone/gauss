@@ -56,7 +56,10 @@ export async function devCommand(
       (newAgent) => {
         const old = agent;
         agent = newAgent;
-        old.dispose().catch(() => {});
+        // fire-and-forget: old agent disposal must not block hot-reload
+        old.dispose().catch((err: unknown) => {
+          console.warn("[hot-reload] Failed to dispose old agent:", err instanceof Error ? err.message : String(err));
+        });
         console.log(color("yellow", `\n[hot-reload] Agent reloaded from ${configPath}\n`));
       },
     );

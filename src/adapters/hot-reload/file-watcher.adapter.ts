@@ -5,6 +5,9 @@
 import { readFileSync, watch, type FSWatcher } from "node:fs";
 import type { HotReloadPort, AgentConfig } from "../../ports/hot-reload.port.js";
 
+/** Default debounce interval for file-change events in ms */
+const DEFAULT_DEBOUNCE_MS = 300;
+
 function validateAgentConfig(data: unknown): data is AgentConfig {
   if (typeof data !== "object" || data === null) return false;
   const obj = data as Record<string, unknown>;
@@ -20,7 +23,7 @@ export class FileWatcherAdapter implements HotReloadPort {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly debounceMs: number;
 
-  constructor(debounceMs = 300) {
+  constructor(debounceMs = DEFAULT_DEBOUNCE_MS) {
     this.debounceMs = debounceMs;
   }
 

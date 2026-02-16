@@ -2,6 +2,9 @@
 // Agent Lifecycle Manager — Startup, Shutdown, and Health Management
 // =============================================================================
 
+/** Graceful shutdown timeout in ms (30 seconds) */
+const SHUTDOWN_TIMEOUT_MS = 30_000;
+
 export interface LifecycleHooks {
   onStartup?: () => Promise<void>;
   onShutdown?: () => Promise<void>;
@@ -47,7 +50,7 @@ export class LifecycleManager {
     if (this.runningOperations.size > 0) {
       const controller = new AbortController();
       const timeout = new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, 30000);
+        const timer = setTimeout(resolve, SHUTDOWN_TIMEOUT_MS);
         controller.signal.addEventListener('abort', () => {
           clearTimeout(timer);
           resolve();
@@ -56,7 +59,10 @@ export class LifecycleManager {
       
       const allOperations = Promise.all(Array.from(this.runningOperations))
         .then(() => {})
-        .catch(() => {}); // Ignore errors during graceful shutdown
+        // fire-and-forget: running operations must not prevent graceful shutdown
+        .catch((err: unknown) => {
+          console.warn("[shutdown] Error in running operation:", err instanceof Error ? err.message : String(err));
+        });
       
       await Promise.race([allOperations, timeout]);
       controller.abort();

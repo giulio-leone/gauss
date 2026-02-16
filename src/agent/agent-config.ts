@@ -24,9 +24,12 @@ export const DEFAULT_APPROVAL_CONFIG: Required<ApprovalConfig> = {
   onApprovalRequired: async () => true,
 };
 
+/** Subagent execution timeout in ms (5 minutes) */
+const DEFAULT_SUBAGENT_TIMEOUT_MS = 300_000;
+
 export const DEFAULT_SUBAGENT_CONFIG: Required<SubagentConfig> = {
   maxDepth: 3,
-  timeoutMs: 300_000,
+  timeoutMs: DEFAULT_SUBAGENT_TIMEOUT_MS,
   allowNesting: true,
 };
 

@@ -6,6 +6,11 @@ import type { LanguageModel } from "ai";
 import { color, createSpinner, formatDuration, formatMarkdown } from "../format.js";
 import { createCliTools } from "../tools.js";
 
+/** Max characters shown for tool call arguments in console output */
+const MAX_ARGS_DISPLAY_LENGTH = 200;
+/** Max characters shown for tool results in console output */
+const MAX_RESULT_DISPLAY_LENGTH = 500;
+
 export async function runChat(
   prompt: string,
   model: LanguageModel,
@@ -62,13 +67,13 @@ export async function runChat(
           for (const tc of step.toolCalls) {
             console.log(color("magenta", `\n  🔧 ${tc.toolName}`));
             const argsStr = JSON.stringify(tc.args);
-            console.log(color("dim", `     ${argsStr.length > 200 ? argsStr.slice(0, 197) + "..." : argsStr}`));
+            console.log(color("dim", `     ${argsStr.length > MAX_ARGS_DISPLAY_LENGTH ? argsStr.slice(0, MAX_ARGS_DISPLAY_LENGTH - 3) + "..." : argsStr}`));
           }
         }
         if (step.toolResults) {
           for (const tr of step.toolResults) {
             const resStr = typeof tr.result === "string" ? tr.result : JSON.stringify(tr.result);
-            const truncated = resStr.length > 500 ? resStr.slice(0, 497) + "..." : resStr;
+            const truncated = resStr.length > MAX_RESULT_DISPLAY_LENGTH ? resStr.slice(0, MAX_RESULT_DISPLAY_LENGTH - 3) + "..." : resStr;
             console.log(color("dim", `     → ${truncated}`));
           }
         }
@@ -89,7 +94,10 @@ export async function runChat(
     console.error(color("red", `\n✗ Error: ${msg}\n`));
   } finally {
     spinner.stop();
-    await persistUsage(costTracker).catch(() => {});
+    // fire-and-forget: usage persistence must not block exit
+    await persistUsage(costTracker).catch((err: unknown) => {
+      console.warn("[usage] Failed to persist usage data:", err instanceof Error ? err.message : String(err));
+    });
     await agent.dispose();
   }
 }

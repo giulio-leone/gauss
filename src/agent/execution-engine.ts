@@ -326,7 +326,10 @@ export class ExecutionEngine {
                     });
                   }
                 }
-              }).catch(() => { /* ignore usage tracking errors */ });
+              }).catch((err: unknown) => {
+                // fire-and-forget: usage tracking must not break streaming
+                console.warn("[usage-tracking] Failed to record usage:", err instanceof Error ? err.message : String(err));
+              });
             }
             return stream;
           });

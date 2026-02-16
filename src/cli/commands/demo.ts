@@ -5,6 +5,9 @@
 import type { LanguageModel } from "ai";
 import { color } from "../format.js";
 
+/** Max characters shown for response previews in demo output */
+const MAX_RESPONSE_PREVIEW_LENGTH = 200;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Guardrails Demo
 // ─────────────────────────────────────────────────────────────────────────────
@@ -107,7 +110,7 @@ export async function demoWorkflow(model: LanguageModel): Promise<void> {
   try {
     console.log(color("yellow", "▸ Running workflow + agent..."));
     const result = await agent.run("Explain what a workflow engine is in 2 sentences.");
-    console.log(color("green", `\n  ✓ Response: ${result.text.slice(0, 200)}\n`));
+    console.log(color("green", `\n  ✓ Response: ${result.text.slice(0, MAX_RESPONSE_PREVIEW_LENGTH)}\n`));
 
     const wfResult = plugin.getLastResult();
     if (wfResult) {

@@ -17,6 +17,11 @@ import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const MAX_HISTORY = 200;
 
+/** Max characters shown for streaming tool-input deltas */
+const MAX_DELTA_DISPLAY_LENGTH = 200;
+/** Max characters shown for tool output summaries */
+const MAX_TOOL_OUTPUT_DISPLAY_LENGTH = 500;
+
 const DEFAULT_SYSTEM_PROMPT =
   "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, list directories, and execute bash commands. Use these tools to help the user accomplish their tasks. Be concise and direct.";
 
@@ -146,7 +151,10 @@ export async function startRepl(
     if (!isEof) throw err;
     console.log(color("dim", "\nGoodbye! 👋\n"));
   } finally {
-    await persistUsage(sessionCostTracker).catch(() => {});
+    // fire-and-forget: usage persistence must not block exit
+    await persistUsage(sessionCostTracker).catch((err: unknown) => {
+      console.warn("[usage] Failed to persist usage data:", err instanceof Error ? err.message : String(err));
+    });
     await mcpAdapter.closeAll();
     rl.close();
   }
@@ -255,7 +263,7 @@ export async function startRepl(
             process.stdout.write(color("magenta", `\n  🔧 ${part.toolName} `));
             break;
           case "tool-input-delta":
-            process.stdout.write(color("dim", part.delta.length > 200 ? part.delta.slice(0, 200) + "…" : part.delta));
+            process.stdout.write(color("dim", part.delta.length > MAX_DELTA_DISPLAY_LENGTH ? part.delta.slice(0, MAX_DELTA_DISPLAY_LENGTH) + "…" : part.delta));
             break;
           case "tool-input-end":
             process.stdout.write("\n");
@@ -264,7 +272,7 @@ export async function startRepl(
             {
               const raw = (part as Record<string, unknown>).output ?? (part as Record<string, unknown>).result;
               const summary = typeof raw === "string" ? raw : JSON.stringify(raw);
-              process.stdout.write(color("dim", `  ↳ ${summary.length > 500 ? summary.slice(0, 500) + "…" : summary}\n`));
+              process.stdout.write(color("dim", `  ↳ ${summary.length > MAX_TOOL_OUTPUT_DISPLAY_LENGTH ? summary.slice(0, MAX_TOOL_OUTPUT_DISPLAY_LENGTH) + "…" : summary}\n`));
             }
             break;
           case "tool-error":

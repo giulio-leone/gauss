@@ -203,8 +203,9 @@ export class DefaultMcpServerAdapter implements McpServerPort {
 
         if (!line) continue;
 
-        this.processStdioLine(line).catch(() => {
-          // silently ignore malformed input
+        this.processStdioLine(line).catch((err: unknown) => {
+          // fire-and-forget: stdio line processing must not crash the server
+          console.warn("[mcp-stdio] Unhandled error processing line:", err instanceof Error ? err.message : String(err));
         });
       }
     };
@@ -239,7 +240,8 @@ export class DefaultMcpServerAdapter implements McpServerPort {
   private startSse(port: number): Promise<void> {
     return new Promise((resolve, reject) => {
       this.httpServer = createServer((req, res) => {
-        this.handleHttpRequest(req, res).catch(() => {
+        this.handleHttpRequest(req, res).catch((err: unknown) => {
+          console.warn("[mcp-sse] Unhandled request error:", err instanceof Error ? err.message : String(err));
           if (!res.headersSent) {
             res.writeHead(500);
             res.end();

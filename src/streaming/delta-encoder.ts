@@ -4,6 +4,9 @@
 
 import type { AgentEvent } from "../types.js";
 
+/** Default cap on tracked entries to bound memory usage */
+const DEFAULT_MAX_ENTRIES = 1000;
+
 export interface DeltaEncoder {
   /** Encode an event, returning null if identical to previous of same type. */
   encode(event: AgentEvent): string | null;
@@ -25,7 +28,7 @@ function fieldsEqual(a: unknown, b: unknown): boolean {
 }
 
 export function createDeltaEncoder(options?: DeltaEncoderOptions): DeltaEncoder {
-  const maxEntries = options?.maxEntries ?? 1000;
+  const maxEntries = options?.maxEntries ?? DEFAULT_MAX_ENTRIES;
   const lastSeen = new Map<string, { serialized: string; event: AgentEvent }>();
 
   return {

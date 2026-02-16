@@ -25,6 +25,9 @@ import type { AgentCardProvider } from "./agent-card.plugin.js";
 import { A2ADelegationManager, type AgentCapability, type DelegationResult } from "./a2a-delegation.js";
 import { A2APushNotifier, type PushNotificationConfig } from "./a2a-push.js";
 
+/** Default timeout for outbound A2A requests in ms (30 seconds) */
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+
 export interface A2AAgentRuntime {
   sessionId: string;
   run(prompt: string, options?: DeepAgentRunOptions): Promise<DeepAgentResult>;
@@ -112,7 +115,7 @@ export class A2APlugin implements DeepAgentPlugin {
     }
 
     this.fetchImpl = fetchImpl;
-    this.requestTimeoutMs = options.requestTimeoutMs ?? 30_000;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.agentCardProvider = options.agentCardProvider;
     this.delegationManager = new A2ADelegationManager(fetchImpl);
     this.pushNotifier = new A2APushNotifier(fetchImpl);

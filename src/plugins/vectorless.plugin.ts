@@ -14,6 +14,9 @@ import type { ReRankingPort, ScoredResult, SourceAttribution } from "../ports/re
 import { DefaultChunkingAdapter } from "../adapters/chunking/index.js";
 import { DefaultReRankingAdapter } from "../adapters/reranking/index.js";
 
+/** Default maximum token count per RAG chunk */
+const DEFAULT_MAX_TOKENS_PER_CHUNK = 512;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,7 +227,7 @@ export class VectorlessPlugin extends BasePlugin {
           text: z.string().describe("The document text to ingest"),
           source: z.string().optional().describe("Source identifier for attribution"),
           chunkingStrategy: z.enum(["fixed", "sliding-window", "semantic", "recursive"]).default("recursive").describe("Chunking strategy"),
-          maxTokens: z.number().min(1).default(512).describe("Max tokens per chunk"),
+          maxTokens: z.number().min(1).default(DEFAULT_MAX_TOKENS_PER_CHUNK).describe("Max tokens per chunk"),
           overlap: z.number().min(0).default(50).describe("Token overlap for sliding-window"),
         }),
         execute: async (args: unknown) => {
@@ -235,7 +238,7 @@ export class VectorlessPlugin extends BasePlugin {
               text: z.string(),
               source: z.string().optional(),
               chunkingStrategy: z.enum(["fixed", "sliding-window", "semantic", "recursive"]).default("recursive"),
-              maxTokens: z.number().min(1).default(512),
+              maxTokens: z.number().min(1).default(DEFAULT_MAX_TOKENS_PER_CHUNK),
               overlap: z.number().min(0).default(50),
             }),
             args,

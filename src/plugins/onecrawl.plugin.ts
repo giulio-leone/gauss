@@ -10,6 +10,9 @@ import { BasePlugin } from "./base.plugin.js";
 import type { ValidationPort } from "../ports/validation.port.js";
 import { getValidator } from "./utils/get-validator.js";
 
+/** Default HTTP request timeout in ms (30 seconds) */
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,7 +78,7 @@ export class OneCrawlPlugin extends BasePlugin {
       const mod = await import("onecrawl");
       const CrawlerClass = mod.Crawler ?? mod.default?.Crawler ?? mod.default;
       return new CrawlerClass({
-        timeout: this.options.timeout ?? 30000,
+        timeout: this.options.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS,
       });
     } catch {
       throw new Error(

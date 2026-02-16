@@ -9,6 +9,9 @@ import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const CONFIG_FILE = ".gaussflowrc";
 
+/** Maximum number of history lines to retain on disk */
+const MAX_HISTORY_LINES = 1000;
+
 export interface GaussFlowConfig {
   keys: Record<string, string>;
   defaultProvider?: string;
@@ -143,8 +146,8 @@ export function loadHistory(): string[] {
   if (!existsSync(path)) return [];
   try {
     const lines = readFileSync(path, "utf-8").split("\n").filter(Boolean);
-    if (lines.length > 1000) {
-      const trimmed = lines.slice(-1000);
+    if (lines.length > MAX_HISTORY_LINES) {
+      const trimmed = lines.slice(-MAX_HISTORY_LINES);
       writeFileSync(path, trimmed.join("\n") + "\n", { encoding: "utf-8", mode: 0o600 });
       chmodSync(path, 0o600);
       return trimmed;

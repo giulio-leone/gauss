@@ -13,6 +13,9 @@ import { InMemoryAgentMemoryAdapter } from "../adapters/memory/in-memory-agent-m
 // Shared schema constants
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Max characters kept when summarizing memory entries */
+const SUMMARY_MAX_LENGTH = 500;
+
 const memoryTypeSchema = z.enum(["conversation", "fact", "preference", "task", "summary"]);
 const importanceSchema = z.number().min(0).max(1).optional();
 
@@ -118,7 +121,7 @@ export class MemoryPlugin implements DeepAgentPlugin {
     const text = params.result.text;
     if (!text) return;
 
-    const summary = text.length > 500 ? text.slice(0, 500) + "..." : text;
+    const summary = text.length > SUMMARY_MAX_LENGTH ? text.slice(0, SUMMARY_MAX_LENGTH) + "..." : text;
     const entry: MemoryEntry = {
       id: crypto.randomUUID(),
       content: summary,
