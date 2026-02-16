@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { createInterface } from "node:readline/promises";
+import { execSync } from "node:child_process";
 import { stdin, stdout } from "node:process";
 import type { LanguageModel } from "ai";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
@@ -35,7 +36,7 @@ export async function startRepl(
   const SLASH_COMMANDS = [
     "/help", "/exit", "/quit", "/clear", "/model", "/provider",
     "/info", "/settings", "/system", "/yolo", "/read", "/bash",
-    "/history", "/clear-history", "/mcp",
+    "/history", "/clear-history", "/mcp", "/git",
   ];
   const MCP_SUBCOMMANDS = ["add", "list", "remove", "connect", "disconnect"];
 
@@ -337,6 +338,9 @@ export async function startRepl(
         console.log("  /bash <cmd>        Execute a bash command");
         console.log("  !<cmd>             Shortcut for /bash");
         console.log("");
+        console.log(bold("  Git:"));
+        console.log("  /git               Show git status");
+        console.log("");
         console.log(bold("  History:"));
         console.log("  /history           Show conversation history");
         console.log("  /clear-history     Clear conversation history");
@@ -516,6 +520,13 @@ export async function startRepl(
 
       case "/mcp":
         await handleMcpCommand(parts.slice(1));
+        break;
+
+      case "/git":
+        try {
+          const output = execSync("git status --short", { encoding: "utf8" });
+          console.log(output || "(clean working tree)");
+        } catch { console.log("Not a git repository"); }
         break;
 
       default:
