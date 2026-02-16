@@ -12,7 +12,7 @@ import { demoGuardrails, demoWorkflow, demoGraph, demoObservability } from "./co
 import { startRepl } from "./repl.js";
 import { color, bold, maskKey } from "./format.js";
 
-const VERSION = "0.8.1";
+const VERSION = "0.9.0";
 
 const HELP = `
 ${bold("GaussFlow CLI")} — AI Agent Framework
