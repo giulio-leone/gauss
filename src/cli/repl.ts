@@ -11,6 +11,8 @@ import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMc
 import { color, bold, createSpinner, formatDuration, maskKey, formatMarkdown } from "./format.js";
 import { readFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
+import { persistUsage } from "./persist-usage.js";
+import { DefaultCostTrackerAdapter } from "../adapters/cost-tracker/index.js";
 import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const MAX_HISTORY = 200;
@@ -69,6 +71,7 @@ export async function startRepl(
   let currentApiKey = apiKey;
   let systemPrompt = DEFAULT_SYSTEM_PROMPT;
   let yoloMode = yolo ?? false;
+  const sessionCostTracker = new DefaultCostTrackerAdapter();
 
   // Serialize tool confirmations to avoid concurrent readline conflicts
   let confirmLock = Promise.resolve<void>();
@@ -143,6 +146,7 @@ export async function startRepl(
     if (!isEof) throw err;
     console.log(color("dim", "\nGoodbye! 👋\n"));
   } finally {
+    await persistUsage(sessionCostTracker).catch(() => {});
     await mcpAdapter.closeAll();
     rl.close();
   }
@@ -219,6 +223,7 @@ export async function startRepl(
       maxSteps: 30,
     })
       .withTools(tools)
+      .withCostTracker(sessionCostTracker)
       .build();
 
     const startTime = Date.now();

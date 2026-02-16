@@ -10,6 +10,7 @@ import type { LearningPort } from "../ports/learning.port.js";
 import type { CheckpointConfig } from "../types.js";
 import type { PluginContext, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
+import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 
@@ -33,6 +34,7 @@ export interface ExecutionEngineConfig {
   userId?: string;
   checkpointConfig?: Required<CheckpointConfig>;
   telemetry?: TelemetryPort;
+  costTracker?: CostTrackerPort;
 }
 
 // =============================================================================
@@ -147,6 +149,19 @@ export class ExecutionEngine {
         if (usage.completionTokens) {
           this.tokenTracker.addOutput(usage.completionTokens);
           this.config.telemetry?.recordMetric("llm.tokens.output", usage.completionTokens);
+        }
+
+        // Record cost tracking if available
+        if (this.config.costTracker && (usage.promptTokens || usage.completionTokens)) {
+          const modelId = (this.config.model as unknown as { modelId?: string }).modelId ?? "unknown";
+          const provider = (this.config.model as unknown as { provider?: string }).provider ?? "unknown";
+          this.config.costTracker.recordUsage({
+            inputTokens: usage.promptTokens ?? 0,
+            outputTokens: usage.completionTokens ?? 0,
+            model: modelId,
+            provider,
+            timestamp: Date.now(),
+          });
         }
       }
 
@@ -285,7 +300,39 @@ export class ExecutionEngine {
           stopWhen: stepCountIs(this.config.maxSteps),
         });
 
-        return agent.stream(params as Parameters<typeof agent.stream>[0]);
+        const streamResult = agent.stream(params as Parameters<typeof agent.stream>[0]);
+
+        // Track cost from streaming after completion
+        if (this.config.costTracker) {
+          const costTracker = this.config.costTracker;
+          const model = this.config.model;
+          const tokenTracker = this.tokenTracker;
+          return Promise.resolve(streamResult).then((stream) => {
+            const usagePromise = (stream as Record<string, unknown>).usage ?? (stream as Record<string, unknown>).totalUsage;
+            if (usagePromise && typeof (usagePromise as Promise<unknown>).then === "function") {
+              (usagePromise as Promise<{ promptTokens?: number; completionTokens?: number }>).then((u) => {
+                if (u) {
+                  if (u.promptTokens) tokenTracker.addInput(u.promptTokens);
+                  if (u.completionTokens) tokenTracker.addOutput(u.completionTokens);
+                  if (u.promptTokens || u.completionTokens) {
+                    const modelId = (model as unknown as { modelId?: string }).modelId ?? "unknown";
+                    const provider = (model as unknown as { provider?: string }).provider ?? "unknown";
+                    costTracker.recordUsage({
+                      inputTokens: u.promptTokens ?? 0,
+                      outputTokens: u.completionTokens ?? 0,
+                      model: modelId,
+                      provider,
+                      timestamp: Date.now(),
+                    });
+                  }
+                }
+              }).catch(() => { /* ignore usage tracking errors */ });
+            }
+            return stream;
+          });
+        }
+
+        return streamResult;
       });
     } catch (error: unknown) {
       const onErrorResult = await this.pluginManager.runOnError(pluginCtx, {

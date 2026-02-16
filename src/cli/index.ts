@@ -25,12 +25,14 @@ ${bold("Usage:")}
   gaussflow config list                        List API keys
   gaussflow config show                        Show full config
   gaussflow config delete <provider>           Delete API key
+  gaussflow usage                              Show token usage and cost estimate
   gaussflow demo <type> [--provider <name>]    Feature demos
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
   run         Single-shot prompt execution
   config      Manage API keys and defaults in ~/.gaussflowrc
+  usage       Show token usage and estimated cost
   demo        Run feature demos (guardrails, workflow, graph, observability)
 
 ${bold("Options:")}
@@ -87,6 +89,9 @@ async function main(): Promise<void> {
   switch (command) {
     case "config":
       return handleConfig(positionals.slice(1));
+
+    case "usage":
+      return handleUsage();
 
     case "chat":
       return handleChat(values as Record<string, string | boolean | undefined>);
@@ -220,6 +225,72 @@ function handleConfig(args: string[]): void {
     default:
       console.error(color("red", "Usage: gaussflow config [set|set-provider|set-model|list|show|delete]"));
       process.exitCode = 1;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Usage
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleUsage(): Promise<void> {
+  const { readFileSync, existsSync } = await import("node:fs");
+  const { homedir } = await import("node:os");
+  const { join } = await import("node:path");
+
+  const usagePath = join(homedir(), ".gaussflow", "usage.ndjson");
+
+  if (!existsSync(usagePath)) {
+    console.log(color("dim", "No usage data found. Usage is recorded after each CLI session."));
+    return;
+  }
+
+  let records: Array<{ inputTokens: number; outputTokens: number; model: string; provider: string; timestamp: number }>;
+  try {
+    const data = readFileSync(usagePath, "utf-8");
+    const lines = data.split('\n').filter(l => l.trim());
+    records = lines.map(l => JSON.parse(l));
+  } catch {
+    console.error(color("red", "Failed to parse usage data."));
+    process.exitCode = 1;
+    return;
+  }
+
+  if (records.length === 0) {
+    console.log(color("dim", "No usage records found."));
+    return;
+  }
+
+  // Aggregate by model
+  const byModel = new Map<string, { inputTokens: number; outputTokens: number }>();
+  let totalInput = 0;
+  let totalOutput = 0;
+
+  for (const r of records) {
+    totalInput += r.inputTokens;
+    totalOutput += r.outputTokens;
+    const existing = byModel.get(r.model) ?? { inputTokens: 0, outputTokens: 0 };
+    existing.inputTokens += r.inputTokens;
+    existing.outputTokens += r.outputTokens;
+    byModel.set(r.model, existing);
+  }
+
+  const { DefaultCostTrackerAdapter } = await import("../adapters/cost-tracker/index.js");
+  const tracker = new DefaultCostTrackerAdapter({ silent: true });
+  for (const r of records) tracker.recordUsage(r);
+  const estimate = tracker.getEstimate();
+
+  console.log(bold("\nToken Usage Summary"));
+  console.log(`  Total input tokens:  ${color("cyan", totalInput.toLocaleString())}`);
+  console.log(`  Total output tokens: ${color("cyan", totalOutput.toLocaleString())}`);
+  console.log(`  Estimated cost:      ${color("green", `$${estimate.totalCost.toFixed(4)}`)}`);
+  console.log();
+
+  if (estimate.breakdown.length > 0) {
+    console.log(bold("  Breakdown by model:"));
+    for (const b of estimate.breakdown) {
+      console.log(`    ${b.model}: ${b.inputTokens.toLocaleString()} in / ${b.outputTokens.toLocaleString()} out → ${color("green", `$${b.cost.toFixed(4)}`)}`);
+    }
+    console.log();
   }
 }
 

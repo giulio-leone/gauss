@@ -10,6 +10,7 @@ import type { LearningPort } from "../ports/learning.port.js";
 import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
+import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type { DeepAgentConfig, CheckpointConfig, SubagentConfig, ApprovalConfig } from "../types.js";
 import type { DeepAgentPlugin, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
@@ -67,6 +68,7 @@ interface DeepAgentInternalConfig {
   checkpointConfig?: Required<CheckpointConfig>;
   extraTools?: Record<string, Tool>;
   plugins?: DeepAgentPlugin[];
+  costTracker?: CostTrackerPort;
   circuitBreaker?: CircuitBreaker;
   rateLimiter?: RateLimiter;
   toolCache?: ToolCache;
@@ -162,6 +164,7 @@ export class DeepAgent {
         userId: this.config.userId,
         checkpointConfig: this.config.checkpointConfig,
         telemetry: this.config.telemetry,
+        costTracker: this.config.costTracker,
       },
       this.toolManager,
       this.pluginManager,

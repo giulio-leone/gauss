@@ -31,12 +31,16 @@ export async function runChat(
   });
 
   const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { DefaultCostTrackerAdapter } = await import("../../adapters/cost-tracker/index.js");
+  const { persistUsage } = await import("../persist-usage.js");
+  const costTracker = new DefaultCostTrackerAdapter();
   const agent = DeepAgent.create({
     model,
     instructions: "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, and execute bash commands. Use these tools to help accomplish the task. Be concise and direct.",
     maxSteps: 15,
   })
     .withTools(tools)
+    .withCostTracker(costTracker)
     .build();
 
   const startTime = Date.now();
@@ -85,6 +89,7 @@ export async function runChat(
     console.error(color("red", `\n✗ Error: ${msg}\n`));
   } finally {
     spinner.stop();
+    await persistUsage(costTracker).catch(() => {});
     await agent.dispose();
   }
 }
