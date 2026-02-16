@@ -3,7 +3,6 @@
 // =============================================================================
 
 import type { LanguageModel } from "ai";
-import { DeepAgent } from "../../agent/deep-agent.js";
 import { color, createSpinner, formatDuration, formatMarkdown } from "../format.js";
 import { createCliTools } from "../tools.js";
 
@@ -31,6 +30,7 @@ export async function runChat(
     },
   });
 
+  const { DeepAgent } = await import("../../agent/deep-agent.js");
   const agent = DeepAgent.create({
     model,
     instructions: "You are GaussFlow, an AI coding assistant. You can read files, write files, search code, and execute bash commands. Use these tools to help accomplish the task. Be concise and direct.",

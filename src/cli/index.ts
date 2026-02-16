@@ -7,9 +7,7 @@ import { parseArgs } from "node:util";
 import { setKey, deleteKey, listKeys, resolveApiKey, envVarName, setDefaultProvider, setDefaultModel, getDefaultProvider, getDefaultModelFromConfig, loadConfig } from "./config.js";
 import { createModel, isValidProvider, SUPPORTED_PROVIDERS, getDefaultModel } from "./providers.js";
 import type { ProviderName } from "./providers.js";
-import { runChat } from "./commands/chat.js";
-import { demoGuardrails, demoWorkflow, demoGraph, demoObservability } from "./commands/demo.js";
-import { startRepl } from "./repl.js";
+// Heavy modules (DeepAgent, plugins, graph) are lazy-loaded inside handlers
 import { color, bold, maskKey } from "./format.js";
 
 const VERSION = "0.9.0";
@@ -232,6 +230,7 @@ function handleConfig(args: string[]): void {
 async function handleChat(opts: Record<string, string | boolean | undefined>): Promise<void> {
   const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
   const languageModel = await createModel(provider, apiKey, model);
+  const { startRepl } = await import("./repl.js");
   await startRepl(languageModel, provider, apiKey, model, !!opts.yolo);
 }
 
@@ -250,6 +249,7 @@ async function handleRun(
   }
   const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
   const languageModel = await createModel(provider, apiKey, model);
+  const { runChat } = await import("./commands/chat.js");
   await runChat(prompt, languageModel, !!opts.yolo);
 }
 
@@ -270,6 +270,7 @@ async function handleDemo(
   }
   const { provider, model, apiKey } = await resolveProviderAndModel(opts);
   const languageModel = await createModel(provider, apiKey, model);
+  const { demoGuardrails, demoWorkflow, demoGraph, demoObservability } = await import("./commands/demo.js");
 
   switch (demoType) {
     case "guardrails":

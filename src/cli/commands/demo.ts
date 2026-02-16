@@ -3,17 +3,6 @@
 // =============================================================================
 
 import type { LanguageModel } from "ai";
-import { DeepAgent } from "../../agent/deep-agent.js";
-import {
-  GuardrailsPlugin,
-  createPiiFilter,
-  WorkflowPlugin,
-  ObservabilityPlugin,
-} from "../../plugins/index.js";
-import { AgentGraph } from "../../graph/agent-graph.js";
-import { InMemoryTracingAdapter } from "../../adapters/tracing/index.js";
-import { InMemoryMetricsAdapter } from "../../adapters/metrics/index.js";
-import { ConsoleLoggingAdapter } from "../../adapters/logging/index.js";
 import { color } from "../format.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,6 +10,9 @@ import { color } from "../format.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoGuardrails(model: LanguageModel): Promise<void> {
+  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { GuardrailsPlugin, createPiiFilter } = await import("../../plugins/index.js");
+
   console.log(color("magenta", "\n═══ Guardrails Plugin Demo ═══\n"));
   console.log("This demo shows input/output validation with content filtering.\n");
 
@@ -70,6 +62,9 @@ export async function demoGuardrails(model: LanguageModel): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoWorkflow(model: LanguageModel): Promise<void> {
+  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { WorkflowPlugin } = await import("../../plugins/index.js");
+
   console.log(color("magenta", "\n═══ Workflow Plugin Demo ═══\n"));
   console.log("This demo executes a 3-step workflow before the agent runs.\n");
 
@@ -132,6 +127,8 @@ export async function demoWorkflow(model: LanguageModel): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoGraph(model: LanguageModel): Promise<void> {
+  const { AgentGraph } = await import("../../graph/agent-graph.js");
+
   console.log(color("magenta", "\n═══ Agent Graph Demo ═══\n"));
   console.log("This demo runs a 3-node agent graph for multi-agent collaboration.\n");
   console.log("  [researcher] → [writer] → [reviewer]\n");
@@ -189,6 +186,12 @@ export async function demoGraph(model: LanguageModel): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function demoObservability(model: LanguageModel): Promise<void> {
+  const { DeepAgent } = await import("../../agent/deep-agent.js");
+  const { ObservabilityPlugin } = await import("../../plugins/index.js");
+  const { InMemoryTracingAdapter } = await import("../../adapters/tracing/index.js");
+  const { InMemoryMetricsAdapter } = await import("../../adapters/metrics/index.js");
+  const { ConsoleLoggingAdapter } = await import("../../adapters/logging/index.js");
+
   console.log(color("magenta", "\n═══ Observability Plugin Demo ═══\n"));
   console.log("This demo shows tracing, metrics, and logging.\n");
 

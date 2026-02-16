@@ -80,7 +80,7 @@
     "LICENSE"
   ],
   "bin": {
-    "gaussflow": "./dist/cli/index.cjs"
+    "gaussflow": "./dist/cli/index.js"
   },
   "scripts": {
     "build": "tsup",

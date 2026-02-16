@@ -4,18 +4,13 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
-import { tool as aiTool } from "ai";
 import type { LanguageModel } from "ai";
-import { z } from "zod";
-import { DeepAgent } from "../agent/deep-agent.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
 import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMcpServer, loadHistory, appendHistory } from "./config.js";
 import { color, bold, createSpinner, formatDuration, maskKey, formatMarkdown } from "./format.js";
-import { createCliTools } from "./tools.js";
 import { readFile } from "./commands/files.js";
 import { runBash } from "./commands/bash.js";
-import { AiSdkMcpAdapter } from "../adapters/mcp/ai-sdk-mcp.adapter.js";
 import type { McpServerConfig } from "../ports/mcp.port.js";
 
 const MAX_HISTORY = 200;
@@ -78,6 +73,7 @@ export async function startRepl(
   // Serialize tool confirmations to avoid concurrent readline conflicts
   let confirmLock = Promise.resolve<void>();
 
+  const { AiSdkMcpAdapter } = await import("../adapters/mcp/ai-sdk-mcp.adapter.js");
   const mcpAdapter = new AiSdkMcpAdapter();
 
   // Auto-connect saved MCP servers
@@ -188,6 +184,11 @@ export async function startRepl(
 
   async function chat(prompt: string): Promise<void> {
     history.push({ role: "user", content: prompt });
+
+    const { tool: aiTool } = await import("ai");
+    const { z } = await import("zod");
+    const { DeepAgent } = await import("../agent/deep-agent.js");
+    const { createCliTools } = await import("./tools.js");
 
     const tools = createCliTools({
       yolo: yoloMode,

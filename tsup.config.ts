@@ -30,17 +30,19 @@ export default defineConfig([
       "a2a/index": "src/a2a/index.ts",
     },
     format: ["cjs", "esm"],
+    splitting: true,
     dts: true,
     clean: true,
     sourcemap: true,
     external: [...SHARED_EXTERNALS, ...AI_SDK_EXTERNALS],
   },
-  // CLI (CJS only — Node.js executable)
+  // CLI (ESM — Node.js executable, with code splitting for lazy imports)
   {
     entry: {
       "cli/index": "src/cli/index.ts",
     },
-    format: ["cjs"],
+    format: ["esm"],
+    splitting: true,
     dts: false,
     clean: false,
     sourcemap: true,
@@ -58,6 +60,7 @@ export default defineConfig([
       "runtime-edge": "src/runtime/edge.ts",
     },
     format: ["esm"],
+    splitting: true,
     dts: true,
     clean: false,
     sourcemap: true,
