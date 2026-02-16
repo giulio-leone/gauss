@@ -180,15 +180,25 @@ export class A2APlugin implements DeepAgentPlugin {
     const sendTaskSubscribe = async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
       const taskId = params.taskId ?? crypto.randomUUID();
       
-      const events: A2ATaskEvent[] = [];
+      const eventQueue: A2ATaskEvent[] = [];
       let completed = false;
+      let pending: { promise: Promise<void>; resolve: () => void };
+      
+      function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+        let resolve!: () => void;
+        const promise = new Promise<void>(r => { resolve = r; });
+        return { promise, resolve };
+      }
+      pending = createDeferred();
       
       const eventListener = (event: A2ATaskEvent) => {
         if (event.taskId === taskId) {
-          events.push(event);
+          eventQueue.push(event);
           if (event.type === 'task:completed' || event.type === 'task:failed' || event.type === 'task:cancelled') {
             completed = true;
           }
+          pending.resolve();
+          pending = createDeferred();
         }
       };
       
@@ -219,25 +229,25 @@ export class A2APlugin implements DeepAgentPlugin {
             }
           });
 
-        // Emit events as they occur
+        // Yield events as they arrive via deferred promises
         let lastEventIndex = 0;
         while (!completed) {
-          if (events.length > lastEventIndex) {
-            for (let i = lastEventIndex; i < events.length; i++) {
-              yield events[i];
-            }
-            lastEventIndex = events.length;
+          if (eventQueue.length <= lastEventIndex) {
+            await pending.promise;
           }
-          await new Promise(resolve => setTimeout(resolve, 100));
+          for (let i = lastEventIndex; i < eventQueue.length; i++) {
+            yield eventQueue[i];
+          }
+          lastEventIndex = eventQueue.length;
         }
         
         // Wait for task completion
         await runPromise;
         
-        // Emit any remaining events
-        if (events.length > lastEventIndex) {
-          for (let i = lastEventIndex; i < events.length; i++) {
-            yield events[i];
+        // Yield any remaining events
+        if (eventQueue.length > lastEventIndex) {
+          for (let i = lastEventIndex; i < eventQueue.length; i++) {
+            yield eventQueue[i];
           }
         }
         

@@ -259,6 +259,24 @@ export class ToolManager {
 }
 
 // =============================================================================
+// Generic tool-wrapping utility
+// =============================================================================
+
+/** Iterates all executable tools and replaces each execute with the result of `wrapFn`. */
+function wrapAllTools(
+  tools: Record<string, Tool>,
+  wrapFn: (name: string, originalExecute: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown,
+): void {
+  for (const [name, toolDef] of Object.entries(tools)) {
+    if (!toolDef) continue;
+    const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
+    if (!maybeExecutable.execute) continue;
+    const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+    maybeExecutable.execute = wrapFn(name, originalExecute);
+  }
+}
+
+// =============================================================================
 // Standalone wrapping functions (SRP extraction)
 // =============================================================================
 
@@ -269,27 +287,20 @@ function applyApprovalWrapping(
   runtime: RuntimePort,
 ): void {
   let stepIndex = 0;
-  for (const [name, toolDef] of Object.entries(tools)) {
-    const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-    if (!maybeExecutable.execute) continue;
+  wrapAllTools(tools, (name, originalExecute) => async (...args: unknown[]) => {
+    const { approved, reason } = await approval.checkAndApprove(
+      name,
+      runtime.randomUUID(),
+      args[0],
+      stepIndex++,
+    );
 
-    const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+    if (!approved) {
+      return `Tool call denied: ${reason ?? "not approved"}`;
+    }
 
-    maybeExecutable.execute = async (...args: unknown[]) => {
-      const { approved, reason } = await approval.checkAndApprove(
-        name,
-        runtime.randomUUID(),
-        args[0],
-        stepIndex++,
-      );
-
-      if (!approved) {
-        return `Tool call denied: ${reason ?? "not approved"}`;
-      }
-
-      return originalExecute(...args);
-    };
-  }
+    return originalExecute(...args);
+  });
 }
 
 /** Wraps each tool's execute with circuit breaker and/or caching. */
@@ -299,37 +310,21 @@ function applyResilienceWrapping(
   toolCache?: ToolCache,
 ): void {
   if (circuitBreaker) {
-    for (const [_name, toolDef] of Object.entries(tools)) {
-      if (!toolDef) continue;
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
-        return circuitBreaker.execute(async () => originalExecute(...args));
-      };
-    }
+    wrapAllTools(tools, (_name, originalExecute) => async (...args: unknown[]): Promise<unknown> => {
+      return circuitBreaker.execute(async () => originalExecute(...args));
+    });
   }
 
   if (toolCache) {
-    for (const [name, toolDef] of Object.entries(tools)) {
-      if (!toolDef) continue;
-      const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-      if (!maybeExecutable.execute) continue;
-
-      const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
-
-      maybeExecutable.execute = async (...args: unknown[]): Promise<unknown> => {
-        const cacheKey = `${name}:${JSON.stringify(args)}`;
-        if (toolCache.has(cacheKey)) {
-          return toolCache.get(cacheKey);
-        }
-        const result = await originalExecute(...args);
-        toolCache.set(cacheKey, result);
-        return result;
-      };
-    }
+    wrapAllTools(tools, (name, originalExecute) => async (...args: unknown[]): Promise<unknown> => {
+      const cacheKey = `${name}:${JSON.stringify(args)}`;
+      if (toolCache.has(cacheKey)) {
+        return toolCache.get(cacheKey);
+      }
+      const result = await originalExecute(...args);
+      toolCache.set(cacheKey, result);
+      return result;
+    });
   }
 }
 
@@ -341,40 +336,33 @@ function applyPluginWrapping(
 ): void {
   if (pluginManager.count === 0) return;
 
-  for (const [name, toolDef] of Object.entries(tools)) {
-    const maybeExecutable = toolDef as { execute?: (...args: unknown[]) => unknown };
-    if (!maybeExecutable.execute) continue;
+  wrapAllTools(tools, (name, originalExecute) => async (...args: unknown[]) => {
+    const beforeResult = await pluginManager.runBeforeTool(pluginCtx, {
+      toolName: name,
+      args: args[0],
+    });
 
-    const originalExecute = maybeExecutable.execute.bind(maybeExecutable);
+    if (beforeResult.skip) {
+      return beforeResult.result;
+    }
 
-    maybeExecutable.execute = async (...args: unknown[]) => {
-      const beforeResult = await pluginManager.runBeforeTool(pluginCtx, {
+    const finalArgs = beforeResult.args !== undefined ? beforeResult.args : args[0];
+
+    try {
+      const result = await originalExecute(finalArgs, ...args.slice(1));
+      await pluginManager.runAfterTool(pluginCtx, {
         toolName: name,
-        args: args[0],
+        args: finalArgs,
+        result,
       });
-
-      if (beforeResult.skip) {
-        return beforeResult.result;
-      }
-
-      const finalArgs = beforeResult.args !== undefined ? beforeResult.args : args[0];
-
-      try {
-        const result = await originalExecute(finalArgs, ...args.slice(1));
-        await pluginManager.runAfterTool(pluginCtx, {
-          toolName: name,
-          args: finalArgs,
-          result,
-        });
-        return result;
-      } catch (error) {
-        const onErrorResult = await pluginManager.runOnError(pluginCtx, {
-          error,
-          phase: "tool",
-        });
-        if (onErrorResult.suppress) return undefined;
-        throw error;
-      }
-    };
-  }
+      return result;
+    } catch (error) {
+      const onErrorResult = await pluginManager.runOnError(pluginCtx, {
+        error,
+        phase: "tool",
+      });
+      if (onErrorResult.suppress) return undefined;
+      throw error;
+    }
+  });
 }

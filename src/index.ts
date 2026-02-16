@@ -208,7 +208,8 @@ export {
 // Agent — Orchestrator
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { DeepAgent, DeepAgentBuilder } from "./agent/deep-agent.js";
+export { DeepAgent } from "./agent/deep-agent.js";
+export { DeepAgentBuilder } from "./agent/deep-agent-builder.js";
 export type { DeepAgentResult, DeepAgentRunOptions } from "./agent/deep-agent.js";
 export { ToolManager } from "./agent/tool-manager.js";
 export { ExecutionEngine } from "./agent/execution-engine.js";

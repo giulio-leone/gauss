@@ -61,6 +61,7 @@ export class VectorlessPlugin extends BasePlugin {
   readonly chunks: Map<string, Chunk> = new Map();
   readonly chunkingAdapter: ChunkingPort;
   readonly rerankingAdapter: ReRankingPort;
+  private _toolsCache?: Record<string, Tool>;
 
   constructor(options: VectorlessPluginOptions = {}) {
     super();
@@ -100,6 +101,7 @@ export class VectorlessPlugin extends BasePlugin {
   }
 
   get tools(): Record<string, Tool> {
+    if (this._toolsCache) return this._toolsCache;
     const getVectorless = this.getVectorless.bind(this);
     const getKnowledge = () => this.currentKnowledge;
     const setKnowledge = (k: unknown) => { this.currentKnowledge = k; };
@@ -120,7 +122,7 @@ export class VectorlessPlugin extends BasePlugin {
     const chunkingAdapter = this.chunkingAdapter;
     const rerankingAdapter = this.rerankingAdapter;
 
-    return {
+    const toolsMap: Record<string, Tool> = {
       generate: tool({
         description: "Extract knowledge (entities, relations, quotes) from text. Must be called before query/search.",
         inputSchema: z.object({
@@ -289,6 +291,7 @@ export class VectorlessPlugin extends BasePlugin {
 
           const candidates: ScoredResult[] = [];
           const queryLower = query.toLowerCase();
+          const queryWords = queryLower.split(/\s+/);
 
           // 1. Entity search from knowledge base
           const knowledge = getKnowledge();
@@ -309,7 +312,8 @@ export class VectorlessPlugin extends BasePlugin {
 
           // 2. Full-text keyword search across chunks
           for (const [, chunk] of chunks) {
-            if (chunk.text.toLowerCase().includes(queryLower) || queryLower.split(/\s+/).some((w) => chunk.text.toLowerCase().includes(w))) {
+            const chunkLower = chunk.text.toLowerCase();
+            if (chunkLower.includes(queryLower) || queryWords.some((w) => chunkLower.includes(w))) {
               const result: ScoredResult = {
                 id: chunk.id,
                 text: chunk.text,
@@ -379,12 +383,15 @@ export class VectorlessPlugin extends BasePlugin {
         },
       }),
     };
+    this._toolsCache = toolsMap;
+    return toolsMap;
   }
 
   async dispose(): Promise<void> {
     this.currentKnowledge = null;
     this.vectorlessPromise = null;
     this.chunks.clear();
+    this._toolsCache = undefined;
   }
 }
 

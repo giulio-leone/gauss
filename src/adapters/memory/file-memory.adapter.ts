@@ -11,6 +11,7 @@ import type {
   RecallOptions,
   MemoryStats,
 } from "../../ports/agent-memory.port.js";
+import { calculateMemoryStats } from "./memory-utils.js";
 
 export interface FileMemoryAdapterOptions {
   directory?: string; // default: .gaussflow/memory/
@@ -144,21 +145,6 @@ export class FileMemoryAdapter implements AgentMemoryPort {
 
   async getStats(): Promise<MemoryStats> {
     const all = await this.loadAllEntries();
-    const byType: Record<string, number> = {};
-    let oldest: string | undefined;
-    let newest: string | undefined;
-
-    for (const entry of all) {
-      byType[entry.type] = (byType[entry.type] ?? 0) + 1;
-      if (!oldest || entry.timestamp < oldest) oldest = entry.timestamp;
-      if (!newest || entry.timestamp > newest) newest = entry.timestamp;
-    }
-
-    return {
-      totalEntries: all.length,
-      byType,
-      oldestEntry: oldest,
-      newestEntry: newest,
-    };
+    return calculateMemoryStats(all);
   }
 }

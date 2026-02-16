@@ -8,6 +8,7 @@ import type {
   RecallOptions,
   MemoryStats,
 } from "../../ports/agent-memory.port.js";
+import { calculateMemoryStats } from "./memory-utils.js";
 
 export interface InMemoryAgentMemoryOptions {
   maxEntries?: number; // default 10000
@@ -74,21 +75,6 @@ export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
   }
 
   async getStats(): Promise<MemoryStats> {
-    const byType: Record<string, number> = {};
-    let oldest: string | undefined;
-    let newest: string | undefined;
-
-    for (const entry of this.entries.values()) {
-      byType[entry.type] = (byType[entry.type] ?? 0) + 1;
-      if (!oldest || entry.timestamp < oldest) oldest = entry.timestamp;
-      if (!newest || entry.timestamp > newest) newest = entry.timestamp;
-    }
-
-    return {
-      totalEntries: this.entries.size,
-      byType,
-      oldestEntry: oldest,
-      newestEntry: newest,
-    };
+    return calculateMemoryStats(this.entries.values());
   }
 }
