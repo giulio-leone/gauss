@@ -693,6 +693,30 @@ const agent = DeepAgent.create({
 // Adds tools: scrape, search, batch
 ```
 
+#### Semantic Scraping & Tool Manifests
+
+The `SemanticScrapingAdapter` provides incremental, per-site tool manifests with cross-page deduplication:
+
+```typescript
+import { SemanticScrapingAdapter } from "@giulio-leone/gaussflow-agent/scraping";
+
+const adapter = new SemanticScrapingAdapter();
+
+// Add tools discovered on a page
+adapter.updatePage("example.com", "https://example.com/products", tools);
+
+// Incremental diff (add/remove without full rescan)
+adapter.applyDiff("example.com", url, addedTools, removedNames);
+
+// Export as MCP-compatible JSON
+const json = adapter.toMCPJson("example.com");
+
+// Query tools for a specific URL pattern
+const pageTools = adapter.getToolsForUrl("example.com", "/products/123");
+```
+
+Used by the OneGenUI Chrome extension to persist tool manifests in IndexedDB and expose them via DOM injection (`<script type="application/wmcp+json">`).
+
 #### VectorlessPlugin
 
 RAG/knowledge extraction tools (no vector database needed):
