@@ -413,10 +413,9 @@ async function handleDev(
     process.exitCode = 1;
     return;
   }
-  const { provider, model, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
-  const languageModel = await createModel(provider, apiKey, model);
+  const { provider, apiKey } = await resolveProviderAndModel(opts as Record<string, string | undefined>);
   const { devCommand } = await import("./commands/dev.js");
-  await devCommand(configPath, languageModel);
+  await devCommand(configPath, provider, apiKey, (p, k, m) => createModel(p, k, m));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -12,10 +12,11 @@ import type { HotReloadPort } from "../../ports/hot-reload.port.js";
 
 export async function devCommand(
   configPath: string,
-  model: LanguageModel,
+  provider: string,
+  apiKey: string,
+  createModelFn: (provider: string, apiKey: string, model: string) => Promise<LanguageModel>,
 ): Promise<void> {
-  const modelResolver = () => model;
-
+  // Pre-resolve initial model; cache subsequent resolutions
   let config;
   try {
     config = AgentConfigLoader.loadFile(configPath);
@@ -25,6 +26,18 @@ export async function devCommand(
     process.exitCode = 1;
     return;
   }
+
+  const modelCache = new Map<string, LanguageModel>();
+  const initialModel = await createModelFn(provider, apiKey, config.model);
+  modelCache.set(config.model, initialModel);
+
+  const modelResolver = (modelName: string): LanguageModel => {
+    const cached = modelCache.get(modelName);
+    if (cached) return cached;
+    // For hot-reload model changes, warn and use initial model
+    console.log(color("yellow", `  ⚠ Model "${modelName}" not pre-cached, using initial model`));
+    return initialModel;
+  };
 
   let agent: DeepAgent = AgentConfigLoader.fromConfig(config, modelResolver);
 
@@ -41,7 +54,9 @@ export async function devCommand(
       configPath,
       modelResolver,
       (newAgent) => {
+        const old = agent;
         agent = newAgent;
+        old.dispose().catch(() => {});
         console.log(color("yellow", `\n[hot-reload] Agent reloaded from ${configPath}\n`));
       },
     );
