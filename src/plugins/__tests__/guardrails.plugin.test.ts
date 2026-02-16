@@ -1,29 +1,17 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { GuardrailsPlugin, GuardrailsError, createPiiFilter } from "../guardrails.plugin.js";
-import type { PluginContext } from "../../ports/plugin.port.js";
-import { InMemoryAdapter } from "../../adapters/memory/in-memory.adapter.js";
-import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
-
-function createMockContext(): PluginContext {
-  return {
-    sessionId: "test-session",
-    config: { instructions: "test", maxSteps: 10 },
-    filesystem: new VirtualFilesystem(),
-    memory: new InMemoryAdapter(),
-    toolNames: ["tool1"],
-  };
-}
+import { createMockContext, createConsoleSpy } from "../../__tests__/helpers/test-utils.js";
 
 describe("GuardrailsPlugin", () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let consoleSpy: ReturnType<typeof createConsoleSpy>;
 
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleSpy = createConsoleSpy();
   });
 
   afterEach(() => {
-    consoleSpy.mockRestore();
+    consoleSpy.restore();
   });
 
   describe("inputSchema validation", () => {
@@ -212,7 +200,7 @@ describe("GuardrailsPlugin", () => {
         plugin.hooks.beforeRun!(ctx, { prompt: "short" });
       }).not.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(consoleSpy.warn).toHaveBeenCalledWith(
         expect.stringContaining("[guardrails]")
       );
     });

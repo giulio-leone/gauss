@@ -42,20 +42,15 @@ export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
 
   async recall(_query: string, options: RecallOptions = {}): Promise<MemoryEntry[]> {
     const { limit = 10, type, sessionId, minImportance, query } = options;
-    let results = Array.from(this.entries.values());
+    const lower = query?.toLowerCase();
+    const results: MemoryEntry[] = [];
 
-    if (type) {
-      results = results.filter((e) => e.type === type);
-    }
-    if (sessionId) {
-      results = results.filter((e) => e.sessionId === sessionId);
-    }
-    if (minImportance !== undefined) {
-      results = results.filter((e) => (e.importance ?? 0) >= minImportance);
-    }
-    if (query) {
-      const lower = query.toLowerCase();
-      results = results.filter((e) => e.content.toLowerCase().includes(lower));
+    for (const e of this.entries.values()) {
+      if (type && e.type !== type) continue;
+      if (sessionId && e.sessionId !== sessionId) continue;
+      if (minImportance !== undefined && (e.importance ?? 0) < minImportance) continue;
+      if (lower && !e.content.toLowerCase().includes(lower)) continue;
+      results.push(e);
     }
 
     // Sort by timestamp descending (newest first)

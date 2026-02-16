@@ -6,39 +6,19 @@ import { WorkflowPlugin } from "../../plugins/workflow.plugin.js";
 import { InMemoryTracingAdapter } from "../../adapters/tracing/in-memory-tracing.adapter.js";
 import { InMemoryMetricsAdapter } from "../../adapters/metrics/in-memory-metrics.adapter.js";
 import { ConsoleLoggingAdapter } from "../../adapters/logging/console-logging.adapter.js";
-import type { PluginContext, PluginSetupContext } from "../../ports/plugin.port.js";
-import { InMemoryAdapter } from "../../adapters/memory/in-memory.adapter.js";
-import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
-
-function createMockContext(): PluginContext {
-  return {
-    sessionId: "test-session",
-    config: { instructions: "test", maxSteps: 10 },
-    filesystem: new VirtualFilesystem(),
-    memory: new InMemoryAdapter(),
-    toolNames: ["tool1"],
-  };
-}
-
-function createMockSetupContext(): PluginSetupContext {
-  return {
-    logger: new ConsoleLoggingAdapter(),
-    memory: new InMemoryAdapter(),
-    filesystem: new VirtualFilesystem(),
-  };
-}
+import { createMockContext, createMockSetupContext, createConsoleSpy } from "../helpers/test-utils.js";
 
 describe("Plugin Composition Integration", () => {
   let pluginManager: PluginManager;
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let consoleSpy: ReturnType<typeof createConsoleSpy>;
 
   beforeEach(() => {
     pluginManager = new PluginManager();
-    consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    consoleSpy = createConsoleSpy();
   });
 
   afterEach(() => {
-    consoleSpy.mockRestore();
+    consoleSpy.restore();
     pluginManager.dispose();
   });
 

@@ -1,5 +1,22 @@
 import { defineConfig } from "tsup";
 
+const SHARED_EXTERNALS = [
+  "@giulio-leone/gaussflow-mcp",
+  "@giulio-leone/gaussflow-providers",
+  "@giulio-leone/gaussflow-jobs",
+  "@supabase/supabase-js",
+  "tiktoken",
+  "@ai-sdk/mcp",
+] as const;
+
+const AI_SDK_EXTERNALS = [
+  "@ai-sdk/openai",
+  "@ai-sdk/anthropic",
+  "@ai-sdk/google",
+  "@ai-sdk/groq",
+  "@ai-sdk/mistral",
+] as const;
+
 export default defineConfig([
   // Core + Node (ESM + CJS)
   {
@@ -16,19 +33,7 @@ export default defineConfig([
     dts: true,
     clean: true,
     sourcemap: true,
-    external: [
-      "@giulio-leone/gaussflow-mcp",
-      "@giulio-leone/gaussflow-providers",
-      "@giulio-leone/gaussflow-jobs",
-      "@supabase/supabase-js",
-      "tiktoken",
-      "@ai-sdk/mcp",
-      "@ai-sdk/openai",
-      "@ai-sdk/anthropic",
-      "@ai-sdk/google",
-      "@ai-sdk/groq",
-      "@ai-sdk/mistral",
-    ],
+    external: [...SHARED_EXTERNALS, ...AI_SDK_EXTERNALS],
   },
   // CLI (CJS only — Node.js executable)
   {
@@ -39,19 +44,7 @@ export default defineConfig([
     dts: false,
     clean: false,
     sourcemap: true,
-    external: [
-      "@giulio-leone/gaussflow-mcp",
-      "@giulio-leone/gaussflow-providers",
-      "@giulio-leone/gaussflow-jobs",
-      "@supabase/supabase-js",
-      "tiktoken",
-      "@ai-sdk/mcp",
-      "@ai-sdk/openai",
-      "@ai-sdk/anthropic",
-      "@ai-sdk/google",
-      "@ai-sdk/groq",
-      "@ai-sdk/mistral",
-    ],
+    external: [...SHARED_EXTERNALS, ...AI_SDK_EXTERNALS],
   },
   // Deno, Edge, Browser, Server (ESM only)
   {
@@ -68,13 +61,6 @@ export default defineConfig([
     dts: true,
     clean: false,
     sourcemap: true,
-    external: [
-      "@giulio-leone/gaussflow-mcp",
-      "@giulio-leone/gaussflow-providers",
-      "@giulio-leone/gaussflow-jobs",
-      "@supabase/supabase-js",
-      "tiktoken",
-      "@ai-sdk/mcp",
-    ],
+    external: [...SHARED_EXTERNALS],
   },
 ]);
