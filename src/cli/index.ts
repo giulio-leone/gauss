@@ -10,7 +10,7 @@ import type { ProviderName } from "./providers.js";
 // Heavy modules (DeepAgent, plugins, graph) are lazy-loaded inside handlers
 import { color, bold, maskKey } from "./format.js";
 
-const VERSION = "0.9.0";
+const VERSION = "1.0.0";
 
 const HELP = `
 ${bold("GaussFlow CLI")} — AI Agent Framework
