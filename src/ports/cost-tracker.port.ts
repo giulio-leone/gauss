@@ -14,7 +14,7 @@ export interface CostEstimate {
   totalInputTokens: number;
   totalOutputTokens: number;
   totalCost: number;
-  currency: string;
+  currency: "USD";
   breakdown: Array<{
     model: string;
     inputTokens: number;

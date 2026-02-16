@@ -26,12 +26,15 @@ const MODEL_PRICING: Record<string, [number, number]> = {
 export interface CostTrackerOptions {
   budget?: number;
   onBudgetExceeded?: () => void;
+  /** When true, suppresses console.warn for unknown models (useful for replaying records). */
+  silent?: boolean;
 }
 
 export class DefaultCostTrackerAdapter implements CostTrackerPort {
   private readonly usages: CostTokenUsage[] = [];
   private readonly budget: number | null;
   private readonly onBudgetExceeded?: () => void;
+  private readonly silent: boolean;
   private budgetExceededFired = false;
   private totalCost = 0;
 
@@ -41,6 +44,7 @@ export class DefaultCostTrackerAdapter implements CostTrackerPort {
   constructor(options: CostTrackerOptions = {}) {
     this.budget = options.budget ?? null;
     this.onBudgetExceeded = options.onBudgetExceeded;
+    this.silent = options.silent ?? false;
   }
 
   recordUsage(usage: CostTokenUsage): void {
@@ -54,7 +58,9 @@ export class DefaultCostTrackerAdapter implements CostTrackerPort {
     // Warn and track unpriced models
     if (!MODEL_PRICING[sanitized.model]) {
       if (!this.unpricedModels.has(sanitized.model)) {
-        console.warn(`[CostTracker] Unknown model "${sanitized.model}" — cost will be recorded as $0`);
+        if (!this.silent) {
+          console.warn(`[CostTracker] Unknown model "${sanitized.model}" — cost will be recorded as $0`);
+        }
         this.unpricedModels.add(sanitized.model);
       }
     }
@@ -89,7 +95,8 @@ export class DefaultCostTrackerAdapter implements CostTrackerPort {
       breakdown.push({ model, inputTokens: tokens.inputTokens, outputTokens: tokens.outputTokens, cost });
     }
 
-    return { totalInputTokens, totalOutputTokens, totalCost: this.totalCost, currency: "USD", breakdown };
+    const totalCost = breakdown.reduce((sum, b) => sum + b.cost, 0);
+    return { totalInputTokens, totalOutputTokens, totalCost, currency: "USD", breakdown };
   }
 
   getSessionBudget(): number | null {

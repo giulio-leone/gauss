@@ -237,7 +237,7 @@ async function handleUsage(): Promise<void> {
   const { homedir } = await import("node:os");
   const { join } = await import("node:path");
 
-  const usagePath = join(homedir(), ".gaussflow", "usage.json");
+  const usagePath = join(homedir(), ".gaussflow", "usage.ndjson");
 
   if (!existsSync(usagePath)) {
     console.log(color("dim", "No usage data found. Usage is recorded after each CLI session."));
@@ -246,14 +246,16 @@ async function handleUsage(): Promise<void> {
 
   let records: Array<{ inputTokens: number; outputTokens: number; model: string; provider: string; timestamp: number }>;
   try {
-    records = JSON.parse(readFileSync(usagePath, "utf-8"));
+    const data = readFileSync(usagePath, "utf-8");
+    const lines = data.split('\n').filter(l => l.trim());
+    records = lines.map(l => JSON.parse(l));
   } catch {
     console.error(color("red", "Failed to parse usage data."));
     process.exitCode = 1;
     return;
   }
 
-  if (!Array.isArray(records) || records.length === 0) {
+  if (records.length === 0) {
     console.log(color("dim", "No usage records found."));
     return;
   }
@@ -273,7 +275,7 @@ async function handleUsage(): Promise<void> {
   }
 
   const { DefaultCostTrackerAdapter } = await import("../adapters/cost-tracker/index.js");
-  const tracker = new DefaultCostTrackerAdapter();
+  const tracker = new DefaultCostTrackerAdapter({ silent: true });
   for (const r of records) tracker.recordUsage(r);
   const estimate = tracker.getEstimate();
 
