@@ -94,6 +94,10 @@ export type {
   Chunk,
 } from "./ports/chunking.port.js";
 export type {
+  PartialJsonPort,
+  JsonAccumulator,
+} from "./ports/partial-json.port.js";
+export type {
   ReRankingPort,
   ReRankingOptions,
   ScoredResult,
@@ -388,6 +392,12 @@ export { DefaultReRankingAdapter } from "./adapters/reranking/index.js";
 export { ZodValidationAdapter } from "./adapters/validation/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Partial JSON
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { createDefaultPartialJsonAdapter, DefaultPartialJsonAdapter } from "./adapters/partial-json/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Runtime
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -505,6 +515,7 @@ export { createSseHandler } from "./streaming/sse-handler.js";
 export { handleWebSocket } from "./streaming/ws-handler.js";
 export { createDeltaEncoder } from "./streaming/delta-encoder.js";
 export { createGraphEventStream } from "./streaming/graph-stream.js";
+export { streamJson } from "./streaming/stream-json.js";
 export type { EventStreamOptions } from "./streaming/event-stream.js";
 export type { SseHandlerOptions } from "./streaming/sse-handler.js";
 export type { WsCommand, WsHandlerOptions, WebSocketLike } from "./streaming/ws-handler.js";
