@@ -149,6 +149,7 @@
     "tiktoken": "^1.0.0",
     "tsup": "^8.0.2",
     "typescript": "^5.9.3",
+    "@vitest/coverage-v8": "^4.0.15",
     "vitest": "^4.0.15"
   }
 }

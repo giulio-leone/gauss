@@ -1,5 +1,7 @@
 # GaussFlow (@giulio-leone/gaussflow-agent)
 
+[![CI](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml)
+
 > **GaussFlow** — AI Agent Framework built on Vercel AI SDK v6
 
 A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.

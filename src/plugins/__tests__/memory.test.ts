@@ -1,8 +1,6 @@
 // =============================================================================
 // Memory system tests — InMemoryAgentMemoryAdapter, FileMemoryAdapter, MemoryPlugin
 // =============================================================================
-// TODO: Export MemoryPlugin and AgentMemoryPort types from src/index.ts
-//       and src/plugins/index.ts when integrating with the main barrel.
 
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs/promises";

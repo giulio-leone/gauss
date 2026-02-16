@@ -1,8 +1,6 @@
 // =============================================================================
 // Plugin Registry — Tests
 // =============================================================================
-// TODO: Export PluginRegistryPlugin and DefaultPluginRegistryAdapter from
-//       src/index.ts and src/plugins/index.ts once those files are safe to edit.
 
 import { describe, expect, it } from "vitest";
 

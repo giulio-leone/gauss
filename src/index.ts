@@ -51,6 +51,17 @@ export type { MemoryPort } from "./ports/memory.port.js";
 export type { LearningPort } from "./ports/learning.port.js";
 export type { FilesystemPort } from "./ports/filesystem.port.js";
 export type {
+  AgentMemoryPort,
+  MemoryEntry,
+  MemoryStats,
+  RecallOptions,
+} from "./ports/agent-memory.port.js";
+export type {
+  PluginManifest,
+  PluginRegistryPort,
+  PluginSource,
+} from "./ports/plugin-registry.port.js";
+export type {
   ValidationPort,
   ValidationResult,
 } from "./ports/validation.port.js";
@@ -290,6 +301,16 @@ export {
   McpServerPlugin,
   createMcpServerPlugin,
 } from "./plugins/index.js";
+export {
+  MemoryPlugin,
+  createMemoryPlugin,
+} from "./plugins/memory.plugin.js";
+export type { MemoryPluginOptions } from "./plugins/memory.plugin.js";
+export {
+  PluginRegistryPlugin,
+  createPluginRegistryPlugin,
+} from "./plugins/plugin-registry.plugin.js";
+export type { PluginRegistryPluginOptions } from "./plugins/plugin-registry.plugin.js";
 export type {
   AgentCardPluginOptions,
   AgentCardSnapshot,
@@ -349,7 +370,14 @@ export type { McpToolExecutor } from "./adapters/mcp-server/index.js";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { InMemoryAdapter } from "./adapters/memory/in-memory.adapter.js";
+export { InMemoryAgentMemoryAdapter } from "./adapters/memory/in-memory-agent-memory.adapter.js";
 export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Plugin Registry
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { DefaultPluginRegistryAdapter } from "./adapters/plugin-registry/default-plugin-registry.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — Learning
