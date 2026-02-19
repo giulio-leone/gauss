@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-02-16
+
+### Added
+
+- **HierarchicalEventBus**: Child buses with namespace-scoped events, bubbling (child→parent), broadcasting (parent→children), anti-storm backpressure (maxBubblesPerSecond)
+- **ReactiveSharedContext**: Key-level watchers with wildcard support, optimistic locking via `setVersioned()`, CRDT merge with CAS retry loop, scoped contexts with watcher bubbling
+- **WorkerPool**: Generic async work-stealing pool with dynamic grow/shrink, priority queue, abort support, timeout detection, and bounded metrics (max 1000 entries)
+- **AsyncChannel**: Push→pull bridge implementing `AsyncIterable<T>` for `for await...of` consumption
+- **IncrementalReadyTracker**: Incremental Kahn's algorithm — O(fan-out) per `markCompleted()`, snapshot/restore support
+- **PriorityQueue**: Generic binary min-heap with custom comparator
+- **TokenBudgetController**: 3-tier budget management (ok/soft-limit/hard-limit) with acquire/release semantics and rolling auto-refined estimates
+- **ReactiveGraphExecutor**: Event-driven push-based graph execution replacing batch-static GraphExecutor. Uses WorkerPool + IncrementalReadyTracker + AsyncChannel + TokenBudgetController
+- **ForkCoordinator**: Parallel fork execution with partial results, `minResults` threshold, eager resolution on mixed success+error, and timeout support
+- **SubagentRegistry**: 7-state lifecycle manager (queued→running→streaming→completed/failed/timeout/cancelled) with validated transitions, GC, orphan detection, cancellation cascade
+- **SubagentScheduler**: Priority queue with aging anti-starvation, circuit breaker per task type, dynamic pool sizing, ToolLoopAgent execution
+- **Async Subagent Tools**: `dispatch_subagent` (fire-and-forget), `poll_subagent` (status check), `await_subagent` (multi-task wait with timeout) — replaces synchronous TaskTool
+- **AgentSupervisor**: Erlang-style supervision with one-for-one, one-for-all, rest-for-one strategies. Child policies (permanent/temporary/transient), restart intensity with sliding window, escalation, heartbeat monitoring, graceful degradation with fallback
+- **SupervisorBuilder**: Fluent builder for AgentSupervisor configuration
+- **DynamicAgentGraph**: Runtime graph mutations (addNode, removeNode, replaceNode, addEdge, removeEdge) with incremental cycle detection, duplicate edge rejection, append-only mutation log, event emission
+- **Structured Planning System**: Hierarchical Zod schema (Plan→Phase→Step→SubStep), state machine with validated transitions, 4 tools (plan_create, plan_update, plan_status, plan_visualize), plan-to-graph conversion
+- **New Event Types**: 9 supervisor/subagent/graph event types in AgentEventType union + `graph:mutation`
+- **Full Public API Exports**: All new modules exported from `src/index.ts`
+
+### Fixed
+
+- AgentSupervisor: factory() failures no longer permanently brick child recovery (try/catch + status reset to "crashed")
+- AgentSupervisor: unhandled promise rejections in heartbeat setInterval callbacks (`.catch()` guard)
+- AgentSupervisor: restartAll/restartRestForOne continue loop on individual factory failures
+- WorkerPool: latencies/completionTimestamps arrays capped at 1000 entries (prevents unbounded memory growth)
+- DynamicAgentGraph: duplicate edges rejected (prevents IncrementalReadyTracker deadlock)
+- SharedContext: TOCTOU race in setVersioned fixed with synchronous version bump before async write
+- SharedContext: merge() now uses CAS retry loop (max 3 retries) instead of unsafe read-then-write
+- ForkCoordinator: eagerly resolves when all nodes reported with enough successes (no unnecessary timeout wait)
+- GraphExecutor: fork node promises awaited on success path (prevents orphaned LLM API calls)
+
+### Breaking Changes
+
+- `EventBus` now supports hierarchical features (createChild, bubbling, broadcasting) — API extended
+- `SharedContext` now supports watchers, versioning, merge, scoping — API extended
+- `GraphExecutor` replaced with reactive push-based implementation (same class name preserved)
+- New `graph:mutation` event type added to AgentEventType union
+
 ## [1.2.0] - 2026-02-16
 
 ### Added
