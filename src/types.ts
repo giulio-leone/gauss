@@ -123,7 +123,27 @@ export type AgentEventType =
   | "consensus:start"
   | "consensus:result"
   | "fork:start"
-  | "fork:complete";
+  | "fork:complete"
+  | "supervisor:start"
+  | "supervisor:stop"
+  | "supervisor:task:assigned"
+  | "supervisor:task:completed"
+  | "subagent:start"
+  | "subagent:stop"
+  | "subagent:message"
+  | "graph:node:retry"
+  | "graph:edge:traverse"
+  | "graph:mutation"
+  | "subagent:dispatch"
+  | "subagent:dequeue"
+  | "subagent:status-change"
+  | "subagent:output-chunk"
+  | "subagent:cancelled"
+  | "subagent:timeout"
+  | "subagent:gc"
+  | "subagent:backpressure"
+  | "subagent:circuit-open"
+  | "subagent:pool-resize";
 
 export interface AgentEvent<T = unknown> {
   type: AgentEventType;
