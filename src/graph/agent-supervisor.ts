@@ -307,10 +307,10 @@ export class AgentSupervisor {
       if (!current || current.status !== "running") return;
 
       const node = current.node;
-      if (!node || typeof (node as Record<string, unknown>)["ping"] !== "function") return;
+      if (!node || typeof (node as unknown as Record<string, unknown>)["ping"] !== "function") return;
 
       try {
-        const ping = (node as Record<string, unknown>)["ping"] as () => Promise<void>;
+        const ping = (node as unknown as Record<string, unknown>)["ping"] as () => Promise<void>;
         await Promise.race([
           ping(),
           new Promise<never>((_, reject) =>

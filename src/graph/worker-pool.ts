@@ -40,21 +40,21 @@ export type WorkerPoolEvent<T, R> =
   | { type: 'pool:drained' }
   | { type: 'pool:pressure'; queueDepth: number; activeWorkers: number };
 
-interface PoolTask<T> {
+interface PoolTask<T, R = unknown> {
   readonly id: string;
   readonly input: T;
   readonly priority: number;
   readonly enqueuedAt: number;
   readonly abortController: AbortController;
-  readonly resolve: (result: unknown) => void;
+  readonly resolve: (result: R | PromiseLike<R>) => void;
   readonly reject: (error: Error) => void;
 }
 
 type WorkerState = 'idle' | 'busy' | 'dead';
 
-interface WorkerSlot<T> {
+interface WorkerSlot<T, R = unknown> {
   state: WorkerState;
-  currentTask: PoolTask<T> | null;
+  currentTask: PoolTask<T, R> | null;
   idleSince: number;
   wakeResolve: (() => void) | null;
 }
@@ -74,8 +74,8 @@ const DEFAULT_POOL_CONFIG: WorkerPoolConfig = {
 // ── Implementation ───────────────────────────────────────────────────────────
 
 export class WorkerPool<T, R> {
-  private readonly queue: PriorityQueue<PoolTask<T>>;
-  private readonly workers = new Map<number, WorkerSlot<T>>();
+  private readonly queue: PriorityQueue<PoolTask<T, R>>;
+  private readonly workers = new Map<number, WorkerSlot<T, R>>();
   private readonly executor: (input: T, signal: AbortSignal) => Promise<R>;
   private readonly config: WorkerPoolConfig;
   private readonly onEvent?: (event: WorkerPoolEvent<T, R>) => void;
@@ -99,7 +99,7 @@ export class WorkerPool<T, R> {
     this.executor = executor;
     this.config = { ...DEFAULT_POOL_CONFIG, ...config };
     this.onEvent = onEvent;
-    this.queue = new PriorityQueue<PoolTask<T>>(
+    this.queue = new PriorityQueue<PoolTask<T, R>>(
       (a, b) => a.priority - b.priority,
     );
 
@@ -115,7 +115,7 @@ export class WorkerPool<T, R> {
     if (this.draining) throw new Error('Pool is draining, cannot submit');
 
     return new Promise<R>((resolve, reject) => {
-      const task: PoolTask<T> = {
+      const task: PoolTask<T, R> = {
         id,
         input,
         priority,
@@ -224,7 +224,7 @@ export class WorkerPool<T, R> {
 
   private spawnWorker(): void {
     const id = this.nextWorkerId++;
-    const slot: WorkerSlot<T> = {
+    const slot: WorkerSlot<T, R> = {
       state: 'idle',
       currentTask: null,
       idleSince: Date.now(),
@@ -277,7 +277,7 @@ export class WorkerPool<T, R> {
           slot.wakeResolve = resolve;
         });
 
-        if (slot.state === 'dead') return;
+        if ((slot.state as WorkerState) === 'dead') return;
         continue;
       }
 
@@ -331,7 +331,7 @@ export class WorkerPool<T, R> {
   }
 
   private executeWithTimeout(
-    task: PoolTask<T>,
+    task: PoolTask<T, R>,
     workerId: number,
   ): Promise<R> {
     return new Promise<R>((resolve, reject) => {

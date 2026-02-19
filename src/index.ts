@@ -565,9 +565,23 @@ export {
 export {
   createSubagentTools,
   createTaskTool,
+  createAsyncSubagentTools,
+  SubagentRegistry,
+  SubagentScheduler,
+  createDispatchTool,
+  createPollTool,
+  createAwaitTool,
 } from "./tools/subagent/index.js";
 
 export type { TaskToolConfig } from "./tools/subagent/index.js";
+export type {
+  AsyncSubagentToolsConfig,
+  SubagentHandle,
+  SubagentTaskStatus,
+  SubagentResourceLimits,
+  DispatchParams,
+  PoolConfig,
+} from "./tools/subagent/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tools — Planning
@@ -630,6 +644,7 @@ export type {
 export { AgentGraph, AgentGraphBuilder } from "./graph/agent-graph.js";
 export { SharedContext } from "./graph/shared-context.js";
 export { GraphExecutor } from "./graph/graph-executor.js";
+export type { GraphCheckpoint } from "./graph/graph-executor.js";
 export type { AgentNodeConfig, NodeResult } from "./graph/agent-node.js";
 export type { ConsensusPort, ConsensusResult } from "./ports/consensus.port.js";
 export { LlmJudgeConsensus } from "./adapters/consensus/llm-judge.adapter.js";
@@ -639,6 +654,30 @@ export type { GraphConfig, GraphResult, GraphStreamEvent } from "./domain/graph.
 export type { GraphVisualizationPort, GraphDescriptor } from "./ports/graph-visualization.port.js";
 export { AsciiGraphAdapter } from "./adapters/graph-visualization/ascii-graph.adapter.js";
 export { MermaidGraphAdapter } from "./adapters/graph-visualization/mermaid-graph.adapter.js";
+
+// Graph — Execution Primitives
+export { WorkerPool } from "./graph/worker-pool.js";
+export type { WorkerPoolConfig, WorkerPoolMetrics } from "./graph/worker-pool.js";
+export { AsyncChannel } from "./graph/async-channel.js";
+export { IncrementalReadyTracker } from "./graph/incremental-ready-tracker.js";
+export { PriorityQueue } from "./graph/priority-queue.js";
+export { TokenBudgetController } from "./graph/token-budget-controller.js";
+export type { BudgetStatus } from "./graph/token-budget-controller.js";
+export { ForkCoordinator } from "./graph/fork-coordinator.js";
+
+// Graph — Supervision & Dynamic Graphs
+export { AgentSupervisor } from "./graph/agent-supervisor.js";
+export type {
+  SupervisorStrategy,
+  ChildPolicy,
+  ChildSpec,
+  RestartIntensity,
+  SupervisorConfig,
+  ChildStatus,
+} from "./graph/agent-supervisor.js";
+export { SupervisorBuilder } from "./graph/supervisor-builder.js";
+export { DynamicAgentGraph } from "./graph/dynamic-agent-graph.js";
+export type { MutationType, MutationEntry, MutationResult } from "./graph/dynamic-agent-graph.js";
 
 // ---------------------------------------------------------------------------
 // Templates — Prompt Template System
