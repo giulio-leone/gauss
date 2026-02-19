@@ -41,6 +41,15 @@ export const AgentEventTypeSchema = z.enum([
   "consensus:result",
   "fork:start",
   "fork:complete",
+  "supervisor:start",
+  "supervisor:stop",
+  "supervisor:task:assigned",
+  "supervisor:task:completed",
+  "subagent:start",
+  "subagent:stop",
+  "subagent:message",
+  "graph:node:retry",
+  "graph:edge:traverse",
 ]);
 
 export type AgentEventTypeValue = z.infer<typeof AgentEventTypeSchema>;

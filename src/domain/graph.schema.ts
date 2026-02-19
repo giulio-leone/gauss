@@ -53,7 +53,14 @@ export type GraphStreamEvent =
   | { type: "node:error"; nodeId: string; error: string }
   | { type: "fork:start"; forkId: string; agentCount: number }
   | { type: "fork:complete"; forkId: string; results: NodeResultValue[] }
+  | { type: "fork:partial"; forkId: string; completedCount: number; totalCount: number; partialResults: NodeResultValue[] }
   | { type: "consensus:start"; forkId: string }
   | { type: "consensus:result"; forkId: string; output: string }
   | { type: "graph:complete"; result: GraphResult }
-  | { type: "graph:error"; error: string; partialResults: Record<string, NodeResultValue> };
+  | { type: "graph:error"; error: string; partialResults: Record<string, NodeResultValue> }
+  | { type: "pool:metrics"; metrics: { activeWorkers: number; idleWorkers: number; queueDepth: number; totalCompleted: number; totalFailed: number } }
+  | { type: "budget:warning"; remaining: number; used: number; threshold: "soft" | "hard" }
+  | { type: "backpressure:active"; queueDepth: number; action: "slowdown" | "pause" }
+  | { type: "checkpoint:saved"; checkpoint: string; completedCount: number }
+  | { type: "node:throttled"; nodeId: string; delayMs: number; reason: string }
+  | { type: "node:scheduled"; nodeId: string; queuePosition: number };
