@@ -757,3 +757,67 @@ export { createSnapshot, compareSnapshots } from "./testing/snapshot.js";
 export { GaussFlowServer as OneAgentServer } from "./rest/server.js";
 /** @deprecated Use GaussFlowMcpAdapter */
 export { GaussFlowMcpAdapter as OnegenUiMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
+
+// ---------------------------------------------------------------------------
+// Workflow Compiler — NL → StructuredDeclaration → WorkflowDef + Skills + Agents
+// ---------------------------------------------------------------------------
+export {
+  StructuredDeclarationSchema,
+  TriggerSchema,
+  ChannelSchema,
+  PolicySchema,
+  StepDeclarationSchema,
+  MonitorStepSchema,
+  FilterStepSchema,
+  TransformStepSchema,
+  PublishStepSchema,
+  CustomStepSchema,
+  validateDeclaration,
+} from "./domain/compiler.schema.js";
+export type {
+  StructuredDeclaration,
+  Trigger,
+  CronTrigger,
+  EventTrigger,
+  ManualTrigger,
+  WebhookTrigger,
+  Channel,
+  ChannelPolicy,
+  Policy,
+  StepDeclaration,
+  MonitorStep,
+  FilterStep,
+  TransformStep,
+  PublishStep,
+  CustomStep,
+  SkillDeclaration,
+  AgentDeclaration,
+  A2ARoute,
+  CompilerOutput,
+  LLMCompilerOutput,
+} from "./domain/compiler.schema.js";
+export {
+  StructuredDeclarationSchema,
+  CompilerOutputSchema,
+  SkillDeclarationSchema,
+  AgentDeclarationSchema,
+  A2ARouteSchema,
+} from "./domain/compiler.schema.js";
+export type {
+  NLParserPort,
+  WorkflowCompilerPort,
+  CompileFromNLPort,
+  SkillRegistryPort,
+  WorkflowStoragePort,
+  StoredWorkflow,
+  StorageStrategy,
+} from "./ports/compiler.port.js";
+export { LLMNLParser } from "./adapters/compiler/llm-nl-parser.js";
+export { LLMCompilerEngine } from "./adapters/compiler/llm-compiler-engine.js";
+export { CompileFromNLService } from "./adapters/compiler/compile-from-nl.js";
+export { FileWorkflowStorage } from "./adapters/compiler/file-workflow-storage.js";
+export type { FileStorageOptions } from "./adapters/compiler/file-workflow-storage.js";
+export { DualWorkflowStorage } from "./adapters/compiler/dual-workflow-storage.js";
+export { InMemoryWorkflowStorage } from "./adapters/compiler/inmemory-workflow-storage.js";
+export { createWorkflowStorage } from "./adapters/compiler/storage-factory.js";
+export type { StorageFactoryOptions } from "./adapters/compiler/storage-factory.js";
