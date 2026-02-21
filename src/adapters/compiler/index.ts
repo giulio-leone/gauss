@@ -1,6 +1,10 @@
 export { LLMNLParser } from "./llm-nl-parser.js";
 export { LLMCompilerEngine } from "./llm-compiler-engine.js";
 export { CompileFromNLService } from "./compile-from-nl.js";
+export { LLMSkillMatcher } from "./llm-skill-matcher.js";
+export { InMemorySkillRegistry } from "./inmemory-skill-registry.js";
+export { JSONSerializer } from "./json-serializer.js";
+export { MarkdownSerializer } from "./markdown-serializer.js";
 export { FileWorkflowStorage } from "./file-workflow-storage.js";
 export type { FileStorageOptions } from "./file-workflow-storage.js";
 export { DualWorkflowStorage } from "./dual-workflow-storage.js";
