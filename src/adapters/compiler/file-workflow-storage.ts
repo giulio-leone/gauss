@@ -29,7 +29,13 @@ export class FileWorkflowStorage implements WorkflowStoragePort {
   }
 
   private filePath(id: string): string {
-    return this.path!.join(this.basePath, `${id}.${this.format}`);
+    const candidate = this.path!.join(this.basePath, `${id}.${this.format}`);
+    const resolved = this.path!.resolve(candidate);
+    const base = this.path!.resolve(this.basePath);
+    if (!resolved.startsWith(base + this.path!.sep) && resolved !== base) {
+      throw new Error("Invalid workflow ID: path traversal detected");
+    }
+    return candidate;
   }
 
   async save(workflow: StoredWorkflow): Promise<void> {
@@ -56,11 +62,15 @@ export class FileWorkflowStorage implements WorkflowStoragePort {
       const workflows: StoredWorkflow[] = [];
       for (const file of files) {
         if (file.endsWith(ext)) {
-          const content = await this.fs!.readFile(
-            this.path!.join(this.basePath, file),
-            "utf-8",
-          );
-          workflows.push(JSON.parse(content) as StoredWorkflow);
+          try {
+            const content = await this.fs!.readFile(
+              this.path!.join(this.basePath, file),
+              "utf-8",
+            );
+            workflows.push(JSON.parse(content) as StoredWorkflow);
+          } catch {
+            // Skip corrupted files, don't break entire listing
+          }
         }
       }
       return workflows;

@@ -132,10 +132,14 @@ Analyze the steps, identify required skills per platform, group into role-based 
   }
 
   private generateId(name: string): string {
-    return name
+    const slug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 64);
+      .slice(0, 48);
+
+    const suffix = Date.now().toString(36);
+    const base = slug || "workflow";
+    return `${base}-${suffix}`;
   }
 }
