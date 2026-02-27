@@ -69,6 +69,7 @@ export type { FilesystemPort } from "./ports/filesystem.port.js";
 export type {
   AgentMemoryPort,
   MemoryEntry,
+  MemoryTier,
   MemoryStats,
   RecallOptions,
 } from "./ports/agent-memory.port.js";
@@ -457,6 +458,7 @@ export type { McpToolExecutor } from "./adapters/mcp-server/index.js";
 
 export { InMemoryAdapter } from "./adapters/memory/in-memory.adapter.js";
 export { InMemoryAgentMemoryAdapter } from "./adapters/memory/in-memory-agent-memory.adapter.js";
+export { TieredAgentMemoryAdapter } from "./adapters/memory/tiered-agent-memory.adapter.js";
 export { SupabaseMemoryAdapter } from "./adapters/memory/supabase.adapter.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -44,12 +44,23 @@ export class InMemoryAgentMemoryAdapter implements AgentMemoryPort {
   }
 
   async recall(_query: string, options: RecallOptions = {}): Promise<MemoryEntry[]> {
-    const { limit = 10, type, sessionId, minImportance, query } = options;
+    const {
+      limit = 10,
+      type,
+      tier,
+      includeTiers,
+      sessionId,
+      minImportance,
+      query,
+    } = options;
     const lower = query?.toLowerCase();
     const results: MemoryEntry[] = [];
+    const tierSet = includeTiers ? new Set(includeTiers) : undefined;
 
     for (const e of this.entries.values()) {
       if (type && e.type !== type) continue;
+      if (tier && e.tier !== tier) continue;
+      if (tierSet && (!e.tier || !tierSet.has(e.tier))) continue;
       if (sessionId && e.sessionId !== sessionId) continue;
       if (minImportance !== undefined && (e.importance ?? 0) < minImportance) continue;
       if (lower && !e.content.toLowerCase().includes(lower)) continue;

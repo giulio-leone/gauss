@@ -55,6 +55,27 @@ describe("InMemoryAgentMemoryAdapter", () => {
     expect(facts[0].content).toBe("fact1");
   });
 
+  it("should recall with tier filter", async () => {
+    await adapter.store(
+      makeEntry({
+        type: "fact",
+        tier: "semantic",
+        content: "semantic-fact",
+      }),
+    );
+    await adapter.store(
+      makeEntry({
+        type: "summary",
+        tier: "observation",
+        content: "observation-summary",
+      }),
+    );
+
+    const semantic = await adapter.recall("", { tier: "semantic" });
+    expect(semantic).toHaveLength(1);
+    expect(semantic[0].content).toBe("semantic-fact");
+  });
+
   it("should recall with sessionId filter", async () => {
     await adapter.store(makeEntry({ sessionId: "s1", content: "session1" }));
     await adapter.store(makeEntry({ sessionId: "s2", content: "session2" }));
@@ -128,13 +149,32 @@ describe("InMemoryAgentMemoryAdapter", () => {
   });
 
   it("should return correct stats", async () => {
-    await adapter.store(makeEntry({ type: "fact", timestamp: "2024-01-01T00:00:00Z" }));
-    await adapter.store(makeEntry({ type: "fact", timestamp: "2024-06-01T00:00:00Z" }));
-    await adapter.store(makeEntry({ type: "task", timestamp: "2024-12-01T00:00:00Z" }));
+    await adapter.store(
+      makeEntry({
+        type: "fact",
+        tier: "semantic",
+        timestamp: "2024-01-01T00:00:00Z",
+      }),
+    );
+    await adapter.store(
+      makeEntry({
+        type: "fact",
+        tier: "semantic",
+        timestamp: "2024-06-01T00:00:00Z",
+      }),
+    );
+    await adapter.store(
+      makeEntry({
+        type: "task",
+        tier: "working",
+        timestamp: "2024-12-01T00:00:00Z",
+      }),
+    );
 
     const stats = await adapter.getStats();
     expect(stats.totalEntries).toBe(3);
     expect(stats.byType).toEqual({ fact: 2, task: 1 });
+    expect(stats.byTier).toMatchObject({ semantic: 2, working: 1 });
     expect(stats.oldestEntry).toBe("2024-01-01T00:00:00Z");
     expect(stats.newestEntry).toBe("2024-12-01T00:00:00Z");
   });
@@ -215,6 +255,23 @@ describe("FileMemoryAdapter", () => {
     expect(facts[0].content).toBe("a fact");
   });
 
+  it("should filter by tier", async () => {
+    await adapter.store(
+      makeEntry({ type: "fact", tier: "semantic", content: "semantic fact" }),
+    );
+    await adapter.store(
+      makeEntry({
+        type: "summary",
+        tier: "observation",
+        content: "observation summary",
+      }),
+    );
+
+    const semantic = await adapter.recall("", { tier: "semantic" });
+    expect(semantic).toHaveLength(1);
+    expect(semantic[0].content).toBe("semantic fact");
+  });
+
   it("should clear all files", async () => {
     await adapter.store(makeEntry({ sessionId: "s1" }));
     await adapter.store(makeEntry({ sessionId: "s2" }));
@@ -225,12 +282,25 @@ describe("FileMemoryAdapter", () => {
   });
 
   it("should return correct stats", async () => {
-    await adapter.store(makeEntry({ type: "fact", timestamp: "2024-01-01T00:00:00Z" }));
-    await adapter.store(makeEntry({ type: "task", timestamp: "2024-12-01T00:00:00Z" }));
+    await adapter.store(
+      makeEntry({
+        type: "fact",
+        tier: "semantic",
+        timestamp: "2024-01-01T00:00:00Z",
+      }),
+    );
+    await adapter.store(
+      makeEntry({
+        type: "task",
+        tier: "working",
+        timestamp: "2024-12-01T00:00:00Z",
+      }),
+    );
 
     const stats = await adapter.getStats();
     expect(stats.totalEntries).toBe(2);
     expect(stats.byType).toEqual({ fact: 1, task: 1 });
+    expect(stats.byTier).toMatchObject({ semantic: 1, working: 1 });
     expect(stats.oldestEntry).toBe("2024-01-01T00:00:00Z");
     expect(stats.newestEntry).toBe("2024-12-01T00:00:00Z");
   });
@@ -262,9 +332,11 @@ describe("MemoryPlugin", () => {
     expect(plugin.version).toBe("1.0.0");
   });
 
-  it("should have all four tools", () => {
+  it("should have all memory tools", () => {
     expect(plugin.tools).toHaveProperty("memory:store");
     expect(plugin.tools).toHaveProperty("memory:recall");
+    expect(plugin.tools).toHaveProperty("memory:observe");
+    expect(plugin.tools).toHaveProperty("memory:reflect");
     expect(plugin.tools).toHaveProperty("memory:stats");
     expect(plugin.tools).toHaveProperty("memory:clear");
   });
@@ -276,6 +348,22 @@ describe("MemoryPlugin", () => {
     expect(result).toContain("type: fact");
   });
 
+  it("memory:store should support explicit tier", async () => {
+    const storeTool = plugin.tools["memory:store"] as any;
+    const recallTool = plugin.tools["memory:recall"] as any;
+
+    await storeTool.execute({
+      content: "Semantic memory",
+      type: "fact",
+      tier: "semantic",
+      importance: 0.9,
+    });
+
+    const recalled = await recallTool.execute({ tier: "semantic" });
+    expect(recalled).toContain("Semantic memory");
+    expect(recalled).toContain("[semantic:fact]");
+  });
+
   it("memory:recall should return stored entries", async () => {
     const storeTool = plugin.tools["memory:store"] as any;
     const recallTool = plugin.tools["memory:recall"] as any;
@@ -283,6 +371,40 @@ describe("MemoryPlugin", () => {
     await storeTool.execute({ content: "TypeScript rocks", type: "fact" });
     const result = await recallTool.execute({ query: "typescript" });
     expect(result).toContain("TypeScript rocks");
+  });
+
+  it("memory:observe should store observation tier entries", async () => {
+    const observeTool = plugin.tools["memory:observe"] as any;
+    const recallTool = plugin.tools["memory:recall"] as any;
+
+    const result = await observeTool.execute({
+      content: "Model hesitates when requirements are ambiguous",
+      importance: 0.8,
+    });
+    expect(result).toContain("Stored observation");
+
+    const observations = await recallTool.execute({ tier: "observation" });
+    expect(observations).toContain("Model hesitates");
+    expect(observations).toContain("[observation:summary]");
+  });
+
+  it("memory:reflect should summarize observations into target tier", async () => {
+    const observeTool = plugin.tools["memory:observe"] as any;
+    const reflectTool = plugin.tools["memory:reflect"] as any;
+    const recallTool = plugin.tools["memory:recall"] as any;
+
+    await observeTool.execute({ content: "Observation A" });
+    await observeTool.execute({ content: "Observation B" });
+
+    const reflection = await reflectTool.execute({
+      targetTier: "semantic",
+      limit: 10,
+    });
+
+    expect(reflection).toContain("Reflection stored in tier 'semantic'");
+
+    const semantic = await recallTool.execute({ tier: "semantic" });
+    expect(semantic).toContain("[semantic:summary]");
   });
 
   it("memory:recall should return 'No memories found' when empty", async () => {
@@ -353,6 +475,7 @@ describe("MemoryPlugin", () => {
     const results = await adapter.recall("", {});
     expect(results).toHaveLength(1);
     expect(results[0].type).toBe("summary");
+    expect(results[0].tier).toBe("short");
     expect(results[0].sessionId).toBe("test-session");
   });
 
