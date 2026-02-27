@@ -71,6 +71,12 @@ export class McpPolicyEngine implements PolicyEnginePort {
     this.rules.push(rule);
   }
 
+  async removeRule(id: string): Promise<boolean> {
+    const before = this.rules.length;
+    this.rules = this.rules.filter((rule) => rule.id !== id);
+    return this.rules.length < before;
+  }
+
   async setRules(rules: PolicyRule[]): Promise<void> {
     this.rules = [...rules];
   }

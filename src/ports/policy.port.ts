@@ -57,6 +57,7 @@ export interface PolicyAuditRecord {
 export interface PolicyEnginePort {
   evaluate(request: PolicyRequest, context: PolicyContext): Promise<PolicyDecision>;
   addRule(rule: PolicyRule): Promise<void>;
+  removeRule(id: string): Promise<boolean>;
   setRules(rules: PolicyRule[]): Promise<void>;
   listRules(): Promise<PolicyRule[]>;
   getAuditLog(limit?: number): Promise<PolicyAuditRecord[]>;

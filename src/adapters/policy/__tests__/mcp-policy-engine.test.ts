@@ -100,4 +100,27 @@ describe("McpPolicyEngine", () => {
     expect(audits[0]?.request.resource).toBe("docs:search");
     expect(audits[1]?.request.resource).toBe("docs:read");
   });
+
+  it("removes rules by id", async () => {
+    const engine = new McpPolicyEngine({
+      rules: [
+        {
+          id: "r-1",
+          effect: "deny",
+          resourcePattern: "calc:*",
+        },
+        {
+          id: "r-2",
+          effect: "allow",
+          resourcePattern: "docs:*",
+        },
+      ],
+    });
+
+    const removed = await engine.removeRule("r-1");
+    const rules = await engine.listRules();
+
+    expect(removed).toBe(true);
+    expect(rules.map((rule) => rule.id)).toEqual(["r-2"]);
+  });
 });
