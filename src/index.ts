@@ -41,6 +41,7 @@ export type {
   DelegationMessageFilterContext,
   DelegationMessageFilterResult,
   SubagentConfig,
+  McpToolsetSelection,
   CheckpointConfig,
   ApprovalRequest,
   AgentEventType,

@@ -11,7 +11,13 @@ import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
-import type { DeepAgentConfig, CheckpointConfig, SubagentConfig, ApprovalConfig } from "../types.js";
+import type {
+  DeepAgentConfig,
+  CheckpointConfig,
+  SubagentConfig,
+  ApprovalConfig,
+  McpToolsetSelection,
+} from "../types.js";
 import type { DeepAgentPlugin, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import { createRuntimeAdapterAsync } from "../adapters/runtime/detect-runtime.js";
@@ -43,6 +49,7 @@ export interface DeepAgentResult<TOutput = unknown> {
 
 export interface DeepAgentRunOptions {
   pluginMetadata?: PluginRunMetadata;
+  mcpToolset?: McpToolsetSelection;
 }
 
 // Re-export builder for backward compatibility

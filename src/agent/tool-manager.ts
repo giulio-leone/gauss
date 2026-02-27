@@ -9,6 +9,7 @@ import type { LanguageModel, Tool } from "ai";
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
 import type { ApprovalConfig, SubagentConfig } from "../types.js";
+import type { McpToolsetSelection } from "../types.js";
 import type { PluginContext, PluginRunMetadata, PluginSetupContext } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 
@@ -92,7 +93,7 @@ export class ToolManager {
   // Build catalog
   // ---------------------------------------------------------------------------
 
-  async buildToolCatalog(): Promise<Record<string, Tool>> {
+  async buildToolCatalog(runMetadata?: PluginRunMetadata): Promise<Record<string, Tool>> {
     const tools: Record<string, Tool> = {};
 
     this.registerTools(tools, createFilesystemTools(this.config.fs), "filesystem");
@@ -134,8 +135,22 @@ export class ToolManager {
       const mcpDefs = await this.config.mcp.discoverTools();
       const mcp = this.config.mcp;
       const mcpTools: Record<string, Tool> = {};
+      const selection = this.extractMcpToolsetSelection(runMetadata);
 
       for (const [name, def] of Object.entries(mcpDefs)) {
+        const [serverName = "mcp", ...toolParts] = name.split(":");
+        const shortName = toolParts.length > 0 ? toolParts.join(":") : name;
+
+        if (
+          !this.shouldIncludeMcpTool(selection, {
+            serverName,
+            fullName: name,
+            shortName,
+          })
+        ) {
+          continue;
+        }
+
         mcpTools[`mcp:${name}`] = tool({
           description: def.description,
           inputSchema: z.object({}).passthrough(),
@@ -226,7 +241,7 @@ export class ToolManager {
     runtime: RuntimePort,
     runMetadata?: PluginRunMetadata,
   ): Promise<{ tools: Record<string, Tool>; pluginCtx: PluginContext }> {
-    const tools = await this.buildToolCatalog();
+    const tools = await this.buildToolCatalog(runMetadata);
     const toolNames = Object.keys(tools);
     const setupCtx = this.createPluginSetupContext(sessionId, toolNames, eventBus);
     await this.pluginManager.initialize(setupCtx);
@@ -272,6 +287,89 @@ export class ToolManager {
       ...this.createPluginContext(sessionId, toolNames),
       on: (eventType, handler) => eventBus.on(eventType, handler),
     };
+  }
+
+  private extractMcpToolsetSelection(
+    runMetadata?: PluginRunMetadata,
+  ): McpToolsetSelection | undefined {
+    const raw = runMetadata?.mcpToolset;
+    if (!raw || typeof raw !== "object") {
+      return undefined;
+    }
+
+    const normalize = (value: unknown): string[] | undefined => {
+      if (!Array.isArray(value)) return undefined;
+      const cleaned = value
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      return cleaned.length > 0 ? cleaned : undefined;
+    };
+
+    const candidate = raw as Partial<McpToolsetSelection>;
+    const selection: McpToolsetSelection = {
+      includeServers: normalize(candidate.includeServers),
+      excludeServers: normalize(candidate.excludeServers),
+      includeTools: normalize(candidate.includeTools),
+      excludeTools: normalize(candidate.excludeTools),
+    };
+
+    if (
+      !selection.includeServers &&
+      !selection.excludeServers &&
+      !selection.includeTools &&
+      !selection.excludeTools
+    ) {
+      return undefined;
+    }
+
+    return selection;
+  }
+
+  private shouldIncludeMcpTool(
+    selection: McpToolsetSelection | undefined,
+    toolInfo: {
+      serverName: string;
+      fullName: string;
+      shortName: string;
+    },
+  ): boolean {
+    if (!selection) {
+      return true;
+    }
+
+    if (
+      selection.includeServers &&
+      !selection.includeServers.includes(toolInfo.serverName)
+    ) {
+      return false;
+    }
+
+    if (
+      selection.excludeServers &&
+      selection.excludeServers.includes(toolInfo.serverName)
+    ) {
+      return false;
+    }
+
+    if (selection.includeTools) {
+      const allowed =
+        selection.includeTools.includes(toolInfo.fullName) ||
+        selection.includeTools.includes(toolInfo.shortName);
+      if (!allowed) {
+        return false;
+      }
+    }
+
+    if (
+      selection.excludeTools &&
+      (selection.excludeTools.includes(toolInfo.fullName) ||
+        selection.excludeTools.includes(toolInfo.shortName))
+    ) {
+      return false;
+    }
+
+    return true;
   }
 }
 

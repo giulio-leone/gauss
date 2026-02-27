@@ -180,6 +180,17 @@ export interface SubagentConfig {
   hooks?: DelegationHooks | undefined;
 }
 
+export interface McpToolsetSelection {
+  /** Include only tools from these MCP servers */
+  includeServers?: string[];
+  /** Exclude tools from these MCP servers */
+  excludeServers?: string[];
+  /** Include only these tool names (short name or namespaced name) */
+  includeTools?: string[];
+  /** Exclude these tool names (short name or namespaced name) */
+  excludeTools?: string[];
+}
+
 export interface CheckpointConfig {
   /** Enable checkpointing. Default: true */
   enabled?: boolean;
