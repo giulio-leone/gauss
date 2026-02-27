@@ -11,6 +11,8 @@ import type {
   ParallelStep,
   ConditionalStep,
   LoopStep,
+  ForeachStep,
+  MapStep,
   AgentStep,
   RetryConfig,
   WorkflowEvent,
@@ -24,6 +26,7 @@ const DEFAULT_RETRY: RetryConfig = {
 };
 
 const DEFAULT_MAX_ITERATIONS = 10;
+const DEFAULT_MAX_CONCURRENCY = 1;
 
 export type AgentExecutor = (prompt: string, ctx: WorkflowContext) => Promise<unknown>;
 
@@ -149,6 +152,10 @@ export class DefaultWorkflowEngine implements WorkflowPort {
         result = await this.executeConditional(step, ctx, completedSteps, skippedSteps, registry, deadline);
       } else if (this.isLoopStep(step)) {
         result = await this.executeLoop(step, ctx, registry, deadline);
+      } else if (this.isForeachStep(step)) {
+        result = await this.executeForeach(step, ctx, registry, deadline);
+      } else if (this.isMapStep(step)) {
+        result = await this.executeMap(step, ctx, registry, deadline);
       } else if (this.isAgentStep(step)) {
         result = await this.executeAgent(step, ctx);
         // Register agent steps for rollback
@@ -162,7 +169,10 @@ export class DefaultWorkflowEngine implements WorkflowPort {
           this.emit({ type: 'step:complete', stepId: step.id, stepName: step.name, timestamp: Date.now(), context: ctx });
           return ctx;
         }
-        result = await this.executeWithRetry(ws, ctx);
+        const projectedCtx = this.applyInputMapping(ws, ctx);
+        const rawResult = await this.executeWithRetry(ws, projectedCtx);
+        result = ws.inputMapping ? { ...ctx, ...rawResult } : rawResult;
+        result = this.applyOutputMappings(ws, result);
         // Register for rollback
         if (ws.rollback) {
           registry.set(step.id, ws);
@@ -250,6 +260,110 @@ export class DefaultWorkflowEngine implements WorkflowPort {
     }
 
     return current;
+  }
+
+  private async executeForeach(
+    step: ForeachStep,
+    ctx: WorkflowContext,
+    registry: Map<string, WorkflowStep>,
+    deadline?: number,
+  ): Promise<WorkflowContext> {
+    const iterable = this.getByPath(ctx, step.iterable);
+    if (!Array.isArray(iterable)) {
+      throw new Error(`Foreach step "${step.id}": iterable path "${step.iterable}" is not an array`);
+    }
+
+    const maxIter = step.maxIterations
+      ? Math.min(step.maxIterations, iterable.length)
+      : iterable.length;
+    const items = iterable.slice(0, maxIter);
+    const itemKey = step.itemKey ?? "item";
+    const indexKey = step.indexKey ?? "index";
+
+    const outputs = await this.executeItemsWithConcurrency(
+      items,
+      step.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+      async (item, index) => {
+        if (deadline && Date.now() >= deadline) {
+          throw new Error("Workflow timeout exceeded");
+        }
+
+        const itemCtx: WorkflowContext = {
+          ...ctx,
+          [itemKey]: item,
+          [indexKey]: index,
+        };
+
+        if (step.step.rollback) {
+          registry.set(step.step.id, step.step);
+        }
+
+        const projectedCtx = this.applyInputMapping(step.step, itemCtx);
+        const rawResult = await this.executeWithRetry(step.step, projectedCtx);
+        const mergedResult = step.step.inputMapping
+          ? { ...itemCtx, ...rawResult }
+          : rawResult;
+        const mappedResult = this.applyOutputMappings(step.step, mergedResult);
+        return this.extractStepOutput(mappedResult, step.step.id);
+      },
+    );
+
+    const aggregateKey = step.aggregateOutputKey ?? step.id;
+    return {
+      ...ctx,
+      [aggregateKey]: this.aggregateOutputs(outputs, step.aggregationMode ?? "array"),
+    };
+  }
+
+  private async executeMap(
+    step: MapStep,
+    ctx: WorkflowContext,
+    registry: Map<string, WorkflowStep>,
+    deadline?: number,
+  ): Promise<WorkflowContext> {
+    const source = this.getByPath(ctx, step.input);
+    if (!Array.isArray(source)) {
+      throw new Error(`Map step "${step.id}": input path "${step.input}" is not an array`);
+    }
+
+    const filtered = source.filter((item, index) =>
+      step.filter ? step.filter(item, index, ctx) : true,
+    );
+    const itemKey = step.itemKey ?? "item";
+    const indexKey = step.indexKey ?? "index";
+
+    const transformed = await this.executeItemsWithConcurrency(
+      filtered,
+      step.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+      async (item, index) => {
+        if (deadline && Date.now() >= deadline) {
+          throw new Error("Workflow timeout exceeded");
+        }
+
+        const itemCtx: WorkflowContext = {
+          ...ctx,
+          [itemKey]: item,
+          [indexKey]: index,
+        };
+
+        if (step.transform.rollback) {
+          registry.set(step.transform.id, step.transform);
+        }
+
+        const projectedCtx = this.applyInputMapping(step.transform, itemCtx);
+        const rawResult = await this.executeWithRetry(step.transform, projectedCtx);
+        const mergedResult = step.transform.inputMapping
+          ? { ...itemCtx, ...rawResult }
+          : rawResult;
+        const mappedResult = this.applyOutputMappings(step.transform, mergedResult);
+        return this.extractStepOutput(mappedResult, step.transform.id);
+      },
+    );
+
+    return {
+      ...ctx,
+      [step.outputKey]: transformed,
+    };
   }
 
   private async executeAgent(step: AgentStep, ctx: WorkflowContext): Promise<WorkflowContext> {
@@ -343,6 +457,14 @@ export class DefaultWorkflowEngine implements WorkflowPort {
     return (step as LoopStep).type === 'loop';
   }
 
+  private isForeachStep(step: AnyStep): step is ForeachStep {
+    return (step as ForeachStep).type === 'foreach';
+  }
+
+  private isMapStep(step: AnyStep): step is MapStep {
+    return (step as MapStep).type === 'map';
+  }
+
   private isAgentStep(step: AnyStep): step is AgentStep {
     return (step as AgentStep).type === 'agent';
   }
@@ -358,6 +480,22 @@ export class DefaultWorkflowEngine implements WorkflowPort {
     } else if (this.isLoopStep(step)) {
       if (!step.body) errors.push(`Loop step "${step.id}" must have a body`);
       if (!step.condition) errors.push(`Loop step "${step.id}" must have a condition`);
+    } else if (this.isForeachStep(step)) {
+      if (!step.iterable) errors.push(`Foreach step "${step.id}" must define iterable path`);
+      if (!step.step) errors.push(`Foreach step "${step.id}" must define an item step`);
+      if (step.maxConcurrency !== undefined && step.maxConcurrency < 1) {
+        errors.push(`Foreach step "${step.id}" maxConcurrency must be >= 1`);
+      }
+      if (step.maxIterations !== undefined && step.maxIterations < 1) {
+        errors.push(`Foreach step "${step.id}" maxIterations must be >= 1`);
+      }
+    } else if (this.isMapStep(step)) {
+      if (!step.input) errors.push(`Map step "${step.id}" must define input path`);
+      if (!step.transform) errors.push(`Map step "${step.id}" must define transform step`);
+      if (!step.outputKey) errors.push(`Map step "${step.id}" must define outputKey`);
+      if (step.maxConcurrency !== undefined && step.maxConcurrency < 1) {
+        errors.push(`Map step "${step.id}" maxConcurrency must be >= 1`);
+      }
     } else if (this.isAgentStep(step)) {
       if (!step.prompt) errors.push(`Agent step "${step.id}" must have a prompt`);
       if (!step.outputKey) errors.push(`Agent step "${step.id}" must have an outputKey`);
@@ -365,5 +503,143 @@ export class DefaultWorkflowEngine implements WorkflowPort {
       const ws = step as WorkflowStep;
       if (!ws.execute) errors.push(`Step "${step.id}" must have an execute function`);
     }
+  }
+
+  private getByPath(ctx: WorkflowContext, path: string): unknown {
+    if (!path) return undefined;
+    const normalized = path.replace(/\[(\d+)\]/g, ".$1");
+    const segments = normalized.split(".").filter(Boolean);
+    let current: unknown = ctx;
+
+    for (const segment of segments) {
+      if (current === null || current === undefined) return undefined;
+      if (Array.isArray(current)) {
+        const index = Number(segment);
+        if (!Number.isInteger(index)) return undefined;
+        current = current[index];
+        continue;
+      }
+      if (typeof current !== "object") return undefined;
+      current = (current as Record<string, unknown>)[segment];
+    }
+
+    return current;
+  }
+
+  private applyInputMapping(step: WorkflowStep, ctx: WorkflowContext): WorkflowContext {
+    const mapping = step.inputMapping;
+    if (!mapping) {
+      return ctx;
+    }
+
+    let projected: WorkflowContext = mapping.defaults
+      ? { ...mapping.defaults }
+      : {};
+
+    if (mapping.keys) {
+      for (const key of mapping.keys) {
+        if (key in ctx) {
+          projected[key] = ctx[key];
+        }
+      }
+    }
+
+    if (mapping.paths) {
+      for (const [targetKey, path] of Object.entries(mapping.paths)) {
+        projected[targetKey] = this.getByPath(ctx, path);
+      }
+    }
+
+    if (mapping.overrides) {
+      projected = {
+        ...projected,
+        ...mapping.overrides,
+      };
+    }
+
+    return projected;
+  }
+
+  private applyOutputMappings(step: WorkflowStep, result: WorkflowContext): WorkflowContext {
+    if (!step.outputMapping || step.outputMapping.length === 0) {
+      return result;
+    }
+
+    const mapped: WorkflowContext = { ...result };
+
+    for (const mapping of step.outputMapping) {
+      let value = this.getByPath(result, mapping.source);
+      if (mapping.transform) {
+        value = mapping.transform(value, result);
+      }
+      if (value === undefined) {
+        value = mapping.defaultValue;
+      }
+      mapped[mapping.targetKey] = value;
+    }
+
+    return mapped;
+  }
+
+  private extractStepOutput(result: WorkflowContext, stepId: string): unknown {
+    if (stepId in result) {
+      return result[stepId];
+    }
+    return result;
+  }
+
+  private aggregateOutputs(
+    outputs: unknown[],
+    mode: "array" | "concat" | "merge",
+  ): unknown {
+    if (mode === "concat") {
+      return outputs.flatMap((output) =>
+        Array.isArray(output) ? output : [output],
+      );
+    }
+
+    if (mode === "merge") {
+      const merged: Record<string, unknown> = {};
+      for (const output of outputs) {
+        if (output && typeof output === "object" && !Array.isArray(output)) {
+          Object.assign(merged, output as Record<string, unknown>);
+        }
+      }
+      return merged;
+    }
+
+    return outputs;
+  }
+
+  private async executeItemsWithConcurrency<T, TResult>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T, index: number) => Promise<TResult>,
+  ): Promise<TResult[]> {
+    const safeConcurrency = Math.max(1, Math.floor(concurrency));
+    if (safeConcurrency === 1 || items.length <= 1) {
+      const sequential: TResult[] = [];
+      for (let i = 0; i < items.length; i++) {
+        sequential.push(await worker(items[i]!, i));
+      }
+      return sequential;
+    }
+
+    const results = new Array<TResult>(items.length);
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(safeConcurrency, items.length) },
+      async () => {
+        while (true) {
+          const current = nextIndex;
+          nextIndex++;
+          if (current >= items.length) return;
+          results[current] = await worker(items[current]!, current);
+        }
+      },
+    );
+
+    await Promise.all(workers);
+    return results;
   }
 }
