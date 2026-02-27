@@ -15,8 +15,10 @@ import { InMemoryAgentMemoryAdapter } from "../adapters/memory/in-memory-agent-m
 
 /** Max characters kept when summarizing memory entries */
 const SUMMARY_MAX_LENGTH = 500;
+const REFLECTION_DEFAULT_LIMIT = 20;
 
 const memoryTypeSchema = z.enum(["conversation", "fact", "preference", "task", "summary"]);
+const memoryTierSchema = z.enum(["short", "working", "semantic", "observation"]);
 const importanceSchema = z.number().min(0).max(1).optional();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,23 +58,26 @@ export class MemoryPlugin implements DeepAgentPlugin {
         inputSchema: z.object({
           content: z.string().describe("The content to remember"),
           type: memoryTypeSchema.describe("Type of memory"),
+          tier: memoryTierSchema.optional().describe("Optional memory tier"),
           importance: importanceSchema.describe("Importance score 0-1"),
         }),
         execute: async (args: unknown) => {
-          const { content, type, importance } = z.object({
+          const { content, type, tier, importance } = z.object({
             content: z.string(),
             type: memoryTypeSchema,
+            tier: memoryTierSchema.optional(),
             importance: importanceSchema,
           }).parse(args);
           const entry: MemoryEntry = {
             id: crypto.randomUUID(),
             content,
             type,
+            tier,
             timestamp: new Date().toISOString(),
             importance,
           };
           await this.adapter.store(entry);
-          return `Stored memory entry ${entry.id} (type: ${type})`;
+          return `Stored memory entry ${entry.id} (type: ${type}${tier ? `, tier: ${tier}` : ""})`;
         },
       }),
 
@@ -81,19 +86,123 @@ export class MemoryPlugin implements DeepAgentPlugin {
         inputSchema: z.object({
           query: z.string().optional().describe("Keyword search query"),
           type: memoryTypeSchema.optional().describe("Filter by type"),
+          tier: memoryTierSchema.optional().describe("Filter by tier"),
+          includeTiers: z.array(memoryTierSchema).optional().describe("Filter by multiple tiers"),
           limit: z.number().optional().describe("Max entries to return (default 10)"),
           minImportance: importanceSchema.describe("Minimum importance threshold"),
         }),
         execute: async (args: unknown) => {
-          const { query, type, limit, minImportance } = z.object({
+          const { query, type, tier, includeTiers, limit, minImportance } = z.object({
             query: z.string().optional(),
             type: memoryTypeSchema.optional(),
+            tier: memoryTierSchema.optional(),
+            includeTiers: z.array(memoryTierSchema).optional(),
             limit: z.number().optional(),
             minImportance: importanceSchema,
           }).parse(args);
-          const entries = await this.adapter.recall(query ?? "", { query, type, limit, minImportance });
+          const entries = await this.adapter.recall(query ?? "", {
+            query,
+            type,
+            tier,
+            includeTiers,
+            limit,
+            minImportance,
+          });
           if (entries.length === 0) return "No memories found.";
-          return entries.map((e) => `[${e.type}] ${e.content}`).join("\n");
+          return entries
+            .map((e) => `[${e.tier ?? "unknown"}:${e.type}] ${e.content}`)
+            .join("\n");
+        },
+      }),
+
+      "memory:observe": tool({
+        description: "Store an observation entry in the observation tier",
+        inputSchema: z.object({
+          content: z.string().describe("Observation content"),
+          importance: importanceSchema.describe("Importance score 0-1"),
+        }),
+        execute: async (args: unknown) => {
+          const { content, importance } = z
+            .object({
+              content: z.string(),
+              importance: importanceSchema,
+            })
+            .parse(args);
+
+          const entry: MemoryEntry = {
+            id: crypto.randomUUID(),
+            content,
+            type: "summary",
+            tier: "observation",
+            timestamp: new Date().toISOString(),
+            importance,
+            metadata: { source: "observation" },
+          };
+
+          await this.adapter.store(entry);
+          return `Stored observation ${entry.id}`;
+        },
+      }),
+
+      "memory:reflect": tool({
+        description:
+          "Summarize observation-tier memories into a reflection memory",
+        inputSchema: z.object({
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(100)
+            .default(REFLECTION_DEFAULT_LIMIT)
+            .describe("Max observation entries to summarize"),
+          minImportance: importanceSchema.describe(
+            "Minimum importance threshold for observations",
+          ),
+          targetTier: memoryTierSchema
+            .default("semantic")
+            .describe("Tier where reflection output will be stored"),
+        }),
+        execute: async (args: unknown) => {
+          const { limit, minImportance, targetTier } = z
+            .object({
+              limit: z
+                .number()
+                .int()
+                .min(1)
+                .max(100)
+                .default(REFLECTION_DEFAULT_LIMIT),
+              minImportance: importanceSchema,
+              targetTier: memoryTierSchema.default("semantic"),
+            })
+            .parse(args);
+
+          const observations = await this.adapter.recall("", {
+            tier: "observation",
+            limit,
+            minImportance,
+          });
+
+          if (observations.length === 0) {
+            return "No observation memories found.";
+          }
+
+          const reflection = await this.adapter.summarize(observations);
+          const reflectionEntry: MemoryEntry = {
+            id: crypto.randomUUID(),
+            content: reflection,
+            type: "summary",
+            tier: targetTier,
+            timestamp: new Date().toISOString(),
+            importance: 0.7,
+            metadata: {
+              source: "reflection",
+              observationCount: observations.length,
+            },
+          };
+
+          await this.adapter.store(reflectionEntry);
+
+          return `Reflection stored in tier '${targetTier}' from ${observations.length} observation(s).\n\n${reflection}`;
         },
       }),
 
@@ -126,6 +235,7 @@ export class MemoryPlugin implements DeepAgentPlugin {
       id: crypto.randomUUID(),
       content: summary,
       type: "summary",
+      tier: "short",
       timestamp: new Date().toISOString(),
       importance: 0.5,
       sessionId: params.result.sessionId,

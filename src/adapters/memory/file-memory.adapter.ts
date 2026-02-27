@@ -107,7 +107,16 @@ export class FileMemoryAdapter implements AgentMemoryPort {
   }
 
   async recall(_query: string, options: RecallOptions = {}): Promise<MemoryEntry[]> {
-    const { limit = 10, type, sessionId, minImportance, query } = options;
+    const {
+      limit = 10,
+      type,
+      tier,
+      includeTiers,
+      sessionId,
+      minImportance,
+      query,
+    } = options;
+    const tierSet = includeTiers ? new Set(includeTiers) : undefined;
 
     let entries: MemoryEntry[];
     if (sessionId) {
@@ -118,6 +127,12 @@ export class FileMemoryAdapter implements AgentMemoryPort {
 
     if (type) {
       entries = entries.filter((e) => e.type === type);
+    }
+    if (tier) {
+      entries = entries.filter((e) => e.tier === tier);
+    }
+    if (tierSet) {
+      entries = entries.filter((e) => e.tier && tierSet.has(e.tier));
     }
     if (sessionId) {
       entries = entries.filter((e) => e.sessionId === sessionId);
