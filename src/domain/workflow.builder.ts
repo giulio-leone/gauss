@@ -10,6 +10,8 @@ import type {
   ParallelStep,
   ConditionalStep,
   LoopStep,
+  ForeachStep,
+  MapStep,
   AgentStep,
   RetryConfig,
 } from "./workflow.schema.js";
@@ -28,6 +30,27 @@ interface LoopOpts {
   body: WorkflowStep;
   condition: ConditionFn;
   maxIterations?: number;
+}
+
+interface ForeachOpts {
+  iterable: string;
+  step: WorkflowStep;
+  itemKey?: string;
+  indexKey?: string;
+  aggregateOutputKey?: string;
+  aggregationMode?: "array" | "concat" | "merge";
+  maxConcurrency?: number;
+  maxIterations?: number;
+}
+
+interface MapOpts {
+  input: string;
+  transform: WorkflowStep;
+  outputKey: string;
+  itemKey?: string;
+  indexKey?: string;
+  filter?: (item: unknown, index: number, ctx: WorkflowContext) => boolean;
+  maxConcurrency?: number;
 }
 
 export class WorkflowBuilder {
@@ -78,6 +101,41 @@ export class WorkflowBuilder {
       body: opts.body,
       condition: opts.condition,
       maxIterations: opts.maxIterations,
+    };
+    this.steps.push(step);
+    return this;
+  }
+
+  foreach(id: string, name: string, opts: ForeachOpts): this {
+    const step: ForeachStep = {
+      id,
+      name,
+      type: "foreach",
+      iterable: opts.iterable,
+      step: opts.step,
+      itemKey: opts.itemKey,
+      indexKey: opts.indexKey,
+      aggregateOutputKey: opts.aggregateOutputKey,
+      aggregationMode: opts.aggregationMode,
+      maxConcurrency: opts.maxConcurrency,
+      maxIterations: opts.maxIterations,
+    };
+    this.steps.push(step);
+    return this;
+  }
+
+  map(id: string, name: string, opts: MapOpts): this {
+    const step: MapStep = {
+      id,
+      name,
+      type: "map",
+      input: opts.input,
+      transform: opts.transform,
+      outputKey: opts.outputKey,
+      itemKey: opts.itemKey,
+      indexKey: opts.indexKey,
+      filter: opts.filter,
+      maxConcurrency: opts.maxConcurrency,
     };
     this.steps.push(step);
     return this;

@@ -257,6 +257,109 @@ describe("DefaultWorkflowEngine", () => {
     });
   });
 
+  describe("Foreach steps", () => {
+    it("should iterate over collection and aggregate outputs", async () => {
+      const definition = defineWorkflow("foreach-test", "Foreach Test")
+        .foreach("loop-items", "Loop Items", {
+          iterable: "items",
+          itemKey: "item",
+          aggregateOutputKey: "doubled",
+          maxConcurrency: 2,
+          step: {
+            id: "process-item",
+            name: "Process Item",
+            execute: async (ctx: any) => ({
+              ...ctx,
+              "process-item": (ctx.item as number) * 2,
+            }),
+          },
+        })
+        .withInitialContext({ items: [1, 2, 3] })
+        .build();
+
+      const result = await engine.execute(definition);
+
+      expect(result.status).toBe("completed");
+      expect(result.context.doubled).toEqual([2, 4, 6]);
+    });
+  });
+
+  describe("Map steps", () => {
+    it("should transform collections and write mapped output key", async () => {
+      const definition = defineWorkflow("map-test", "Map Test")
+        .map("map-items", "Map Items", {
+          input: "items",
+          outputKey: "mapped",
+          itemKey: "item",
+          maxConcurrency: 2,
+          transform: {
+            id: "map-transform",
+            name: "Map Transform",
+            execute: async (ctx: any) => ({
+              ...ctx,
+              "map-transform": (ctx.item as number) + 10,
+            }),
+          },
+        })
+        .withInitialContext({ items: [1, 2, 3] })
+        .build();
+
+      const result = await engine.execute(definition);
+
+      expect(result.status).toBe("completed");
+      expect(result.context.mapped).toEqual([11, 12, 13]);
+    });
+  });
+
+  describe("Input and output mapping", () => {
+    it("should project input context and map output fields", async () => {
+      const definition: WorkflowDefinition = {
+        id: "mapping-test",
+        name: "Mapping Test",
+        initialContext: {
+          config: { threshold: 0.5 },
+          raw: { score: 0.9 },
+          keep: "yes",
+        },
+        steps: [
+          {
+            id: "analyze",
+            name: "Analyze",
+            inputMapping: {
+              keys: ["config"],
+              paths: { score: "raw.score" },
+              defaults: { mode: "strict" },
+              overrides: { source: "test" },
+            },
+            outputMapping: [
+              {
+                source: "analysis.passed",
+                targetKey: "passed",
+                defaultValue: false,
+              },
+            ],
+            execute: async (ctx: any) => ({
+              ...ctx,
+              analysis: {
+                passed:
+                  (ctx.score as number) >=
+                  (((ctx.config as { threshold: number })?.threshold ?? 1) as number),
+              },
+            }),
+          },
+        ],
+      };
+
+      const result = await engine.execute(definition);
+
+      expect(result.status).toBe("completed");
+      expect(result.context.passed).toBe(true);
+      expect(result.context.keep).toBe("yes");
+      expect((result.context.analysis as { passed: boolean }).passed).toBe(true);
+      expect(result.context.source).toBe("test");
+    });
+  });
+
   describe("Retry with backoff", () => {
     it("should retry failed steps with exponential backoff", async () => {
       let attempts = 0;
