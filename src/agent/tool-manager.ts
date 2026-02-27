@@ -22,6 +22,7 @@ import { PluginManager } from "../plugins/plugin-manager.js";
 import { ApprovalManager } from "./approval-manager.js";
 import { createFilesystemTools } from "../tools/filesystem/index.js";
 import { createPlanningTools } from "../tools/planning/index.js";
+import { createPolicyTools } from "../tools/policy/index.js";
 import { createAsyncSubagentTools } from "../tools/subagent/index.js";
 import { SubagentRegistry } from "../tools/subagent/subagent-registry.js";
 import { SubagentScheduler } from "../tools/subagent/subagent-scheduler.js";
@@ -170,6 +171,14 @@ export class ToolManager {
       }
 
       this.registerTools(tools, mcpTools, "mcp");
+    }
+
+    if (this.config.policyEngine) {
+      this.registerTools(
+        tools,
+        createPolicyTools(this.config.policyEngine),
+        "policy",
+      );
     }
 
     return tools;

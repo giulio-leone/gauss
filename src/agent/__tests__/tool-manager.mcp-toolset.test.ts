@@ -161,4 +161,28 @@ describe("ToolManager MCP dynamic toolset", () => {
     expect(audits[0]?.context.tenantId).toBe("acme");
     expect(audits[0]?.decision.allowed).toBe(false);
   });
+
+  it("registers policy management tools when policy engine is configured", async () => {
+    const manager = new ToolManager(
+      {
+        model: mockModel,
+        instructions: "test",
+        maxSteps: 4,
+        fs: new VirtualFilesystem(),
+        memory: new InMemoryAdapter(),
+        planning: false,
+        subagents: false,
+        policyEngine: new McpPolicyEngine(),
+      },
+      new PluginManager(),
+    );
+
+    const tools = await manager.buildToolCatalog();
+
+    expect(Object.keys(tools)).toContain("policy_list_rules");
+    expect(Object.keys(tools)).toContain("policy_add_rule");
+    expect(Object.keys(tools)).toContain("policy_remove_rule");
+    expect(Object.keys(tools)).toContain("policy_list_audit");
+    expect(Object.keys(tools)).toContain("policy_clear_audit");
+  });
 });
