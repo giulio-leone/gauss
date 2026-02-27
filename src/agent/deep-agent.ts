@@ -9,6 +9,10 @@ import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
 import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
+import type {
+  PolicyContext,
+  PolicyEnginePort,
+} from "../ports/policy.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type {
@@ -50,6 +54,7 @@ export interface DeepAgentResult<TOutput = unknown> {
 export interface DeepAgentRunOptions {
   pluginMetadata?: PluginRunMetadata;
   mcpToolset?: McpToolsetSelection;
+  policyContext?: PolicyContext;
 }
 
 // Re-export builder for backward compatibility
@@ -69,6 +74,7 @@ interface DeepAgentInternalConfig {
   memory: MemoryPort;
   tokenCounter: TokenCounterPort;
   mcp?: McpPort;
+  policyEngine?: PolicyEnginePort;
   runtime?: RuntimePort;
   learning?: LearningPort;
   userId?: string;
@@ -154,6 +160,8 @@ export class DeepAgent {
         memory: this.config.memory,
         learning: this.config.learning,
         mcp: this.config.mcp,
+        policyEngine: this.config.policyEngine,
+        userId: this.config.userId,
         planning: this.config.planning,
         subagents: this.config.subagents,
         subagentConfig: this.config.subagentConfig,

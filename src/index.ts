@@ -96,6 +96,15 @@ export type {
   McpServerConfig,
 } from "./ports/mcp.port.js";
 export type {
+  PolicyEffect,
+  PolicyContext,
+  PolicyRequest,
+  PolicyRule,
+  PolicyDecision,
+  PolicyAuditRecord,
+  PolicyEnginePort,
+} from "./ports/policy.port.js";
+export type {
   McpServerPort,
   McpServerOptions,
   McpToolServerDefinition,
@@ -449,6 +458,12 @@ export { VirtualFilesystem, type DiskSyncFn } from "./adapters/filesystem/virtua
 
 export { GaussFlowMcpAdapter } from "./adapters/mcp/gaussflow-mcp.adapter.js";
 export { AiSdkMcpAdapter } from "./adapters/mcp/ai-sdk-mcp.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Adapters — Policy
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { McpPolicyEngine } from "./adapters/policy/mcp-policy-engine.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Adapters — MCP Server

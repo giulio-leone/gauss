@@ -8,6 +8,11 @@ import type { LanguageModel, Tool } from "ai";
 
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
+import type {
+  PolicyContext,
+  PolicyEnginePort,
+  PolicyRequest,
+} from "../ports/policy.port.js";
 import type { ApprovalConfig, SubagentConfig } from "../types.js";
 import type { McpToolsetSelection } from "../types.js";
 import type { PluginContext, PluginRunMetadata, PluginSetupContext } from "../ports/plugin.port.js";
@@ -40,6 +45,8 @@ export interface ToolManagerConfig {
   memory: MemoryPort;
   learning?: LearningPort;
   mcp?: McpPort;
+  policyEngine?: PolicyEnginePort;
+  userId?: string;
   planning: boolean;
   subagents: boolean;
   subagentConfig?: Partial<SubagentConfig>;
@@ -193,11 +200,48 @@ export class ToolManager {
     applyResilienceWrapping(tools, this.circuitBreaker, this.toolCache);
   }
 
+  wrapToolsWithPolicy(
+    tools: Record<string, Tool>,
+    sessionId: string,
+    runMetadata?: PluginRunMetadata,
+  ): void {
+    if (!this.config.policyEngine) return;
+
+    const context = this.resolvePolicyContext(sessionId, runMetadata);
+    applyPolicyWrapping(tools, this.config.policyEngine, context);
+  }
+
   wrapToolsWithPlugins(
     tools: Record<string, Tool>,
     pluginCtx: PluginContext,
   ): void {
     applyPluginWrapping(tools, this.pluginManager, pluginCtx);
+  }
+
+  resolvePolicyContext(
+    sessionId: string,
+    runMetadata?: PluginRunMetadata,
+  ): PolicyContext {
+    const base: PolicyContext = {
+      sessionId,
+      userId: this.config.userId,
+    };
+
+    const raw = runMetadata?.policyContext;
+    if (!raw || typeof raw !== "object") {
+      return base;
+    }
+
+    const candidate = raw as Partial<PolicyContext>;
+    return {
+      ...base,
+      ...(candidate.sessionId ? { sessionId: candidate.sessionId } : {}),
+      ...(candidate.userId ? { userId: candidate.userId } : {}),
+      ...(candidate.tenantId ? { tenantId: candidate.tenantId } : {}),
+      ...(candidate.metadata && typeof candidate.metadata === "object"
+        ? { metadata: candidate.metadata }
+        : {}),
+    };
   }
 
   createRateLimitedModel(): LanguageModel {
@@ -249,6 +293,9 @@ export class ToolManager {
     const pluginCtx = this.createPluginContext(sessionId, toolNames, runMetadata);
     this.wrapToolsWithApproval(tools, sessionId, eventBus, runtime);
     this.wrapToolsWithResilience(tools);
+    if (this.config.policyEngine) {
+      this.wrapToolsWithPolicy(tools, sessionId, runMetadata);
+    }
     this.wrapToolsWithPlugins(tools, pluginCtx);
 
     return { tools, pluginCtx };
@@ -441,6 +488,39 @@ function applyResilienceWrapping(
       return result;
     });
   }
+}
+
+/** Wraps MCP tools with allow/deny policy checks and audit logging. */
+function applyPolicyWrapping(
+  tools: Record<string, Tool>,
+  policyEngine: PolicyEnginePort,
+  context: PolicyContext,
+): void {
+  wrapAllTools(tools, (name, originalExecute) => async (...args: unknown[]): Promise<unknown> => {
+    if (!name.startsWith("mcp:")) {
+      return originalExecute(...args);
+    }
+
+    const resource = name.slice("mcp:".length);
+    const [serverName = "mcp", ...toolParts] = resource.split(":");
+    const toolName = toolParts.length > 0 ? toolParts.join(":") : resource;
+
+    const request: PolicyRequest = {
+      action: "invoke",
+      resource,
+      serverName,
+      toolName,
+    };
+
+    const decision = await policyEngine.evaluate(request, context);
+    if (!decision.allowed) {
+      throw new Error(
+        `MCP policy denied (${decision.auditId}) for ${resource}: ${decision.reason ?? "access denied"}`,
+      );
+    }
+
+    return originalExecute(...args);
+  });
 }
 
 /** Wraps each tool's execute with plugin before/after/onError hooks. */

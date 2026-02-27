@@ -9,6 +9,7 @@ import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
 import type { TokenCounterPort } from "../ports/token-counter.port.js";
 import type { McpPort } from "../ports/mcp.port.js";
+import type { PolicyEnginePort } from "../ports/policy.port.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type { AgentEventHandler, AgentEventType, DeepAgentConfig, ApprovalConfig, SubagentConfig } from "../types.js";
@@ -35,6 +36,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
   private userId?: string;
   private tokenCounter?: TokenCounterPort;
   private mcp?: McpPort;
+  private policyEngine?: PolicyEnginePort;
   private runtime?: RuntimePort;
   private costTracker?: CostTrackerPort;
 
@@ -92,6 +94,11 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
 
   withMcp(mcp: McpPort): this {
     this.mcp = mcp;
+    return this;
+  }
+
+  withPolicyEngine(policyEngine: PolicyEnginePort): this {
+    this.policyEngine = policyEngine;
     return this;
   }
 
@@ -210,6 +217,7 @@ export class DeepAgentBuilder extends AbstractBuilder<DeepAgent> {
       userId: this.userId,
       tokenCounter: this.tokenCounter ?? defaultTokenCounter(),
       mcp: this.mcp,
+      policyEngine: this.policyEngine,
       runtime: this.runtime,
       costTracker: this.costTracker,
       planning: this.planning,

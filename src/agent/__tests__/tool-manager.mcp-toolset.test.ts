@@ -2,15 +2,22 @@ import { describe, expect, it, vi } from "vitest";
 import type { LanguageModel } from "ai";
 
 import { ToolManager } from "../tool-manager.js";
+import { EventBus } from "../event-bus.js";
 import { PluginManager } from "../../plugins/plugin-manager.js";
 import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
 import { InMemoryAdapter } from "../../adapters/memory/in-memory.adapter.js";
+import { McpPolicyEngine } from "../../adapters/policy/mcp-policy-engine.js";
 import type { McpPort } from "../../ports/mcp.port.js";
+import type { RuntimePort } from "../../ports/runtime.port.js";
 
 const mockModel = {
   modelId: "test-model",
   provider: "test",
 } as unknown as LanguageModel;
+
+const mockRuntime = {
+  invokeModel: vi.fn(),
+} as unknown as RuntimePort;
 
 function createMockMcp(): McpPort {
   const mock = {
@@ -108,5 +115,50 @@ describe("ToolManager MCP dynamic toolset", () => {
     expect(mcpTools).not.toContain("mcp:docs:list");
     expect(mcpTools).toContain("mcp:calc:add");
     expect(mcpTools).not.toContain("mcp:docs:read");
+  });
+
+  it("enforces MCP policy deny rules and records audit", async () => {
+    const policy = new McpPolicyEngine({
+      rules: [
+        {
+          id: "deny-calc",
+          effect: "deny",
+          resourcePattern: "calc:*",
+          reason: "No calculator tools",
+          priority: 100,
+        },
+      ],
+    });
+
+    const manager = new ToolManager(
+      {
+        model: mockModel,
+        instructions: "test",
+        maxSteps: 4,
+        fs: new VirtualFilesystem(),
+        memory: new InMemoryAdapter(),
+        planning: false,
+        subagents: false,
+        mcp: createMockMcp(),
+        policyEngine: policy,
+      },
+      new PluginManager(),
+    );
+
+    const { tools } = await manager.prepareTools(
+      "session-1",
+      new EventBus(),
+      mockRuntime,
+      { policyContext: { tenantId: "acme" } },
+    );
+
+    await expect(tools["mcp:calc:add"]?.execute({})).rejects.toThrow(
+      "MCP policy denied",
+    );
+
+    const audits = await policy.getAuditLog(1);
+    expect(audits[0]?.request.resource).toBe("calc:add");
+    expect(audits[0]?.context.tenantId).toBe("acme");
+    expect(audits[0]?.decision.allowed).toBe(false);
   });
 });

@@ -3,6 +3,7 @@
 // =============================================================================
 
 import type { LanguageModel } from "ai";
+import type { PolicyEnginePort } from "./ports/policy.port.js";
 
 // =============================================================================
 // Agent Configuration
@@ -27,6 +28,8 @@ export interface DeepAgentConfig {
   subagent?: SubagentConfig;
   /** Checkpoint configuration */
   checkpoint?: CheckpointConfig;
+  /** Optional MCP policy engine */
+  policyEngine?: PolicyEnginePort;
 }
 
 export interface ContextConfig {

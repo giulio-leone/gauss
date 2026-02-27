@@ -148,14 +148,11 @@ export class ExecutionEngine {
     runtime: RuntimePort,
     options: DeepAgentRunOptions = {},
   ): Promise<DeepAgentResult> {
-    const runMetadata: PluginRunMetadata = options.mcpToolset
-      ? {
-          ...(options.pluginMetadata ?? {}),
-          mcpToolset: options.mcpToolset,
-        }
-      : {
-          ...(options.pluginMetadata ?? {}),
-        };
+    const runMetadata: PluginRunMetadata = {
+      ...(options.pluginMetadata ?? {}),
+      ...(options.mcpToolset ? { mcpToolset: options.mcpToolset } : {}),
+      ...(options.policyContext ? { policyContext: options.policyContext } : {}),
+    };
 
     let pluginCtx = this.toolManager.createPluginContext(
       sessionId,
