@@ -77,6 +77,11 @@
     "./runtime/edge": {
       "types": "./dist/runtime-edge.d.ts",
       "import": "./dist/runtime-edge.js"
+    },
+    "./providers": {
+      "types": "./dist/providers/index.d.ts",
+      "import": "./dist/providers/index.js",
+      "require": "./dist/providers/index.cjs"
     }
   },
   "files": [
@@ -107,12 +112,12 @@
     "zod": "^3.25.76"
   },
   "peerDependencies": {
-    "@ai-sdk/openai": "^3.0.29",
-    "@ai-sdk/anthropic": "^3.0.44",
-    "@ai-sdk/google": "^3.0.29",
-    "@ai-sdk/groq": "^3.0.24",
-    "@ai-sdk/mistral": "^3.0.20",
+    "@ai-sdk/anthropic": "^3.0.49",
+    "@ai-sdk/google": "^3.0.33",
+    "@ai-sdk/groq": "^3.0.25",
     "@ai-sdk/mcp": "^1.0.21",
+    "@ai-sdk/mistral": "^3.0.20",
+    "@ai-sdk/openai": "^3.0.36",
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@supabase/supabase-js": "^2.95.3",
     "tiktoken": "^1.0.22"
@@ -151,11 +156,11 @@
     "@openrouter/ai-sdk-provider": "^2.2.3",
     "@supabase/supabase-js": "^2.0.0",
     "@types/node": "^25.2.3",
+    "@vitest/coverage-v8": "^4.0.15",
     "rimraf": "^6.1.2",
     "tiktoken": "^1.0.0",
     "tsup": "^8.0.2",
     "typescript": "^5.9.3",
-    "@vitest/coverage-v8": "^4.0.15",
     "vitest": "^4.0.15"
   }
 }

@@ -29,6 +29,7 @@ export default defineConfig([
       "workflow/index": "src/workflow/index.ts",
       "a2a/index": "src/a2a/index.ts",
       "testing/index": "src/testing/index.ts",
+      "providers/index": "src/providers/index.ts",
     },
     format: ["cjs", "esm"],
     splitting: true,
