@@ -317,6 +317,57 @@ describe("DeepAgent", () => {
       expect(events[3]!.type).toBe("step:end");
       expect((events[3]!.data as Record<string, unknown>).stepIndex).toBe(1);
     });
+
+    it("applies delegation messageFilter for subagent tool events", async () => {
+      generateFn.mockResolvedValue({
+        text: "Done",
+        steps: [
+          {
+            type: "tool-call",
+            toolCalls: [
+              {
+                toolName: "dispatch_subagent",
+                toolCallId: "tc-1",
+                args: { prompt: "x" },
+              },
+            ],
+            toolResults: [
+              {
+                toolName: "dispatch_subagent",
+                toolCallId: "tc-1",
+                result: { taskId: "abc" },
+              },
+            ],
+          },
+        ],
+      });
+
+      const messageFilter = vi
+        .fn()
+        .mockResolvedValue({ allow: false, reason: "policy-filter" });
+
+      const events: AgentEvent[] = [];
+      const agent = DeepAgent.create({
+        model: mockModel,
+        instructions: "Test",
+      })
+        .withSubagents({ hooks: { messageFilter } })
+        .on("*", (event) => events.push(event))
+        .build();
+
+      await agent.run("Hello");
+
+      const toolCallEvents = events.filter((e) => e.type === "tool:call");
+      const toolResultEvents = events.filter((e) => e.type === "tool:result");
+      const filteredEvents = events.filter(
+        (e) => e.type === "delegation:message-filtered",
+      );
+
+      expect(messageFilter).toHaveBeenCalled();
+      expect(toolCallEvents).toHaveLength(0);
+      expect(toolResultEvents).toHaveLength(0);
+      expect(filteredEvents.length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   // ===========================================================================

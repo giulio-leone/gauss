@@ -9,6 +9,13 @@ import type {
   CheckpointConfig,
 } from "../types.js";
 
+export interface ResolvedSubagentConfig {
+  maxDepth: number;
+  timeoutMs: number;
+  allowNesting: boolean;
+  hooks?: SubagentConfig["hooks"];
+}
+
 export const DEFAULT_CONTEXT_CONFIG: Required<ContextConfig> = {
   summarizationThreshold: 0.7,
   truncationThreshold: 0.85,
@@ -27,7 +34,7 @@ export const DEFAULT_APPROVAL_CONFIG: Required<ApprovalConfig> = {
 /** Subagent execution timeout in ms (5 minutes) */
 const DEFAULT_SUBAGENT_TIMEOUT_MS = 300_000;
 
-export const DEFAULT_SUBAGENT_CONFIG: Required<SubagentConfig> = {
+export const DEFAULT_SUBAGENT_CONFIG: ResolvedSubagentConfig = {
   maxDepth: 3,
   timeoutMs: DEFAULT_SUBAGENT_TIMEOUT_MS,
   allowNesting: true,
@@ -55,7 +62,7 @@ export function resolveApprovalConfig(
 
 export function resolveSubagentConfig(
   partial?: SubagentConfig,
-): Required<SubagentConfig> {
+): ResolvedSubagentConfig {
   if (!partial) return { ...DEFAULT_SUBAGENT_CONFIG };
   return { ...DEFAULT_SUBAGENT_CONFIG, ...partial };
 }

@@ -5,6 +5,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 
+import type { DelegationHooks } from "../../types.js";
 import type { SubagentRegistry } from "./subagent-registry.js";
 import {
   SubagentQueueFullError,
@@ -57,6 +58,7 @@ export interface DispatchToolConfig {
   registry: SubagentRegistry;
   parentId: string;
   currentDepth: number;
+  hooks?: DelegationHooks;
 }
 
 // ---------------------------------------------------------------------------
@@ -64,7 +66,7 @@ export interface DispatchToolConfig {
 // ---------------------------------------------------------------------------
 
 export function createDispatchTool(config: DispatchToolConfig) {
-  const { registry, parentId, currentDepth } = config;
+  const { registry, parentId, currentDepth, hooks } = config;
 
   return tool({
     description:
@@ -74,12 +76,55 @@ export function createDispatchTool(config: DispatchToolConfig) {
     inputSchema: DispatchSubagentInputSchema,
     execute: async (input): Promise<string> => {
       try {
+        let prompt = input.prompt;
+        let instructions = input.instructions;
+        let priority = input.priority;
+        let timeoutMs = input.timeoutMs;
+        let metadata = input.metadata;
+
+        if (hooks?.onDelegationStart) {
+          const hookResult = await hooks.onDelegationStart({
+            parentId,
+            currentDepth,
+            prompt,
+            instructions,
+            priority,
+            timeoutMs,
+            metadata,
+          });
+
+          if (hookResult?.allow === false) {
+            return JSON.stringify({
+              blocked: true,
+              error:
+                hookResult.reason ??
+                "Delegation blocked by supervisor hook",
+            });
+          }
+
+          if (hookResult?.prompt !== undefined) {
+            prompt = hookResult.prompt;
+          }
+          if (hookResult?.instructions !== undefined) {
+            instructions = hookResult.instructions;
+          }
+          if (hookResult?.priority !== undefined) {
+            priority = hookResult.priority;
+          }
+          if (hookResult?.timeoutMs !== undefined) {
+            timeoutMs = hookResult.timeoutMs;
+          }
+          if (hookResult?.metadata !== undefined) {
+            metadata = hookResult.metadata;
+          }
+        }
+
         const handle = registry.dispatch(parentId, currentDepth, {
-          prompt: input.prompt,
-          instructions: input.instructions,
-          priority: input.priority,
-          timeoutMs: input.timeoutMs,
-          metadata: input.metadata,
+          prompt,
+          instructions,
+          priority,
+          timeoutMs,
+          metadata,
         });
 
         return JSON.stringify({

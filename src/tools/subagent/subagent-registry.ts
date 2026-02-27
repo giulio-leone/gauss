@@ -4,6 +4,7 @@
 
 import type { EventBus } from "../../agent/event-bus.js";
 import type { TelemetryPort } from "../../ports/telemetry.port.js";
+import type { DelegationHooks } from "../../types.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,6 +137,7 @@ export class SubagentRegistry {
   private readonly limits: SubagentResourceLimits;
   private readonly eventBus: EventBus;
   private readonly telemetry?: TelemetryPort;
+  private readonly hooks?: DelegationHooks;
   private readonly generateId: () => string;
   private gcTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -153,12 +155,14 @@ export class SubagentRegistry {
     options?: {
       limits?: Partial<SubagentResourceLimits>;
       telemetry?: TelemetryPort;
+      hooks?: DelegationHooks;
       generateId?: () => string;
     },
   ) {
     this.eventBus = eventBus;
     this.limits = { ...DEFAULT_LIMITS, ...options?.limits };
     this.telemetry = options?.telemetry;
+    this.hooks = options?.hooks;
     this.generateId = options?.generateId ?? (() => crypto.randomUUID());
   }
 
@@ -268,6 +272,15 @@ export class SubagentRegistry {
       prompt: params.prompt,
       priority: handle.priority,
     });
+    this.eventBus.emit("delegation:start" as any, {
+      taskId: handle.taskId,
+      parentId,
+      depth: currentDepth,
+      prompt: params.prompt,
+      priority: handle.priority,
+      timeoutMs: handle.timeoutMs,
+      metadata: handle.metadata,
+    });
     this.telemetry?.recordMetric("subagent.dispatch.count", 1);
 
     this.scheduler?.enqueue(handle);
@@ -316,6 +329,17 @@ export class SubagentRegistry {
       parentId: handle.parentId,
     });
 
+    this.eventBus.emit("delegation:iteration" as any, {
+      taskId,
+      parentId: handle.parentId,
+      previousStatus,
+      status: newStatus,
+      durationMs: Date.now() - handle.createdAt,
+      tokenUsage: handle.tokenUsage,
+    });
+
+    this.invokeIterationHook(handle, previousStatus, newStatus);
+
     if (TERMINAL_STATES.has(newStatus)) {
       if (handle.timeoutTimer) {
         clearTimeout(handle.timeoutTimer);
@@ -329,11 +353,21 @@ export class SubagentRegistry {
         durationMs: Date.now() - handle.createdAt,
         tokenUsage: handle.tokenUsage,
       });
+      this.eventBus.emit("delegation:complete" as any, {
+        taskId,
+        status: newStatus,
+        parentId: handle.parentId,
+        durationMs: Date.now() - handle.createdAt,
+        tokenUsage: handle.tokenUsage,
+        error: handle.error,
+      });
       this.telemetry?.recordMetric(`subagent.status.${newStatus}`, 1);
       this.telemetry?.recordMetric(
         "subagent.completion.duration_ms",
         Date.now() - handle.createdAt,
       );
+
+      this.invokeCompletionHook(handle);
 
       const listeners = this.completionListeners.get(taskId);
       if (listeners) {
@@ -346,6 +380,62 @@ export class SubagentRegistry {
   // -------------------------------------------------------------------------
   // Query
   // -------------------------------------------------------------------------
+
+  private invokeIterationHook(
+    handle: SubagentHandle,
+    previousStatus: SubagentTaskStatus,
+    status: SubagentTaskStatus,
+  ): void {
+    if (!this.hooks?.onIterationComplete) return;
+
+    void Promise.resolve(
+      this.hooks.onIterationComplete({
+        taskId: handle.taskId,
+        parentId: handle.parentId,
+        previousStatus,
+        status,
+        partialOutput: handle.partialOutput,
+        finalOutput: handle.finalOutput,
+        error: handle.error,
+        durationMs: Date.now() - handle.createdAt,
+        tokenUsage: handle.tokenUsage,
+        metadata: handle.metadata,
+      }),
+    )
+      .then((result) => {
+        if (!result) return;
+        if (result.shouldEscalate) {
+          this.eventBus.emit("delegation:blocked" as any, {
+            taskId: handle.taskId,
+            parentId: handle.parentId,
+            reason: result.reason ?? "delegation escalation requested",
+            score: result.score,
+          });
+        }
+      })
+      .catch(() => {
+        // Hook failures must never break task lifecycle transitions.
+      });
+  }
+
+  private invokeCompletionHook(handle: SubagentHandle): void {
+    if (!this.hooks?.onDelegationComplete) return;
+
+    void Promise.resolve(
+      this.hooks.onDelegationComplete({
+        taskId: handle.taskId,
+        parentId: handle.parentId,
+        status: handle.status,
+        finalOutput: handle.finalOutput,
+        error: handle.error,
+        durationMs: Date.now() - handle.createdAt,
+        tokenUsage: handle.tokenUsage,
+        metadata: handle.metadata,
+      }),
+    ).catch(() => {
+      // Hook failures must never break task lifecycle transitions.
+    });
+  }
 
   get(taskId: string): SubagentHandle | undefined {
     return this.handles.get(taskId);

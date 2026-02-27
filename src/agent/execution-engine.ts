@@ -7,7 +7,7 @@ import type { LanguageModel, Tool } from "ai";
 
 import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
-import type { CheckpointConfig } from "../types.js";
+import type { CheckpointConfig, DelegationHooks } from "../types.js";
 import type { PluginContext, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
@@ -32,6 +32,7 @@ export interface ExecutionEngineConfig {
   memory: MemoryPort;
   learning?: LearningPort;
   userId?: string;
+  delegationHooks?: DelegationHooks;
   checkpointConfig?: Required<CheckpointConfig>;
   telemetry?: TelemetryPort;
   costTracker?: CostTrackerPort;
@@ -68,6 +69,60 @@ export class ExecutionEngine {
   // ---------------------------------------------------------------------------
   // Telemetry helper — DRY span lifecycle (try/catch/finally)
   // ---------------------------------------------------------------------------
+
+  private isDelegationTool(toolName: string): boolean {
+    return (
+      toolName === "dispatch_subagent" ||
+      toolName === "poll_subagent" ||
+      toolName === "await_subagent"
+    );
+  }
+
+  private async applyDelegationMessageFilter(params: {
+    direction: "tool:call" | "tool:result";
+    toolName: string;
+    stepIndex: number;
+    payload: unknown;
+  }): Promise<{ allow: boolean; payload: unknown; reason?: string }> {
+    const hook = this.config.delegationHooks?.messageFilter;
+    if (!hook || !this.isDelegationTool(params.toolName)) {
+      return {
+        allow: true,
+        payload: params.payload,
+      };
+    }
+
+    try {
+      const filtered = await hook(params);
+      if (typeof filtered === "boolean") {
+        return {
+          allow: filtered,
+          payload: params.payload,
+        };
+      }
+      if (!filtered) {
+        return {
+          allow: true,
+          payload: params.payload,
+        };
+      }
+
+      return {
+        allow: filtered.allow !== false,
+        payload:
+          filtered.payload !== undefined
+            ? filtered.payload
+            : params.payload,
+        reason: filtered.reason,
+      };
+    } catch {
+      // Filtering failures should not break execution flow.
+      return {
+        allow: true,
+        payload: params.payload,
+      };
+    }
+  }
 
   private async withSpan<T>(name: string, attrs: Record<string, string | number | boolean>, fn: () => Promise<T>): Promise<T> {
     const span = this.config.telemetry?.startSpan(name, attrs);
@@ -197,10 +252,27 @@ export class ExecutionEngine {
             // Emit tool:call for each tool call in this step
             const toolCalls = (stepObj?.toolCalls as Array<{ toolName: string; toolCallId?: string; args?: unknown }>) ?? [];
             for (const tc of toolCalls) {
+              const filtered = await this.applyDelegationMessageFilter({
+                direction: "tool:call",
+                toolName: tc.toolName,
+                stepIndex: i,
+                payload: tc.args,
+              });
+
+              if (!filtered.allow) {
+                this.eventBus.emit("delegation:message-filtered", {
+                  direction: "tool:call",
+                  toolName: tc.toolName,
+                  stepIndex: i,
+                  reason: filtered.reason,
+                });
+                continue;
+              }
+
               this.eventBus.emit("tool:call", {
                 toolName: tc.toolName,
                 toolCallId: tc.toolCallId,
-                args: tc.args,
+                args: filtered.payload,
                 stepIndex: i,
               });
             }
@@ -208,10 +280,27 @@ export class ExecutionEngine {
             // Emit tool:result for each tool result in this step
             const toolResults = (stepObj?.toolResults as Array<{ toolName: string; toolCallId?: string; result?: unknown }>) ?? [];
             for (const tr of toolResults) {
+              const filtered = await this.applyDelegationMessageFilter({
+                direction: "tool:result",
+                toolName: tr.toolName,
+                stepIndex: i,
+                payload: tr.result,
+              });
+
+              if (!filtered.allow) {
+                this.eventBus.emit("delegation:message-filtered", {
+                  direction: "tool:result",
+                  toolName: tr.toolName,
+                  stepIndex: i,
+                  reason: filtered.reason,
+                });
+                continue;
+              }
+
               this.eventBus.emit("tool:result", {
                 toolName: tr.toolName,
                 toolCallId: tr.toolCallId,
-                result: tr.result,
+                result: filtered.payload,
                 stepIndex: i,
               });
             }

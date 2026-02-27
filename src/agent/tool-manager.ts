@@ -110,7 +110,10 @@ export class ToolManager {
         defaultTimeoutMs: this.config.subagentConfig?.timeoutMs ?? DEFAULT_LIMITS.defaultTimeoutMs,
       };
       const eventBus = new EventBus("subagent-bus");
-      const registry = new SubagentRegistry(eventBus, { limits });
+      const registry = new SubagentRegistry(eventBus, {
+        limits,
+        hooks: this.config.subagentConfig?.hooks,
+      });
       const scheduler = new SubagentScheduler(registry, this.config.model, limits);
       scheduler.start();
 
@@ -121,6 +124,7 @@ export class ToolManager {
           parentId: "root",
           maxDepth: limits.maxDepth,
           currentDepth: 0,
+          hooks: this.config.subagentConfig?.hooks,
         }),
         "subagents",
       );

@@ -13,6 +13,7 @@ import { createDispatchTool } from "../tools/subagent/dispatch.tool.js";
 import { createPollTool } from "../tools/subagent/poll.tool.js";
 import { createAwaitTool } from "../tools/subagent/await.tool.js";
 import { createAsyncSubagentTools } from "../tools/subagent/index.js";
+import type { DelegationHooks } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,12 +25,13 @@ function makeId(): string {
 }
 
 function createRegistry(
-  overrides?: Partial<Parameters<typeof SubagentRegistry.prototype.dispatch>[2]>,
+  hooks?: DelegationHooks,
   limitsOverride?: Partial<ConstructorParameters<typeof SubagentRegistry>[1] extends { limits?: infer L } ? L : never>,
 ) {
   const eventBus = new EventBus("test-session");
   const registry = new SubagentRegistry(eventBus, {
     limits: { gcTtlMs: 100, gcIntervalMs: 999_999, ...limitsOverride },
+    hooks,
     generateId: makeId,
   });
   return { eventBus, registry };
@@ -418,6 +420,39 @@ describe("SubagentRegistry", () => {
 
       expect(handler).toHaveBeenCalledTimes(1);
     });
+
+    it("emits delegation:start on dispatch", () => {
+      const { eventBus, registry } = createRegistry();
+      const handler = vi.fn();
+      eventBus.on("delegation:start", handler);
+
+      registry.dispatch("p", 0, { prompt: "delegated-task" });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].data).toMatchObject({
+        parentId: "p",
+        prompt: "delegated-task",
+      });
+    });
+
+    it("emits delegation:complete on terminal transition", () => {
+      const { eventBus, registry } = createRegistry();
+      const handler = vi.fn();
+      eventBus.on("delegation:complete", handler);
+
+      const handle = registry.dispatch("p", 0, { prompt: "x" });
+      registry.transition(handle.taskId, "running");
+      registry.transition(handle.taskId, "completed", {
+        finalOutput: "done",
+      });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].data).toMatchObject({
+        taskId: handle.taskId,
+        parentId: "p",
+        status: "completed",
+      });
+    });
   });
 
   it("shutdown cancels non-terminal handles", async () => {
@@ -432,6 +467,30 @@ describe("SubagentRegistry", () => {
 
     expect(h1.status).toBe("cancelled");
     expect(h2.status).toBe("cancelled");
+  });
+
+  it("invokes onDelegationComplete hook on terminal transition", async () => {
+    const onDelegationComplete = vi
+      .fn<NonNullable<DelegationHooks["onDelegationComplete"]>>()
+      .mockResolvedValue(undefined);
+
+    const { registry } = createRegistry({ onDelegationComplete });
+    const handle = registry.dispatch("p", 0, { prompt: "x" });
+    registry.transition(handle.taskId, "running");
+    registry.transition(handle.taskId, "completed", {
+      finalOutput: "done",
+    });
+
+    // Hook execution is async fire-and-forget.
+    await Promise.resolve();
+
+    expect(onDelegationComplete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: handle.taskId,
+        parentId: "p",
+        status: "completed",
+      }),
+    );
   });
 
   it("isTerminalStatus helper", () => {
@@ -514,6 +573,61 @@ describe("dispatch_subagent tool", () => {
     expect(handle!.priority).toBe(3);
     expect(handle!.timeoutMs).toBe(60_000);
     expect(handle!.metadata).toEqual({ key: "value" });
+  });
+
+  it("honors onDelegationStart hook deny decision", async () => {
+    const hooks: DelegationHooks = {
+      onDelegationStart: async () => ({
+        allow: false,
+        reason: "blocked-by-policy",
+      }),
+    };
+
+    const { registry } = createRegistry();
+    const dispatchTool = createDispatchTool({
+      registry,
+      parentId: "p",
+      currentDepth: 0,
+      hooks,
+    });
+
+    const result = await dispatchTool.execute!(
+      { prompt: "task", priority: 5 },
+      toolCtx,
+    );
+
+    const parsed = JSON.parse(result);
+    expect(parsed.blocked).toBe(true);
+    expect(parsed.error).toContain("blocked-by-policy");
+    expect(registry.totalCount).toBe(0);
+  });
+
+  it("applies onDelegationStart hook parameter overrides", async () => {
+    const hooks: DelegationHooks = {
+      onDelegationStart: async () => ({
+        prompt: "rewritten task",
+        priority: 1,
+        metadata: { source: "supervisor" },
+      }),
+    };
+
+    const { registry } = createRegistry();
+    const dispatchTool = createDispatchTool({
+      registry,
+      parentId: "p",
+      currentDepth: 0,
+      hooks,
+    });
+
+    await dispatchTool.execute!(
+      { prompt: "original", priority: 5 },
+      toolCtx,
+    );
+
+    const handle = registry.getByParent("p")[0];
+    expect(handle?.prompt).toBe("rewritten task");
+    expect(handle?.priority).toBe(1);
+    expect(handle?.metadata).toEqual({ source: "supervisor" });
   });
 });
 
@@ -728,6 +842,32 @@ describe("await_subagent tool", () => {
 
     const parsed = JSON.parse(result);
     expect(parsed[0].status).toBe("running");
+  });
+
+  it("supports isTaskComplete hook for early completion", async () => {
+    const completionHook = vi
+      .fn<NonNullable<DelegationHooks["isTaskComplete"]>>()
+      .mockResolvedValue({ isComplete: true, reason: "enough-signal" });
+
+    const { registry } = createRegistry();
+    const awaitTool = createAwaitTool({
+      registry,
+      hooks: { isTaskComplete: completionHook },
+    });
+
+    const h = registry.dispatch("p", 0, { prompt: "x" });
+    registry.transition(h.taskId, "running");
+
+    const result = await awaitTool.execute!(
+      { taskIds: [h.taskId], timeoutMs: 2_000, pollIntervalMs: 50 },
+      toolCtx,
+    );
+
+    const parsed = JSON.parse(result);
+    expect(parsed[0].status).toBe("running");
+    expect(parsed[0].completionOverride).toBe(true);
+    expect(parsed[0].completionReason).toBe("enough-signal");
+    expect(completionHook).toHaveBeenCalled();
   });
 });
 

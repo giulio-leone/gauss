@@ -1,4 +1,5 @@
 import type { Tool } from "ai";
+import type { DelegationHooks } from "../../types.js";
 import type { SubagentRegistry } from "./subagent-registry.js";
 import { createDispatchTool } from "./dispatch.tool.js";
 import { createPollTool } from "./poll.tool.js";
@@ -27,16 +28,22 @@ export interface AsyncSubagentToolsConfig {
   parentId: string;
   maxDepth: number;
   currentDepth: number;
+  hooks?: DelegationHooks;
 }
 
 export function createAsyncSubagentTools(
   config: AsyncSubagentToolsConfig,
 ): Record<string, Tool> {
-  const { registry, parentId, currentDepth } = config;
+  const { registry, parentId, currentDepth, hooks } = config;
 
   return {
-    dispatch_subagent: createDispatchTool({ registry, parentId, currentDepth }),
+    dispatch_subagent: createDispatchTool({
+      registry,
+      parentId,
+      currentDepth,
+      hooks,
+    }),
     poll_subagent: createPollTool({ registry }),
-    await_subagent: createAwaitTool({ registry }),
+    await_subagent: createAwaitTool({ registry, hooks }),
   };
 }

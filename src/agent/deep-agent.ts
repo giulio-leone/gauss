@@ -169,6 +169,7 @@ export class DeepAgent {
         memory: this.config.memory,
         learning: this.config.learning,
         userId: this.config.userId,
+        delegationHooks: this.config.subagentConfig?.hooks,
         checkpointConfig: this.config.checkpointConfig,
         telemetry: this.config.telemetry,
         costTracker: this.config.costTracker,

@@ -53,6 +53,122 @@ export interface ApprovalConfig {
   onApprovalRequired?: (request: ApprovalRequest) => Promise<boolean>;
 }
 
+// =============================================================================
+// Subagent Delegation Hooks
+// =============================================================================
+
+export interface DelegationStartContext {
+  parentId: string;
+  currentDepth: number;
+  prompt: string;
+  instructions?: string;
+  priority: number;
+  timeoutMs?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DelegationStartResult {
+  allow?: boolean;
+  reason?: string;
+  prompt?: string;
+  instructions?: string;
+  priority?: number;
+  timeoutMs?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DelegationIterationContext {
+  taskId: string;
+  parentId: string;
+  previousStatus: string;
+  status: string;
+  partialOutput: string;
+  finalOutput: string | null;
+  error: string | null;
+  durationMs: number;
+  tokenUsage: { input: number; output: number };
+  metadata: Record<string, unknown>;
+}
+
+export interface DelegationIterationResult {
+  score?: number;
+  shouldEscalate?: boolean;
+  reason?: string;
+}
+
+export interface DelegationCompleteContext {
+  taskId: string;
+  parentId: string;
+  status: string;
+  finalOutput: string | null;
+  error: string | null;
+  durationMs: number;
+  tokenUsage: { input: number; output: number };
+  metadata: Record<string, unknown>;
+}
+
+export interface DelegationCompletionCheckContext {
+  taskId: string;
+  parentId: string;
+  status: string;
+  partialOutput: string;
+  finalOutput: string | null;
+  error: string | null;
+  elapsedMs: number;
+  iterations: number;
+  tokenUsage: { input: number; output: number };
+  metadata: Record<string, unknown>;
+}
+
+export type DelegationCompletionCheckResult =
+  | boolean
+  | {
+      isComplete: boolean;
+      reason?: string;
+    };
+
+export interface DelegationMessageFilterContext {
+  direction: "tool:call" | "tool:result";
+  toolName: string;
+  stepIndex: number;
+  payload: unknown;
+}
+
+export type DelegationMessageFilterResult =
+  | boolean
+  | {
+      allow?: boolean;
+      payload?: unknown;
+      reason?: string;
+    };
+
+export interface DelegationHooks {
+  onDelegationStart?: (
+    context: DelegationStartContext,
+  ) => Promise<DelegationStartResult | void> | DelegationStartResult | void;
+  onIterationComplete?: (
+    context: DelegationIterationContext,
+  ) =>
+    | Promise<DelegationIterationResult | void>
+    | DelegationIterationResult
+    | void;
+  onDelegationComplete?: (
+    context: DelegationCompleteContext,
+  ) => Promise<void> | void;
+  isTaskComplete?: (
+    context: DelegationCompletionCheckContext,
+  ) =>
+    | Promise<DelegationCompletionCheckResult | void>
+    | DelegationCompletionCheckResult
+    | void;
+  messageFilter?: (
+    context: DelegationMessageFilterContext,
+  ) =>
+    | Promise<DelegationMessageFilterResult | void>
+    | DelegationMessageFilterResult
+    | void;
+}
+
 export interface SubagentConfig {
   /** Maximum depth of nested subagents. Default: 3 */
   maxDepth?: number;
@@ -60,6 +176,8 @@ export interface SubagentConfig {
   timeoutMs?: number;
   /** Whether subagents can spawn their own subagents. Default: true */
   allowNesting?: boolean;
+  /** Optional supervisor-style delegation hooks */
+  hooks?: DelegationHooks | undefined;
 }
 
 export interface CheckpointConfig {
@@ -143,7 +261,12 @@ export type AgentEventType =
   | "subagent:gc"
   | "subagent:backpressure"
   | "subagent:circuit-open"
-  | "subagent:pool-resize";
+  | "subagent:pool-resize"
+  | "delegation:start"
+  | "delegation:blocked"
+  | "delegation:iteration"
+  | "delegation:complete"
+  | "delegation:message-filtered";
 
 export interface AgentEvent<T = unknown> {
   type: AgentEventType;

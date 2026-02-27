@@ -48,6 +48,11 @@ export const AgentEventTypeSchema = z.enum([
   "subagent:start",
   "subagent:stop",
   "subagent:message",
+  "delegation:start",
+  "delegation:blocked",
+  "delegation:iteration",
+  "delegation:complete",
+  "delegation:message-filtered",
   "graph:node:retry",
   "graph:edge:traverse",
 ]);
