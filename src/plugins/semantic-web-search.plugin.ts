@@ -33,6 +33,34 @@ interface NormalizedCandidate {
   content: string;
 }
 
+interface SemanticWebSearchQuality {
+  durationMs: number;
+  strategyRequested: ReRankingStrategy;
+  strategyUsed: ReRankingStrategy;
+  fallbackUsed: boolean;
+  candidates: number;
+  reranked: number;
+  averageScore: number;
+  searchAttempts: number;
+  scrapeAttempts: number;
+  scrapeFailures: number;
+}
+
+interface SemanticWebSearchResponse {
+  query: string;
+  results: Array<{
+    rank: number;
+    score: number;
+    title: string;
+    url: string;
+    snippet: string;
+    citation: string;
+  }>;
+  citations: string[];
+  quality: SemanticWebSearchQuality;
+  cacheHit: boolean;
+}
+
 export interface SemanticWebSearchPluginOptions {
   apiKey?: string;
   crawler?: {
@@ -46,6 +74,11 @@ export interface SemanticWebSearchPluginOptions {
   defaultLimit?: number;
   defaultScrapeTopK?: number;
   defaultStrategy?: ReRankingStrategy;
+  fallbackStrategy?: ReRankingStrategy;
+  fallbackOnRerankError?: boolean;
+  requestTimeoutMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
   cacheTtlMs?: number;
 }
 
@@ -64,6 +97,11 @@ export class SemanticWebSearchPlugin extends BasePlugin {
   private readonly defaultLimit: number;
   private readonly defaultScrapeTopK: number;
   private readonly defaultStrategy: ReRankingStrategy;
+  private readonly fallbackStrategy: ReRankingStrategy;
+  private readonly fallbackOnRerankError: boolean;
+  private readonly requestTimeoutMs: number;
+  private readonly maxRetries: number;
+  private readonly retryDelayMs: number;
   private readonly cacheTtlMs: number;
 
   constructor(private readonly options: SemanticWebSearchPluginOptions = {}) {
@@ -74,6 +112,11 @@ export class SemanticWebSearchPlugin extends BasePlugin {
     this.defaultLimit = options.defaultLimit ?? 5;
     this.defaultScrapeTopK = options.defaultScrapeTopK ?? 2;
     this.defaultStrategy = options.defaultStrategy ?? "bm25";
+    this.fallbackStrategy = options.fallbackStrategy ?? "tfidf";
+    this.fallbackOnRerankError = options.fallbackOnRerankError ?? true;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? 10_000;
+    this.maxRetries = options.maxRetries ?? 2;
+    this.retryDelayMs = options.retryDelayMs ?? 200;
     this.cacheTtlMs = options.cacheTtlMs ?? 60_000;
   }
 
@@ -101,23 +144,10 @@ export class SemanticWebSearchPlugin extends BasePlugin {
           const limit = input.limit ?? this.defaultLimit;
           const scrapeTopK = input.scrapeTopK ?? this.defaultScrapeTopK;
           const strategy = input.strategy ?? this.defaultStrategy;
+          const startedAt = Date.now();
 
           const cacheKey = `semantic-web:${input.query}:${limit}:${scrapeTopK}:${strategy}`;
-          const cached = this.cache.get(cacheKey) as
-            | {
-                query: string;
-                results: Array<{
-                  rank: number;
-                  score: number;
-                  title: string;
-                  url: string;
-                  snippet: string;
-                  citation: string;
-                }>;
-                citations: string[];
-                cacheHit: boolean;
-              }
-            | undefined;
+          const cached = this.cache.get(cacheKey) as SemanticWebSearchResponse | undefined;
           if (cached) {
             return {
               ...cached,
@@ -126,12 +156,16 @@ export class SemanticWebSearchPlugin extends BasePlugin {
           }
 
           const crawler = await this.getCrawler();
-          const rawSearch = await this.circuitBreaker.execute(async () =>
+          const {
+            value: rawSearch,
+            attempts: searchAttempts,
+          } = await this.executeWithRetry("search", async () =>
             crawler.search(input.query, { limit }),
           );
 
           const normalized = this.normalizeResults(rawSearch, limit);
-          await this.enrichTopResults(normalized, scrapeTopK, crawler);
+          const { failures: scrapeFailures, attempts: scrapeAttempts } =
+            await this.enrichTopResults(normalized, scrapeTopK, crawler);
 
           const byId = new Map(normalized.map((candidate) => [candidate.id, candidate]));
           const toRank: ScoredResult[] = normalized.map((candidate) => ({
@@ -140,9 +174,25 @@ export class SemanticWebSearchPlugin extends BasePlugin {
             score: 1,
           }));
 
-          const reranked = this.reranker.rerank(input.query, toRank, {
-            strategy,
-          });
+          let reranked: ScoredResult[];
+          let strategyUsed: ReRankingStrategy = strategy;
+          let fallbackUsed = false;
+
+          try {
+            reranked = this.reranker.rerank(input.query, toRank, {
+              strategy,
+            });
+          } catch (error) {
+            if (!this.fallbackOnRerankError || strategy === this.fallbackStrategy) {
+              throw error;
+            }
+
+            reranked = this.reranker.rerank(input.query, toRank, {
+              strategy: this.fallbackStrategy,
+            });
+            strategyUsed = this.fallbackStrategy;
+            fallbackUsed = true;
+          }
 
           const results = reranked.slice(0, limit).map((result, index) => {
             const source = byId.get(result.id);
@@ -161,10 +211,22 @@ export class SemanticWebSearchPlugin extends BasePlugin {
             };
           });
 
-          const response = {
+          const response: SemanticWebSearchResponse = {
             query: input.query,
             results,
             citations: results.map((result) => result.citation),
+            quality: {
+              durationMs: Date.now() - startedAt,
+              strategyRequested: strategy,
+              strategyUsed,
+              fallbackUsed,
+              candidates: normalized.length,
+              reranked: reranked.length,
+              averageScore: this.calculateAverageScore(reranked),
+              searchAttempts,
+              scrapeAttempts,
+              scrapeFailures,
+            },
             cacheHit: false,
           };
 
@@ -253,28 +315,36 @@ export class SemanticWebSearchPlugin extends BasePlugin {
     candidates: NormalizedCandidate[],
     scrapeTopK: number,
     crawler: NonNullable<SemanticWebSearchPluginOptions["crawler"]>,
-  ): Promise<void> {
+  ): Promise<{ failures: number; attempts: number }> {
     if (!crawler.crawl || scrapeTopK <= 0) {
-      return;
+      return { failures: 0, attempts: 0 };
     }
 
     const targets = candidates.slice(0, Math.min(scrapeTopK, candidates.length));
+    let failures = 0;
+    let attempts = 0;
 
     await Promise.all(
       targets.map(async (candidate) => {
         try {
-          const raw = await this.circuitBreaker.execute(async () =>
+          const result = await this.executeWithRetry("scrape", async () =>
             crawler.crawl!(candidate.url),
           );
+          attempts += result.attempts;
+          const raw = result.value;
           const normalized = this.normalizeCrawlContent(raw);
           if (normalized.length > 0) {
             candidate.content = normalized;
           }
         } catch {
+          failures += 1;
+          attempts += this.maxRetries + 1;
           // Best-effort enrichment: keep original candidate content
         }
       }),
     );
+
+    return { failures, attempts };
   }
 
   private normalizeCrawlContent(raw: unknown): string {
@@ -288,6 +358,60 @@ export class SemanticWebSearchPlugin extends BasePlugin {
     }
 
     return "";
+  }
+
+  private async executeWithRetry<T>(
+    label: string,
+    operation: () => Promise<T>,
+  ): Promise<{ value: T; attempts: number }> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= this.maxRetries + 1; attempt++) {
+      try {
+        const value = await this.circuitBreaker.execute(() =>
+          this.withTimeout(operation(), `${label} attempt ${attempt}`),
+        );
+        return { value, attempts: attempt };
+      } catch (error) {
+        lastError = error;
+        if (attempt <= this.maxRetries) {
+          await this.sleep(this.retryDelayMs * attempt);
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    label: string,
+  ): Promise<T> {
+    return await new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`${label} timed out after ${this.requestTimeoutMs}ms`));
+      }, this.requestTimeoutMs);
+
+      promise
+        .then((value) => {
+          clearTimeout(timer);
+          resolve(value);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private calculateAverageScore(results: ScoredResult[]): number {
+    if (results.length === 0) return 0;
+    const sum = results.reduce((acc, item) => acc + item.score, 0);
+    return sum / results.length;
   }
 }
 
