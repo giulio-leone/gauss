@@ -93,6 +93,8 @@
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:quality:semantic": "vitest run src/evals/__tests__/semantic-search.quality-gate.test.ts src/evals/__tests__/semantic-search-harness.test.ts",
+    "quality:gate": "npm run test:quality:semantic",
     "prepublishOnly": "npm run build",
     "clean": "rimraf dist"
   },

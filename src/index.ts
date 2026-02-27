@@ -791,6 +791,26 @@ export {
 export { createSnapshot, compareSnapshots } from "./testing/snapshot.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Evaluation Harness
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  DEFAULT_SEMANTIC_SEARCH_THRESHOLDS,
+  evaluateSemanticSearchSuite,
+  assertSemanticSearchQualityGate,
+} from "./evals/index.js";
+export type {
+  SemanticSearchEvalCase,
+  SemanticSearchEvalResult,
+  SemanticSearchEvalRunOutput,
+  SemanticSearchCaseMetrics,
+  SemanticSearchQualityThresholds,
+  SemanticSearchEvaluationSummary,
+  SemanticSearchEvaluationOptions,
+  SemanticSearchRunner,
+} from "./evals/index.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Deprecated Aliases (Backward Compatibility)
 // ─────────────────────────────────────────────────────────────────────────────
 
