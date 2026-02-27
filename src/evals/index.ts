@@ -11,3 +11,14 @@ export {
   type SemanticSearchEvaluationOptions,
   type SemanticSearchRunner,
 } from "./semantic-search-harness.js";
+
+export {
+  DEFAULT_SEMANTIC_BENCHMARK_BUDGETS,
+  summaryToBenchmarkSnapshot,
+  compareSemanticSearchBenchmark,
+  assertSemanticSearchBenchmarkGate,
+  renderSemanticSearchBenchmarkMarkdown,
+  type SemanticSearchBenchmarkBaseline,
+  type SemanticSearchBenchmarkBudgets,
+  type SemanticSearchBenchmarkComparison,
+} from "./semantic-search-benchmark.js";

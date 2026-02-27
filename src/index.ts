@@ -798,6 +798,11 @@ export {
   DEFAULT_SEMANTIC_SEARCH_THRESHOLDS,
   evaluateSemanticSearchSuite,
   assertSemanticSearchQualityGate,
+  DEFAULT_SEMANTIC_BENCHMARK_BUDGETS,
+  summaryToBenchmarkSnapshot,
+  compareSemanticSearchBenchmark,
+  assertSemanticSearchBenchmarkGate,
+  renderSemanticSearchBenchmarkMarkdown,
 } from "./evals/index.js";
 export type {
   SemanticSearchEvalCase,
@@ -808,6 +813,9 @@ export type {
   SemanticSearchEvaluationSummary,
   SemanticSearchEvaluationOptions,
   SemanticSearchRunner,
+  SemanticSearchBenchmarkBaseline,
+  SemanticSearchBenchmarkBudgets,
+  SemanticSearchBenchmarkComparison,
 } from "./evals/index.js";
 
 // ─────────────────────────────────────────────────────────────────────────────

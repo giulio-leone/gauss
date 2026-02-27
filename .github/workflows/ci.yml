@@ -21,8 +21,12 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run build
       - run: npm test
-        - name: Run semantic quality gate
-          run: npm run quality:gate
+      - name: Run semantic quality gate
+        if: matrix.node-version == 22
+        run: npm run quality:gate
+      - name: Run semantic benchmark gate
+        if: matrix.node-version == 22
+        run: npm run benchmark:gate
       - name: Coverage
         if: matrix.node-version == 22
         run: npx vitest run --coverage --reporter=dot

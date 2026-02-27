@@ -94,7 +94,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:quality:semantic": "vitest run src/evals/__tests__/semantic-search.quality-gate.test.ts src/evals/__tests__/semantic-search-harness.test.ts",
+    "test:benchmark:semantic": "vitest run src/evals/__tests__/semantic-search-benchmark.test.ts src/evals/__tests__/semantic-search.benchmark-gate.test.ts",
     "quality:gate": "npm run test:quality:semantic",
+    "benchmark:gate": "npm run test:benchmark:semantic",
     "prepublishOnly": "npm run build",
     "clean": "rimraf dist"
   },
