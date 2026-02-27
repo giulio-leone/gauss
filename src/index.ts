@@ -1020,3 +1020,12 @@ export { PatternEntityExtractorAdapter, DEFAULT_ENTITY_PATTERNS } from "./adapte
 export type { PatternRule, RelationPattern, PatternEntityExtractorConfig } from "./adapters/entity-extractor/pattern.adapter.js";
 export { GraphRAGPipeline } from "./rag/graph-rag.pipeline.js";
 export type { GraphRAGConfig, GraphIngestResult, GraphQueryResult } from "./rag/graph-rag.pipeline.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M9: E2B Cloud Sandbox + Sandbox Factory
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { E2BSandboxAdapter } from "./adapters/sandbox/e2b.adapter.js";
+export type { E2BSandboxConfig } from "./adapters/sandbox/e2b.adapter.js";
+export { createSandbox } from "./adapters/sandbox/factory.js";
+export type { SandboxFactoryConfig } from "./adapters/sandbox/factory.js";
