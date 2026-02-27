@@ -256,10 +256,14 @@ describe("A2APlugin Full Protocol", () => {
       })
     });
 
-    const result = await plugin.tools["a2a:delegate"].execute({
+    const delegateTool = plugin.tools["a2a:delegate"] as {
+      execute: (input: unknown, options: unknown) => Promise<any>;
+    };
+
+    const result = await delegateTool.execute({
       prompt: "Write some code",
       requiredSkills: ["coding"]
-    });
+    }, {});
 
     expect(result).toBeDefined();
     expect(result.selectedAgent.name).toBe("TestAgent");
@@ -277,9 +281,13 @@ describe("A2APlugin Full Protocol", () => {
       })
     });
 
-    const result = await plugin.tools["a2a:discover"].execute({
+    const discoverTool = plugin.tools["a2a:discover"] as {
+      execute: (input: unknown, options: unknown) => Promise<any>;
+    };
+
+    const result = await discoverTool.execute({
       endpoint: "https://discovered.example.com/a2a"
-    });
+    }, {});
 
     expect(result).toBeDefined();
     expect(result.name).toBe("DiscoveredAgent");
@@ -296,7 +304,10 @@ describe("A2APlugin Full Protocol", () => {
     const response = await httpHandler(request);
     expect(response.status).toBe(200);
     
-    const agentCard = await response.json();
+    const agentCard = await response.json() as {
+      name: string;
+      capabilities: { streaming: boolean; pushNotifications: boolean };
+    };
     expect(agentCard.name).toBeDefined();
     expect(agentCard.capabilities.streaming).toBe(true);
     expect(agentCard.capabilities.pushNotifications).toBe(true);
@@ -308,8 +319,8 @@ describe("A2APlugin Full Protocol", () => {
 
     // Directly test the task creation and event emission
     plugin['queueTask']("test-123", "Test prompt");
-    plugin['markTaskRunning']("test-123");
-    plugin['markTaskCompleted']("test-123", "Test result");
+    const lease = plugin['markTaskRunning']("test-123");
+    plugin['markTaskCompleted']("test-123", "Test result", lease?.leaseId);
 
     // Should have emitted queued, running, and completed events
     expect(events.length).toBe(3);

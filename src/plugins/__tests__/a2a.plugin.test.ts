@@ -80,6 +80,7 @@ describe("A2APlugin", () => {
       const result = {
         text: `Completed: ${prompt}`,
         steps: [],
+        toolCalls: [],
         sessionId: setupCtx.sessionId,
       };
 
@@ -138,7 +139,7 @@ describe("A2APlugin", () => {
 
     const handler = plugin.createJsonRpcHandler({
       sessionId: "session-a2a",
-      run: async () => ({ text: "ok", steps: [], sessionId: "session-a2a" }),
+      run: async () => ({ text: "ok", steps: [], toolCalls: [], sessionId: "session-a2a" }),
     });
 
     const response = await handler({

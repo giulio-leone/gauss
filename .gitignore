@@ -1,8 +1,9 @@
-node_modules/
-dist/
 .turbo/
 *.tsbuildinfo
-firebase-debug.log
+dist/
 docs/.docusaurus/
 docs/build/
+firebase-debug.log
+logs/
+node_modules/
 package-lock.json

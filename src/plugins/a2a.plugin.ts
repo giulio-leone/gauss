@@ -14,7 +14,6 @@ import type {
 import {
   createA2AHttpHandler,
   createA2AJsonRpcHandler,
-  createA2ASseHandler,
   type A2AJsonRpcRequest,
   type A2AJsonRpcResponse,
   type A2ATask,
@@ -24,9 +23,23 @@ import {
 import type { AgentCardProvider } from "./agent-card.plugin.js";
 import { A2ADelegationManager, type AgentCapability, type DelegationResult } from "./a2a-delegation.js";
 import { A2APushNotifier, type PushNotificationConfig } from "./a2a-push.js";
+import {
+  A2ADurableTaskQueue,
+  type A2ATaskLease,
+  type A2ATaskQueueConfig,
+  type A2ATaskQueueSnapshot,
+  type A2ATaskRetryConfig,
+} from "./a2a-durable-task-queue.js";
 
 /** Default timeout for outbound A2A requests in ms (30 seconds) */
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_RETRY_CONFIG: A2ATaskRetryConfig = {
+  maxAttempts: 3,
+  initialBackoffMs: 250,
+  backoffMultiplier: 2,
+  maxBackoffMs: 30_000,
+  jitterRatio: 0,
+};
 
 export interface A2AAgentRuntime {
   sessionId: string;
@@ -37,6 +50,10 @@ export interface A2APluginOptions {
   fetch?: typeof fetch;
   requestTimeoutMs?: number;
   agentCardProvider?: AgentCardProvider;
+  retry?: Partial<A2ATaskRetryConfig>;
+  queue?: Partial<Pick<A2ATaskQueueConfig, "leaseDurationMs" | "retentionMs" | "maxTerminalTasks">>;
+  taskQueue?: A2ADurableTaskQueue;
+  persistQueueState?: boolean;
 }
 
 const A2A_CALL_SCHEMA = z.object({
@@ -70,14 +87,19 @@ export class A2APlugin implements DeepAgentPlugin {
   private readonly fetchImpl: typeof fetch;
   private readonly requestTimeoutMs: number;
   private readonly agentCardProvider?: AgentCardProvider;
-  private readonly tasks = new Map<string, A2ATask>();
-  private readonly completionTimestamps = new Map<string, number>();
+  private readonly taskQueue: A2ADurableTaskQueue;
+  private readonly persistQueueStateEnabled: boolean;
   private readonly delegationManager: A2ADelegationManager;
   private readonly pushNotifier: A2APushNotifier;
   private readonly taskEventListeners = new Set<(event: A2ATaskEvent) => void>();
-  private static readonly MAX_COMPLETED_TASKS = 1000;
-  private static readonly TASK_TTL_MS = 3600_000; // 1 hour
+
+  private static readonly QUEUE_SNAPSHOT_KEY = "a2a:durable-task-queue:v1";
+  private static readonly DEFAULT_MAX_TERMINAL_TASKS = 1000;
+  private static readonly DEFAULT_RETENTION_MS = 3_600_000; // 1 hour
+
   private evictionTimer?: ReturnType<typeof setInterval>;
+  private queueHydrated = false;
+  private queueHydrationPromise: Promise<void> | null = null;
 
   private setupCtx?: PluginSetupContext;
   private latestCtx?: PluginContext;
@@ -85,26 +107,29 @@ export class A2APlugin implements DeepAgentPlugin {
   readonly hooks = {
     beforeRun: async (ctx: PluginContext, _params: { prompt: string }): Promise<void> => {
       this.latestCtx = ctx;
+      if (this.isQueueManagedRun(ctx)) return;
       const taskId = this.getTaskIdFromContext(ctx);
       if (!taskId) return;
-      this.markTaskRunning(taskId);
+      this.markTaskRunning(taskId, this.getLeaseIdFromContext(ctx));
     },
     afterRun: async (
       ctx: PluginContext,
       params: { result: { text: string } },
     ): Promise<void> => {
       this.latestCtx = ctx;
+      if (this.isQueueManagedRun(ctx)) return;
       const taskId = this.getTaskIdFromContext(ctx);
       if (!taskId) return;
-      this.markTaskCompleted(taskId, params.result.text);
+      this.markTaskCompleted(taskId, params.result.text, this.getLeaseIdFromContext(ctx));
     },
     onError: async (
       ctx: PluginContext,
       params: { error: unknown; phase: "run" | "stream" | "tool" | "step" | "setup" },
     ): Promise<void> => {
+      if (this.isQueueManagedRun(ctx)) return;
       const taskId = this.getTaskIdFromContext(ctx);
       if (!taskId) return;
-      this.markTaskFailed(taskId, params.error);
+      this.markTaskFailed(taskId, params.error, this.getLeaseIdFromContext(ctx));
     },
   };
 
@@ -117,8 +142,27 @@ export class A2APlugin implements DeepAgentPlugin {
     this.fetchImpl = fetchImpl;
     this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.agentCardProvider = options.agentCardProvider;
+    this.persistQueueStateEnabled = options.persistQueueState ?? true;
     this.delegationManager = new A2ADelegationManager(fetchImpl);
     this.pushNotifier = new A2APushNotifier(fetchImpl);
+
+    const normalizedRetry: A2ATaskRetryConfig | undefined = options.retry
+      ? {
+          maxAttempts: options.retry.maxAttempts ?? DEFAULT_RETRY_CONFIG.maxAttempts,
+          initialBackoffMs: options.retry.initialBackoffMs ?? DEFAULT_RETRY_CONFIG.initialBackoffMs,
+          backoffMultiplier: options.retry.backoffMultiplier ?? DEFAULT_RETRY_CONFIG.backoffMultiplier,
+          maxBackoffMs: options.retry.maxBackoffMs ?? DEFAULT_RETRY_CONFIG.maxBackoffMs,
+          jitterRatio: options.retry.jitterRatio ?? DEFAULT_RETRY_CONFIG.jitterRatio,
+        }
+      : undefined;
+
+    this.taskQueue = options.taskQueue ?? new A2ADurableTaskQueue({
+      leaseDurationMs: options.queue?.leaseDurationMs,
+      retentionMs: options.queue?.retentionMs ?? A2APlugin.DEFAULT_RETENTION_MS,
+      maxTerminalTasks: options.queue?.maxTerminalTasks ?? A2APlugin.DEFAULT_MAX_TERMINAL_TASKS,
+      retry: normalizedRetry,
+    });
+
     this.evictionTimer = setInterval(() => this.evictStaleTasks(), 60_000);
 
     this.tools = {
@@ -139,9 +183,7 @@ export class A2APlugin implements DeepAgentPlugin {
           const response = await this.callRemoteEndpoint(args.endpoint, payload);
 
           if (response.error) {
-            throw new Error(
-              `[A2A ${response.error.code}] ${response.error.message}`,
-            );
+            throw new Error(`[A2A ${response.error.code}] ${response.error.message}`);
           }
 
           return response.result;
@@ -176,6 +218,7 @@ export class A2APlugin implements DeepAgentPlugin {
 
   setup(ctx: PluginSetupContext): void {
     this.setupCtx = ctx;
+    void this.ensureQueueHydrated();
   }
 
   dispose(): void {
@@ -183,87 +226,68 @@ export class A2APlugin implements DeepAgentPlugin {
       clearInterval(this.evictionTimer);
       this.evictionTimer = undefined;
     }
+    void this.persistQueueState();
   }
 
   createJsonRpcHandler(
     agent: A2AAgentRuntime,
   ): (request: A2AJsonRpcRequest) => Promise<A2AJsonRpcResponse> & { sendTaskSubscribe?: (params: A2ATasksSendParams) => AsyncGenerator<A2ATaskEvent, void, unknown> } {
     const plugin = this;
-    
+
     const sendTaskSubscribe = async function* (params: A2ATasksSendParams): AsyncGenerator<A2ATaskEvent, void, unknown> {
+      await plugin.ensureQueueHydrated();
       const taskId = params.taskId ?? crypto.randomUUID();
-      
+
       const eventQueue: A2ATaskEvent[] = [];
       let completed = false;
       let pending: { promise: Promise<void>; resolve: () => void };
-      
+
       function createDeferred(): { promise: Promise<void>; resolve: () => void } {
         let resolve!: () => void;
-        const promise = new Promise<void>(r => { resolve = r; });
+        const promise = new Promise<void>((r) => {
+          resolve = r;
+        });
         return { promise, resolve };
       }
       pending = createDeferred();
-      
+
       const eventListener = (event: A2ATaskEvent) => {
         if (event.taskId === taskId) {
           eventQueue.push(event);
-          if (event.type === 'task:completed' || event.type === 'task:failed' || event.type === 'task:cancelled') {
+          if (event.type === "task:completed" || event.type === "task:failed" || event.type === "task:cancelled") {
             completed = true;
           }
           pending.resolve();
           pending = createDeferred();
         }
       };
-      
-      // Register listener before queueTask so task:queued event is captured
+
       plugin.taskEventListeners.add(eventListener);
       plugin.queueTask(taskId, params.prompt, params.metadata);
-      
+
       try {
-        const runMetadata: Record<string, unknown> = {
-          ...(params.metadata ?? {}),
-          a2aTaskId: taskId,
-        };
+        const runPromise = plugin.executeTaskWithRetry(agent, taskId, params);
 
-        // Start the task
-        plugin.markTaskRunning(taskId);
-        
-        const runPromise = agent.run(params.prompt, { pluginMetadata: runMetadata })
-          .then(result => {
-            const task = plugin.tasks.get(taskId);
-            if (task && (task.status === "queued" || task.status === "running")) {
-              plugin.markTaskCompleted(taskId, result.text);
-            }
-          })
-          .catch(error => {
-            const task = plugin.tasks.get(taskId);
-            if (task && task.status !== "failed") {
-              plugin.markTaskFailed(taskId, error);
-            }
-          });
-
-        // Yield events as they arrive via deferred promises
         let lastEventIndex = 0;
         while (!completed) {
           if (eventQueue.length <= lastEventIndex) {
             await pending.promise;
           }
+
           for (let i = lastEventIndex; i < eventQueue.length; i++) {
             yield eventQueue[i];
           }
+
           lastEventIndex = eventQueue.length;
         }
-        
-        // Wait for task completion
+
         await runPromise;
-        
-        // Yield any remaining events
+
         if (eventQueue.length > lastEventIndex) {
           for (let i = lastEventIndex; i < eventQueue.length; i++) {
             yield eventQueue[i];
           }
         }
-        
       } finally {
         plugin.taskEventListeners.delete(eventListener);
       }
@@ -271,63 +295,42 @@ export class A2APlugin implements DeepAgentPlugin {
 
     const jsonRpcHandler = createA2AJsonRpcHandler({
       sendTask: async (params) => {
+        await plugin.ensureQueueHydrated();
         const taskId = params.taskId ?? crypto.randomUUID();
         plugin.queueTask(taskId, params.prompt, params.metadata);
-
-        try {
-          plugin.markTaskRunning(taskId);
-          
-          const runMetadata: Record<string, unknown> = {
-            ...(params.metadata ?? {}),
-            a2aTaskId: taskId,
-          };
-
-          const result = await agent.run(params.prompt, { pluginMetadata: runMetadata });
-
-          const task = plugin.tasks.get(taskId);
-          if (task && (task.status === "queued" || task.status === "running")) {
-            plugin.markTaskCompleted(taskId, result.text);
-          }
-        } catch (error) {
-          const task = plugin.tasks.get(taskId);
-          if (task && task.status !== "failed") {
-            plugin.markTaskFailed(taskId, error);
-          }
-        }
-
+        await plugin.executeTaskWithRetry(agent, taskId, params);
         return plugin.cloneTask(taskId);
       },
       sendTaskSubscribe,
       getTask: async (taskId) => {
-        const task = plugin.tasks.get(taskId);
-        return task ? plugin.cloneTask(task.id) : null;
+        await plugin.ensureQueueHydrated();
+        return plugin.getTask(taskId);
       },
       listTasks: async () => {
-        return [...plugin.tasks.values()].map((task) => plugin.cloneTask(task.id));
+        await plugin.ensureQueueHydrated();
+        return plugin.listTasks();
       },
       cancelTask: async (taskId) => {
-        const task = plugin.tasks.get(taskId);
-        if (!task) return null;
+        await plugin.ensureQueueHydrated();
 
-        if (task.status !== "completed" && task.status !== "failed") {
-          const now = new Date().toISOString();
-          task.status = "cancelled";
-          task.updatedAt = now;
-          task.completedAt = now;
-          plugin.completionTimestamps.set(taskId, Date.now());
+        const previous = plugin.taskQueue.get(taskId);
+        if (!previous) return null;
+
+        const cancelled = plugin.taskQueue.cancel(taskId);
+        if (!cancelled) return null;
+
+        if (previous.status !== "cancelled" && previous.status !== "completed" && previous.status !== "failed") {
           plugin.emitTaskEvent("task:cancelled", taskId);
         }
-
-        return plugin.cloneTask(taskId);
+        void plugin.persistQueueState();
+        return cancelled;
       },
       getAgentCard: async () => {
         return plugin.resolveAgentCard();
       },
     });
 
-    // Expose sendTaskSubscribe for direct access
     (jsonRpcHandler as any).sendTaskSubscribe = sendTaskSubscribe;
-    
     return jsonRpcHandler as any;
   }
 
@@ -338,17 +341,16 @@ export class A2APlugin implements DeepAgentPlugin {
         for await (const event of handler.sendTaskSubscribe(params)) {
           yield event;
         }
-      }
+      },
     });
   }
 
   getTask(taskId: string): A2ATask | null {
-    const task = this.tasks.get(taskId);
-    return task ? this.cloneTask(task.id) : null;
+    return this.taskQueue.get(taskId);
   }
 
   listTasks(): A2ATask[] {
-    return [...this.tasks.values()].map((task) => this.cloneTask(task.id));
+    return this.taskQueue.list();
   }
 
   // Delegation methods
@@ -425,8 +427,7 @@ export class A2APlugin implements DeepAgentPlugin {
         throw new Error(`A2A endpoint returned HTTP ${response.status}`);
       }
 
-      const parsed = await response.json() as A2AJsonRpcResponse;
-      return parsed;
+      return await response.json() as A2AJsonRpcResponse;
     } finally {
       clearTimeout(timer);
     }
@@ -437,14 +438,8 @@ export class A2APlugin implements DeepAgentPlugin {
     prompt: string,
     metadata?: Record<string, unknown>,
   ): void {
-    if (this.tasks.size >= A2APlugin.MAX_COMPLETED_TASKS) {
-      this.evictStaleTasks();
-    }
-    if (this.tasks.size >= A2APlugin.MAX_COMPLETED_TASKS) {
-      throw new Error('Task queue at capacity. Try again later.');
-    }
     const now = new Date().toISOString();
-    this.tasks.set(taskId, {
+    this.taskQueue.enqueue({
       id: taskId,
       status: "queued",
       prompt,
@@ -453,78 +448,112 @@ export class A2APlugin implements DeepAgentPlugin {
       updatedAt: now,
     });
     this.emitTaskEvent("task:queued", taskId);
+    void this.persistQueueState();
   }
 
-  private markTaskRunning(taskId: string): void {
-    const task = this.tasks.get(taskId);
-    if (!task) return;
-    task.status = "running";
-    task.updatedAt = new Date().toISOString();
+  private markTaskRunning(taskId: string, _leaseId?: string): A2ATaskLease | null {
+    const lease = this.taskQueue.acquire(taskId, this.createWorkerId(taskId));
+    if (!lease) return null;
     this.emitTaskEvent("task:running", taskId);
+    void this.persistQueueState();
+    return lease;
   }
 
-  private markTaskCompleted(taskId: string, output: string): void {
-    const task = this.tasks.get(taskId);
-    if (!task) return;
+  private markTaskCompleted(taskId: string, output: string, leaseId?: string): void {
+    const before = this.taskQueue.get(taskId);
+    const completed = this.taskQueue.complete(taskId, output, leaseId);
+    if (!completed) return;
 
-    const now = new Date().toISOString();
-    task.status = "completed";
-    task.output = output;
-    task.updatedAt = now;
-    task.completedAt = now;
-    task.error = undefined;
-    this.completionTimestamps.set(taskId, Date.now());
-    this.emitTaskEvent("task:completed", taskId);
+    if (before?.status !== "completed") {
+      this.emitTaskEvent("task:completed", taskId);
+    }
+    void this.persistQueueState();
   }
 
-  private markTaskFailed(taskId: string, error: unknown): void {
-    const task = this.tasks.get(taskId);
-    if (!task) return;
+  private markTaskFailed(taskId: string, error: unknown, leaseId?: string): void {
+    const result = this.taskQueue.fail(taskId, this.normalizeError(error), leaseId);
+    if (!result) return;
 
-    const now = new Date().toISOString();
-    task.status = "failed";
-    task.error = error instanceof Error ? error.message : String(error);
-    task.updatedAt = now;
-    task.completedAt = now;
-    this.completionTimestamps.set(taskId, Date.now());
-    this.emitTaskEvent("task:failed", taskId);
+    if (result.willRetry) {
+      this.emitTaskEvent("task:queued", taskId);
+    } else {
+      this.emitTaskEvent("task:failed", taskId);
+    }
+    void this.persistQueueState();
+  }
+
+  private async executeTaskWithRetry(
+    agent: A2AAgentRuntime,
+    taskId: string,
+    params: A2ATasksSendParams,
+  ): Promise<void> {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const task = this.taskQueue.get(taskId);
+      if (!task || task.status === "cancelled" || task.status === "completed" || task.status === "failed") {
+        return;
+      }
+
+      const lease = this.markTaskRunning(taskId);
+      if (!lease) {
+        await this.sleep(10);
+        continue;
+      }
+
+      const runMetadata: Record<string, unknown> = {
+        ...(params.metadata ?? {}),
+        a2aTaskId: taskId,
+        a2aLeaseId: lease.leaseId,
+        a2aAttempt: lease.attempt,
+        a2aManagedByQueue: true,
+      };
+
+      try {
+        const result = await agent.run(params.prompt, { pluginMetadata: runMetadata });
+        this.markTaskCompleted(taskId, result.text, lease.leaseId);
+        return;
+      } catch (error) {
+        const failed = this.taskQueue.fail(taskId, this.normalizeError(error), lease.leaseId);
+        if (!failed) return;
+
+        if (!failed.willRetry) {
+          this.emitTaskEvent("task:failed", taskId);
+          void this.persistQueueState();
+          return;
+        }
+
+        this.emitTaskEvent("task:queued", taskId);
+        void this.persistQueueState();
+        await this.sleep(failed.retryDelayMs);
+      }
+    }
   }
 
   private evictStaleTasks(): void {
-    const now = Date.now();
-    for (const [id, ts] of this.completionTimestamps) {
-      if (now - ts > A2APlugin.TASK_TTL_MS) {
-        this.tasks.delete(id);
-        this.completionTimestamps.delete(id);
-        this.pushNotifier.cleanup(id);
+    const before = new Set(this.taskQueue.list().map((task) => task.id));
+    this.taskQueue.evictExpired();
+    const after = new Set(this.taskQueue.list().map((task) => task.id));
+
+    for (const taskId of before) {
+      if (!after.has(taskId)) {
+        this.pushNotifier.cleanup(taskId);
       }
     }
 
-    // Evict orphaned running/queued tasks older than 2x TTL
-    const orphanThreshold = A2APlugin.TASK_TTL_MS * 2;
-    for (const [id, task] of this.tasks) {
-      if (
-        (task.status === "running" || task.status === "queued") &&
-        now - new Date(task.createdAt).getTime() > orphanThreshold
-      ) {
-        this.tasks.delete(id);
-        this.completionTimestamps.delete(id);
-      }
-    }
+    void this.persistQueueState();
   }
 
-  private emitTaskEvent(type: A2ATaskEvent['type'], taskId: string): void {
-    const task = this.tasks.get(taskId);
+  private emitTaskEvent(type: A2ATaskEvent["type"], taskId: string): void {
+    const task = this.taskQueue.get(taskId);
     if (!task) return;
 
     const event: A2ATaskEvent = {
       type,
       taskId,
-      task: this.cloneTask(taskId),
-      timestamp: new Date().toISOString()
+      task,
+      timestamp: new Date().toISOString(),
     };
 
-    // Emit to event listeners
     for (const listener of this.taskEventListeners) {
       try {
         listener(event);
@@ -533,15 +562,75 @@ export class A2APlugin implements DeepAgentPlugin {
       }
     }
 
-    // Send push notifications
-    this.pushNotifier.notify(event).catch(error => {
+    this.pushNotifier.notify(event).catch((error) => {
       console.warn("Push notification error:", error);
     });
   }
 
+  private createWorkerId(taskId: string): string {
+    const sessionId = this.latestCtx?.sessionId ?? this.setupCtx?.sessionId ?? "a2a";
+    return `${sessionId}:${taskId}`;
+  }
+
+  private normalizeError(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  private async ensureQueueHydrated(): Promise<void> {
+    if (this.queueHydrated) return;
+    if (this.queueHydrationPromise) {
+      await this.queueHydrationPromise;
+      return;
+    }
+
+    this.queueHydrationPromise = this.hydrateQueueFromMemory();
+    try {
+      await this.queueHydrationPromise;
+      this.queueHydrated = true;
+    } finally {
+      this.queueHydrationPromise = null;
+    }
+  }
+
+  private async hydrateQueueFromMemory(): Promise<void> {
+    if (!this.persistQueueStateEnabled || !this.setupCtx) return;
+
+    try {
+      const snapshot = await this.setupCtx.memory.loadMetadata<A2ATaskQueueSnapshot>(
+        this.setupCtx.sessionId,
+        A2APlugin.QUEUE_SNAPSHOT_KEY,
+      );
+
+      if (snapshot) {
+        this.taskQueue.hydrate(snapshot);
+      }
+    } catch (error) {
+      console.warn("A2A queue hydration failed:", error);
+    }
+  }
+
+  private async persistQueueState(): Promise<void> {
+    if (!this.persistQueueStateEnabled || !this.setupCtx) return;
+
+    try {
+      await this.setupCtx.memory.saveMetadata(
+        this.setupCtx.sessionId,
+        A2APlugin.QUEUE_SNAPSHOT_KEY,
+        this.taskQueue.snapshot(),
+      );
+    } catch (error) {
+      console.warn("A2A queue persistence failed:", error);
+    }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    if (ms <= 0) return Promise.resolve();
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   private async discoverAgent(endpoint: string): Promise<AgentCapability> {
     try {
-      const discoveryUrl = new URL('/.well-known/agent.json', endpoint).toString();
+      const discoveryUrl = new URL("/.well-known/agent.json", endpoint).toString();
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
       try {
@@ -552,25 +641,23 @@ export class A2APlugin implements DeepAgentPlugin {
             name: discoveryData.name,
             description: discoveryData.description,
             skills: discoveryData.skills?.map((s: any) => s.name) ?? [],
-            endpoint: endpoint
+            endpoint,
           };
         }
       } finally {
         clearTimeout(timer);
       }
     } catch {
-      // Fall back to agent/card method
+      // Fall back to JSON-RPC agent/card.
     }
 
-    // Fallback to JSON-RPC agent/card
     const payload: A2AJsonRpcRequest = {
       jsonrpc: "2.0",
       id: crypto.randomUUID(),
-      method: "agent/card"
+      method: "agent/card",
     };
 
     const response = await this.callRemoteEndpoint(endpoint, payload);
-    
     if (response.error) {
       throw new Error(`Failed to discover agent: ${response.error.message}`);
     }
@@ -580,17 +667,16 @@ export class A2APlugin implements DeepAgentPlugin {
       name: card?.name ?? "Unknown Agent",
       description: card?.instructions ?? "No description",
       skills: card?.tools ?? [],
-      endpoint: endpoint
+      endpoint,
     };
   }
 
   private async subscribeToTask(endpoint: string, prompt: string, taskId?: string): Promise<{ message: string; events: A2ATaskEvent[] }> {
-    const sseUrl = endpoint; // SSE endpoint is same as JSON-RPC endpoint
     const payload = {
       jsonrpc: "2.0",
       id: crypto.randomUUID(),
       method: "tasks/sendSubscribe",
-      params: { prompt, taskId }
+      params: { prompt, taskId },
     };
 
     // SSE streams get 5x the normal timeout
@@ -599,67 +685,65 @@ export class A2APlugin implements DeepAgentPlugin {
     const timer = setTimeout(() => controller.abort(), sseTimeoutMs);
 
     try {
-    const response = await this.fetchImpl(sseUrl, {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream"
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+      const response = await this.fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "text/event-stream",
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      throw new Error(`SSE subscription failed with HTTP ${response.status}`);
-    }
+      if (!response.ok) {
+        throw new Error(`SSE subscription failed with HTTP ${response.status}`);
+      }
 
-    const events: A2ATaskEvent[] = [];
-    let sseCompleted = false;
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+      const events: A2ATaskEvent[] = [];
+      let sseCompleted = false;
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-    if (!reader) {
-      throw new Error("No response body for SSE stream");
-    }
+      if (!reader) {
+        throw new Error("No response body for SSE stream");
+      }
 
-    let buffer = '';
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const segments = buffer.split('\n');
-        // Last segment may be incomplete — keep it in buffer
-        buffer = segments.pop() ?? '';
-        
-        for (const line of segments) {
-          if (line.startsWith('data: ')) {
-            try {
-              const eventData = JSON.parse(line.substring(6));
-              events.push(eventData);
-              if (eventData.type === 'task:completed' || eventData.type === 'task:failed' || eventData.type === 'task:cancelled') {
-                sseCompleted = true;
+          buffer += decoder.decode(value, { stream: true });
+          const segments = buffer.split("\n");
+          buffer = segments.pop() ?? "";
+
+          for (const line of segments) {
+            if (line.startsWith("data: ")) {
+              try {
+                const eventData = JSON.parse(line.substring(6));
+                events.push(eventData);
+                if (eventData.type === "task:completed" || eventData.type === "task:failed" || eventData.type === "task:cancelled") {
+                  sseCompleted = true;
+                }
+              } catch {
+                // Ignore malformed event payloads.
               }
-            } catch {
-              // Ignore invalid JSON
             }
           }
-        }
-        
-        // Break on completion/failure
-        if (sseCompleted) {
-          break;
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
 
-    return { 
-      message: "Task subscription completed",
-      events 
-    };
+          if (sseCompleted) {
+            break;
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      return {
+        message: "Task subscription completed",
+        events,
+      };
     } finally {
       clearTimeout(timer);
     }
@@ -668,6 +752,15 @@ export class A2APlugin implements DeepAgentPlugin {
   private getTaskIdFromContext(ctx: PluginContext): string | undefined {
     const raw = ctx.runMetadata?.a2aTaskId;
     return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+  }
+
+  private getLeaseIdFromContext(ctx: PluginContext): string | undefined {
+    const raw = ctx.runMetadata?.a2aLeaseId;
+    return typeof raw === "string" && raw.length > 0 ? raw : undefined;
+  }
+
+  private isQueueManagedRun(ctx: PluginContext): boolean {
+    return ctx.runMetadata?.a2aManagedByQueue === true;
   }
 
   private async resolveAgentCard(): Promise<unknown> {
@@ -694,15 +787,11 @@ export class A2APlugin implements DeepAgentPlugin {
   }
 
   private cloneTask(taskId: string): A2ATask {
-    const task = this.tasks.get(taskId);
+    const task = this.taskQueue.get(taskId);
     if (!task) {
       throw new Error(`Task not found: ${taskId}`);
     }
-
-    return {
-      ...task,
-      metadata: task.metadata ? { ...task.metadata } : undefined,
-    };
+    return task;
   }
 }
 
