@@ -94,6 +94,12 @@ export {
 } from "./semantic-scraping.plugin.js";
 
 export {
+  SemanticWebSearchPlugin,
+  createSemanticWebSearchPlugin,
+  type SemanticWebSearchPluginOptions,
+} from "./semantic-web-search.plugin.js";
+
+export {
   McpServerPlugin,
   createMcpServerPlugin,
   type McpServerPluginOptions,

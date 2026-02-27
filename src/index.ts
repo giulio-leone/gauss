@@ -399,6 +399,9 @@ export {
   createObservabilityPlugin,
   SemanticScrapingPlugin,
   createSemanticScrapingPlugin,
+  SemanticWebSearchPlugin,
+  createSemanticWebSearchPlugin,
+  type SemanticWebSearchPluginOptions,
   McpServerPlugin,
   createMcpServerPlugin,
 } from "./plugins/index.js";
