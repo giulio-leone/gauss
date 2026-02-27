@@ -5,8 +5,24 @@ import type {
   ReRankingPort,
   ScoredResult,
 } from "../../ports/reranking.port.js";
+import type { TelemetryPort } from "../../ports/telemetry.port.js";
+import { DefaultCostTrackerAdapter } from "../../adapters/cost-tracker/default-cost-tracker.adapter.js";
 import { ToolCache } from "../../adapters/resilience/tool-cache.js";
 import { SemanticWebSearchPlugin } from "../semantic-web-search.plugin.js";
+
+function createMockTelemetry(): TelemetryPort {
+  const span = {
+    setAttribute: vi.fn(),
+    setStatus: vi.fn(),
+    end: vi.fn(),
+  };
+
+  return {
+    startSpan: vi.fn().mockReturnValue(span),
+    recordMetric: vi.fn(),
+    flush: vi.fn().mockResolvedValue(undefined),
+  };
+}
 
 function createMockReranker(): ReRankingPort {
   return {
@@ -201,5 +217,76 @@ describe("SemanticWebSearchPlugin", () => {
     await expect(
       (plugin.tools.semantic_web_search as any).execute({ query: "timeout" }),
     ).rejects.toThrow("timed out");
+  });
+
+  it("emits telemetry events and metrics with trace ids", async () => {
+    const telemetry = createMockTelemetry();
+
+    const plugin = new SemanticWebSearchPlugin({
+      crawler: {
+        search: vi.fn().mockResolvedValue([
+          {
+            title: "Telemetry doc",
+            url: "https://example.com/telemetry",
+            snippet: "telemetry",
+          },
+        ]),
+      },
+      telemetry,
+      reranker: createMockReranker(),
+      cache: new ToolCache(),
+    });
+
+    const result = await (plugin.tools.semantic_web_search as any).execute({
+      query: "telemetry",
+      limit: 1,
+      scrapeTopK: 0,
+    });
+
+    expect(result.quality.traceId).toBeTypeOf("string");
+    expect(result.quality.cacheServed).toBe(false);
+
+    const startSpan = vi.mocked(telemetry.startSpan);
+    const recordMetric = vi.mocked(telemetry.recordMetric);
+
+    expect(startSpan).toHaveBeenCalledWith("semantic_search_started");
+    expect(startSpan).toHaveBeenCalledWith("semantic_search_completed");
+    expect(recordMetric).toHaveBeenCalledWith(
+      "semantic_search_duration_ms",
+      expect.any(Number),
+      expect.any(Object),
+    );
+  });
+
+  it("tracks cost intelligence when cost tracker is configured", async () => {
+    const costTracker = new DefaultCostTrackerAdapter();
+
+    const plugin = new SemanticWebSearchPlugin({
+      crawler: {
+        search: vi.fn().mockResolvedValue([
+          {
+            title: "Cost doc",
+            url: "https://example.com/cost",
+            snippet: "cost tracking",
+          },
+        ]),
+      },
+      costTracker,
+      costModel: "gpt-4o-mini",
+      reranker: createMockReranker(),
+      cache: new ToolCache(),
+    });
+
+    const result = await (plugin.tools.semantic_web_search as any).execute({
+      query: "cost",
+      limit: 1,
+      scrapeTopK: 0,
+    });
+
+    expect(result.cost).toBeDefined();
+    expect(result.cost.totalTokens).toBeGreaterThan(0);
+    expect(result.cost.totalCost).toBeGreaterThan(0);
+    expect(costTracker.getEstimate().totalInputTokens).toBeGreaterThan(0);
+    expect(costTracker.getEstimate().totalOutputTokens).toBeGreaterThan(0);
   });
 });
