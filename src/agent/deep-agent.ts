@@ -24,6 +24,7 @@ import type {
 } from "../types.js";
 import type { DeepAgentPlugin, PluginRunMetadata } from "../ports/plugin.port.js";
 import type { RuntimePort } from "../ports/runtime.port.js";
+import type { MiddlewarePort } from "../ports/middleware.port.js";
 import { createRuntimeAdapterAsync } from "../adapters/runtime/detect-runtime.js";
 
 import { EventBus } from "./event-bus.js";
@@ -33,6 +34,7 @@ import { CircuitBreaker, RateLimiter, ToolCache } from "../adapters/resilience/i
 import { ToolManager } from "./tool-manager.js";
 import { ExecutionEngine } from "./execution-engine.js";
 import { LifecycleManager, type LifecycleHooks, type HealthStatus } from "./lifecycle.js";
+import { MiddlewareChain } from "../middleware/chain.js";
 
 // Builder is imported for use in static factory methods
 import { DeepAgentBuilder } from "./deep-agent-builder.js";
@@ -94,6 +96,8 @@ interface DeepAgentInternalConfig {
   /** AI SDK Output specification for structured output (passthrough to ToolLoopAgent). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   output?: any;
+  /** Middleware stack — composable, priority-ordered hooks */
+  middleware?: MiddlewarePort[];
 }
 
 export class DeepAgent {
@@ -105,6 +109,7 @@ export class DeepAgent {
   private _runtimePromise: Promise<RuntimePort> | null = null;
   private readonly tokenTracker: TokenTracker;
   private readonly pluginManager: PluginManager;
+  private readonly middlewareChain: MiddlewareChain;
   private _toolManager?: ToolManager;
   private _executionEngine?: ExecutionEngine;
   private readonly lifecycleManager: LifecycleManager;
@@ -131,6 +136,12 @@ export class DeepAgent {
     this.pluginManager = new PluginManager();
     for (const plugin of config.plugins ?? []) {
       this.pluginManager.register(plugin);
+    }
+    
+    // Initialize middleware chain
+    this.middlewareChain = new MiddlewareChain();
+    for (const mw of config.middleware ?? []) {
+      this.middlewareChain.use(mw);
     }
     
     // Initialize resilience patterns
@@ -184,6 +195,7 @@ export class DeepAgent {
         memory: this.config.memory,
         learning: this.config.learning,
         userId: this.config.userId,
+        agentName: this.config.name,
         delegationHooks: this.config.subagentConfig?.hooks,
         checkpointConfig: this.config.checkpointConfig,
         telemetry: this.config.telemetry,
@@ -194,6 +206,7 @@ export class DeepAgent {
       this.pluginManager,
       this.eventBus,
       this.tokenTracker,
+      this.middlewareChain,
     );
   }
 

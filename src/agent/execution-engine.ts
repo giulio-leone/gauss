@@ -13,11 +13,13 @@ import type { RuntimePort } from "../ports/runtime.port.js";
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
 import type { UserProfile, UserMemory } from "../domain/learning.schema.js";
 import type { TelemetryPort } from "../ports/telemetry.port.js";
+import type { MiddlewareContext } from "../ports/middleware.port.js";
 
 import type { EventBus } from "./event-bus.js";
 import type { ToolManager } from "./tool-manager.js";
 import { PluginManager } from "../plugins/plugin-manager.js";
 import { TokenTracker } from "../context/token-tracker.js";
+import type { MiddlewareChain } from "../middleware/chain.js";
 
 import type { DeepAgentResult, DeepAgentRunOptions } from "./deep-agent.js";
 
@@ -32,6 +34,7 @@ export interface ExecutionEngineConfig {
   memory: MemoryPort;
   learning?: LearningPort;
   userId?: string;
+  agentName?: string;
   delegationHooks?: DelegationHooks;
   checkpointConfig?: Required<CheckpointConfig>;
   telemetry?: TelemetryPort;
@@ -51,6 +54,7 @@ export class ExecutionEngine {
   private readonly pluginManager: PluginManager;
   private readonly eventBus: EventBus;
   private readonly tokenTracker: TokenTracker;
+  private readonly middlewareChain?: MiddlewareChain;
 
   constructor(
     config: ExecutionEngineConfig,
@@ -58,12 +62,27 @@ export class ExecutionEngine {
     pluginManager: PluginManager,
     eventBus: EventBus,
     tokenTracker: TokenTracker,
+    middlewareChain?: MiddlewareChain,
   ) {
     this.config = config;
     this.toolManager = toolManager;
     this.pluginManager = pluginManager;
     this.eventBus = eventBus;
     this.tokenTracker = tokenTracker;
+    this.middlewareChain = middlewareChain;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Middleware context factory
+  // ---------------------------------------------------------------------------
+
+  private createMiddlewareContext(sessionId: string): MiddlewareContext {
+    return {
+      sessionId,
+      agentName: this.config.agentName,
+      timestamp: Date.now(),
+      metadata: {},
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -186,6 +205,32 @@ export class ExecutionEngine {
         prompt = beforeRunResult.prompt;
       }
 
+      // --- Middleware: beforeAgent ---
+      const mwCtx = this.createMiddlewareContext(sessionId);
+      let instructions = this.config.instructions;
+      if (this.middlewareChain) {
+        const mwResult = await this.middlewareChain.runBeforeAgent(mwCtx, {
+          prompt,
+          instructions,
+          tools,
+        });
+
+        // Abort: middleware requested short-circuit
+        if (mwResult.aborted) {
+          const earlyText = mwResult.earlyResult ?? "";
+          this.eventBus.emit("agent:stop", {
+            result: { text: earlyText, steps: [], sessionId, toolCalls: [] },
+          });
+          return { text: earlyText, steps: [], sessionId, toolCalls: [] };
+        }
+
+        prompt = mwResult.prompt;
+        instructions = mwResult.instructions;
+        // NOTE: mwResult.tools is intentionally NOT merged here.
+        // Tool injection must go through ToolManager to ensure security
+        // validation, circuit breakers, and rate limiting are applied.
+      }
+
       this.eventBus.emit("agent:start", { prompt });
 
       const cpConfig = this.config.checkpointConfig;
@@ -196,7 +241,7 @@ export class ExecutionEngine {
 
       const agentOptions: Record<string, unknown> = {
         model: this.toolManager.createRateLimitedModel(),
-        instructions: this.config.instructions,
+        instructions,
         tools,
         stopWhen: stepCountIs(this.config.maxSteps),
       };
@@ -372,6 +417,15 @@ export class ExecutionEngine {
         output: (result as unknown as { output?: unknown }).output,
         toolCalls: allToolCalls,
       };
+
+      // --- Middleware: afterAgent ---
+      if (this.middlewareChain) {
+        const mwAfterResult = await this.middlewareChain.runAfterAgent(mwCtx, {
+          prompt,
+          result: { text: agentResult.text, steps: agentResult.steps, sessionId },
+        });
+        agentResult.text = mwAfterResult.result.text;
+      }
 
       this.eventBus.emit("agent:stop", { result: agentResult });
       await this.pluginManager.runAfterRun(pluginCtx, { result: agentResult });
