@@ -37,6 +37,8 @@ export interface DeepAgentResult<TOutput = unknown> {
   sessionId: string;
   /** Parsed structured output when `output` is configured via builder or run options. */
   output?: TOutput;
+  /** Tool calls extracted from all steps. */
+  toolCalls: Array<{ name: string; args?: unknown; stepIndex: number }>;
 }
 
 export interface DeepAgentRunOptions {

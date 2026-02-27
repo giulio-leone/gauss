@@ -193,6 +193,29 @@ export class ExecutionEngine {
             }
 
             this.eventBus.emit("step:start", { stepIndex: i, step });
+
+            // Emit tool:call for each tool call in this step
+            const toolCalls = (stepObj?.toolCalls as Array<{ toolName: string; toolCallId?: string; args?: unknown }>) ?? [];
+            for (const tc of toolCalls) {
+              this.eventBus.emit("tool:call", {
+                toolName: tc.toolName,
+                toolCallId: tc.toolCallId,
+                args: tc.args,
+                stepIndex: i,
+              });
+            }
+
+            // Emit tool:result for each tool result in this step
+            const toolResults = (stepObj?.toolResults as Array<{ toolName: string; toolCallId?: string; result?: unknown }>) ?? [];
+            for (const tr of toolResults) {
+              this.eventBus.emit("tool:result", {
+                toolName: tr.toolName,
+                toolCallId: tr.toolCallId,
+                result: tr.result,
+                stepIndex: i,
+              });
+            }
+
             this.eventBus.emit("step:end", { stepIndex: i, step });
 
             await this.pluginManager.runAfterStep(pluginCtx, {
@@ -233,11 +256,22 @@ export class ExecutionEngine {
         this.eventBus.emit("checkpoint:save", { checkpoint });
       }
 
+      // Extract all tool calls from steps
+      const allToolCalls: Array<{ name: string; args?: unknown; stepIndex: number }> = [];
+      for (let i = 0; i < steps.length; i++) {
+        const s = steps[i] as Record<string, unknown> | undefined;
+        const calls = (s?.toolCalls as Array<{ toolName: string; args?: unknown }>) ?? [];
+        for (const tc of calls) {
+          allToolCalls.push({ name: tc.toolName, args: tc.args, stepIndex: i });
+        }
+      }
+
       const agentResult: DeepAgentResult = {
         text: result.text ?? "",
         steps,
         sessionId,
         output: (result as unknown as { output?: unknown }).output,
+        toolCalls: allToolCalls,
       };
 
       this.eventBus.emit("agent:stop", { result: agentResult });
@@ -249,7 +283,7 @@ export class ExecutionEngine {
         phase: "run",
       });
       if (onErrorResult.suppress) {
-        return { text: "", steps: [], sessionId };
+        return { text: "", steps: [], sessionId, toolCalls: [] };
       }
       this.eventBus.emit("error", { error });
       throw error;
