@@ -1029,3 +1029,12 @@ export { E2BSandboxAdapter } from "./adapters/sandbox/e2b.adapter.js";
 export type { E2BSandboxConfig } from "./adapters/sandbox/e2b.adapter.js";
 export { createSandbox } from "./adapters/sandbox/factory.js";
 export type { SandboxFactoryConfig } from "./adapters/sandbox/factory.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M10: Playground — Server API + CLI Launcher
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { registerPlaygroundRoutes } from "./server/playground-api.js";
+export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.js";
+export { startPlayground } from "./cli/playground.js";
+export type { PlaygroundOptions } from "./cli/playground.js";
