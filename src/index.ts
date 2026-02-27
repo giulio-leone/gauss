@@ -1008,3 +1008,15 @@ export type { DatasetsPort, DatasetEntry, DatasetInfo, DatasetQuery } from "./po
 export { InMemoryDatasetsAdapter } from "./adapters/datasets/inmemory.adapter.js";
 export type { DeployerPort, DeploymentConfig, DeploymentInfo, DeploymentStatus } from "./ports/deployer.port.js";
 export { InMemoryDeployerAdapter } from "./adapters/deployer/inmemory.adapter.js";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M8: Graph-RAG — Knowledge Graph + Entity Extraction + GraphRAG Pipeline
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { KnowledgeGraphPort, GraphNode, GraphEdge, GraphQueryOptions, SubgraphResult } from "./ports/knowledge-graph.port.js";
+export { InMemoryKnowledgeGraphAdapter } from "./adapters/knowledge-graph/inmemory.adapter.js";
+export type { EntityExtractorPort, Entity, Relation, ExtractionResult } from "./ports/entity-extractor.port.js";
+export { PatternEntityExtractorAdapter, DEFAULT_ENTITY_PATTERNS } from "./adapters/entity-extractor/pattern.adapter.js";
+export type { PatternRule, RelationPattern, PatternEntityExtractorConfig } from "./adapters/entity-extractor/pattern.adapter.js";
+export { GraphRAGPipeline } from "./rag/graph-rag.pipeline.js";
+export type { GraphRAGConfig, GraphIngestResult, GraphQueryResult } from "./rag/graph-rag.pipeline.js";
