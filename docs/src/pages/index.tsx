@@ -19,7 +19,7 @@ function HomepageHeader() {
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
-            to="/docs/intro">
+            to="/docs/">
             Get Started →
           </Link>
         </div>
@@ -41,15 +41,29 @@ export default function Home(): ReactNode {
             <div className="row">
               <div className="col col--4" style={{padding: '1rem'}}>
                 <Heading as="h3">🏗️ Hexagonal Architecture</Heading>
-                <p>Clean separation of concerns with ports and adapters. Swap implementations without changing business logic.</p>
+                <p>Clean separation with ports and adapters. Swap any implementation without touching business logic.</p>
+              </div>
+              <div className="col col--4" style={{padding: '1rem'}}>
+                <Heading as="h3">🤖 57 Features, Zero Config</Heading>
+                <p>Agents, teams, workflows, RAG, voice, multimodal, video, planning — all from a single import.</p>
+              </div>
+              <div className="col col--4" style={{padding: '1rem'}}>
+                <Heading as="h3">🌐 40+ AI Providers</Heading>
+                <p>OpenAI, Anthropic, Google, Mistral, Groq, Ollama, Azure, Bedrock — use any provider with one API.</p>
+              </div>
+            </div>
+            <div className="row">
+              <div className="col col--4" style={{padding: '1rem'}}>
+                <Heading as="h3">👥 Multi-Agent Teams</Heading>
+                <p>Coordinator + specialists with 4 strategies: round-robin, delegate, broadcast, pipeline.</p>
+              </div>
+              <div className="col col--4" style={{padding: '1rem'}}>
+                <Heading as="h3">🔊 Voice & Multimodal</Heading>
+                <p>STT/TTS with OpenAI Whisper & ElevenLabs. Image analysis, OCR, video processing built-in.</p>
               </div>
               <div className="col col--4" style={{padding: '1rem'}}>
                 <Heading as="h3">🔌 Plugin System</Heading>
-                <p>Extend agent behavior with guardrails, workflows, observability, web scraping, RAG, and evaluations.</p>
-              </div>
-              <div className="col col--4" style={{padding: '1rem'}}>
-                <Heading as="h3">🌐 Multi-Runtime</Heading>
-                <p>Runs on Node.js, Deno, Bun, Edge (Cloudflare Workers), and Browser with auto-detection.</p>
+                <p>Guardrails, evals, observability, caching, MCP, A2A — extend agents with cross-cutting concerns.</p>
               </div>
             </div>
           </div>

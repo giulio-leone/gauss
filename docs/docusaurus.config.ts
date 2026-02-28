@@ -11,10 +11,10 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://g97iulio1609.github.io',
+  url: 'https://giulio-leone.github.io',
   baseUrl: '/gauss/',
 
-  organizationName: 'g97iulio1609',
+  organizationName: 'giulio-leone',
   projectName: 'gauss',
 
   onBrokenLinks: 'throw',
@@ -70,15 +70,40 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Learn',
           items: [
             {
               label: 'Getting Started',
-              to: '/docs/intro',
+              to: '/docs/',
             },
             {
-              label: 'Architecture',
-              to: '/docs/architecture',
+              label: 'Concepts',
+              to: '/docs/concepts',
+            },
+            {
+              label: 'Cookbook',
+              to: '/docs/cookbook',
+            },
+          ],
+        },
+        {
+          title: 'Features',
+          items: [
+            {
+              label: 'Workflows & Graphs',
+              to: '/docs/workflows',
+            },
+            {
+              label: 'Voice (STT/TTS)',
+              to: '/docs/voice',
+            },
+            {
+              label: 'Multi-Agent Teams',
+              to: '/docs/teams',
+            },
+            {
+              label: 'Multimodal',
+              to: '/docs/multimodal',
             },
           ],
         },
@@ -91,7 +116,11 @@ const config: Config = {
             },
             {
               label: 'npm',
-              href: 'https://www.npmjs.com/package/gauss',
+              href: 'https://www.npmjs.com/package/@giulio-leone/gauss',
+            },
+            {
+              label: 'Comparison',
+              to: '/docs/comparison',
             },
           ],
         },

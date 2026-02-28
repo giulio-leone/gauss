@@ -1,139 +1,262 @@
 ---
 sidebar_position: 7
+title: CLI Reference
 ---
 
-# CLI
+# CLI Reference
 
-Gauss includes a command-line interface for interactive testing and scripting — similar to Claude Code or OpenCode.
+The `gauss` CLI provides commands for scaffolding, developing, building, and deploying Gauss projects.
 
 ## Installation
 
 ```bash
-# Global install
 npm install -g gauss
-gaussflow --help
-
-# Or use npx
-npx gauss --help
+# or
+npx gauss
 ```
-
-## Quick Start — Direct Prompt
-
-The fastest way to use Gauss. Just pass a prompt directly:
-
-```bash
-gaussflow "What is AI?"
-```
-
-This streams the response in real-time, just like Claude Code. No subcommand needed.
 
 ## Commands
 
-### Direct Prompt (Default)
+### `gauss init`
+
+Scaffold a new Gauss project with interactive prompts.
 
 ```bash
-gaussflow "Explain quantum computing in simple terms"
-gaussflow "Write a haiku about coding"
+gauss init [directory]
 ```
 
-If the first argument isn't a known command, it's treated as a prompt and streamed directly.
+**Interactive Prompts:**
+- Project name (default: current directory)
+- Template selection
+- Package manager (npm, yarn, pnpm, bun)
 
-### Interactive Chat (REPL)
+**Templates:**
+- `minimal` — Basic agent setup
+- `full` — Complete project with tools, workflows, and voice
+- `rag` — Retrieval-augmented generation (RAG) example
+- `mcp` — Model Context Protocol (MCP) integration
+- `team` — Multi-agent team collaboration
+- `workflow` — Complex workflow orchestration
+
+**Examples:**
 
 ```bash
-gaussflow chat --provider openai --api-key sk-...
+# Interactive setup
+gauss init my-project
+
+# Scaffold with template
+gauss init my-project --template rag --package-manager pnpm
+
+# Use current directory
+gauss init --template team
 ```
 
-Start an interactive session with streaming responses. REPL commands:
+### `gauss dev`
 
-| Command | Description |
-|---------|-------------|
-| `/help` | Show available commands |
-| `/exit` | Exit the REPL |
-| `/clear` | Clear the screen |
-| `/model <id>` | Switch model (e.g., `/model gpt-4o-mini`) |
-| `/provider <name>` | Switch provider |
-| `/info` | Show current provider and model |
-
-### Single-Shot Run
+Start the development server with hot reload support.
 
 ```bash
-gaussflow run "What is the capital of France?" --provider openai
+gauss dev
 ```
 
-Execute a single prompt and exit. Ideal for scripting and CI/CD pipelines.
+**Options:**
+- `--port <port>` — Custom port (default: 3000)
+- `--host <host>` — Bind to specific host (default: localhost)
+- `--open` — Automatically open browser
 
-### Config Management
+**Examples:**
 
 ```bash
-# Save API key (stored in ~/.gaussflowrc with 0600 permissions)
-gaussflow config set openai sk-...
-gaussflow config set anthropic sk-ant-...
-gaussflow config set openrouter sk-or-...
+# Start on default port
+gauss dev
 
-# Set default provider and model
-gaussflow config set-provider openai
-gaussflow config set-model gpt-4o-mini
+# Custom port
+gauss dev --port 8000
 
-# Show full config (keys masked + defaults)
-gaussflow config show
+# Open in browser
+gauss dev --open
 
-# List saved keys (masked)
-gaussflow config list
-
-# Delete a key
-gaussflow config delete openai
+# Custom host and port
+gauss dev --host 0.0.0.0 --port 8080
 ```
 
-### Demo Modes
+**Features:**
+- Fast Refresh for instant updates
+- TypeScript support out of the box
+- Real-time error reporting
+- Auto-reload on file changes
+
+### `gauss build`
+
+Build your project for production.
 
 ```bash
-gaussflow demo guardrails --provider openai    # Input/output validation
-gaussflow demo workflow --provider openai       # Step-based workflow execution
-gaussflow demo graph --provider openai          # Multi-agent graph collaboration
-gaussflow demo observability --provider openai  # Tracing, metrics, logging
+gauss build
 ```
 
-## Providers
+**Options:**
+- `--outdir <dir>` — Output directory (default: dist/)
+- `--minify` — Minify output (default: true)
+- `--sourcemap` — Generate source maps (default: false)
 
-| Provider | Flag | Default Model | Env Variable |
-|----------|------|---------------|--------------|
-| OpenAI | `--provider openai` | `gpt-4o` | `OPENAI_API_KEY` |
-| Anthropic | `--provider anthropic` | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` |
-| Google | `--provider google` | `gemini-2.0-flash` | `GOOGLE_GENERATIVE_AI_API_KEY` |
-| Groq | `--provider groq` | `llama-3.3-70b-versatile` | `GROQ_API_KEY` |
-| Mistral | `--provider mistral` | `mistral-large-latest` | `MISTRAL_API_KEY` |
-| OpenRouter | `--provider openrouter` | `openai/gpt-4o` | `OPENROUTER_API_KEY` |
-
-API key resolution order: `--api-key` flag → `~/.gaussflowrc` → environment variable.
-
-:::tip OpenRouter
-OpenRouter gives you access to hundreds of models through a single API key. Model names use the `org/model` format (e.g., `anthropic/claude-sonnet-4-20250514`, `google/gemini-2.0-flash`).
-:::
-
-## Override Model
+**Examples:**
 
 ```bash
-gaussflow chat --provider openai --model gpt-4o-mini
-gaussflow run "Hello" --provider anthropic --model claude-haiku-3-5-20241022
-gaussflow "Hello" --provider openrouter --model anthropic/claude-sonnet-4-20250514
+# Standard build
+gauss build
+
+# With source maps for debugging
+gauss build --sourcemap
+
+# Custom output directory
+gauss build --outdir ./build
 ```
 
-## Config Defaults
+**Output:**
+- Optimized agent code
+- Bundled dependencies
+- Production-ready deployables
+- Type declarations
 
-Save your preferred provider and model to skip flags:
+### `gauss deploy`
+
+Deploy your Gauss project to cloud platforms.
 
 ```bash
-# One-time setup
-gaussflow config set openai sk-...
-gaussflow config set-provider openai
-gaussflow config set-model gpt-4o-mini
-
-# Now just use directly
-gaussflow "What is AI?"
-gaussflow chat
+gauss deploy [platform]
 ```
 
-:::note
-The saved default model is only used when the active provider matches the saved default provider. If you override `--provider`, the provider's own default model is used unless you also pass `--model`.
-:::
+**Supported Platforms:**
+- `vercel` — Vercel / Netlify
+- `railway` — Railway
+- `fly` — Fly.io
+- `heroku` — Heroku
+- `aws` — AWS Lambda / ECS
+- `gcp` — Google Cloud Run
+- `azure` — Azure Container Apps
+
+**Examples:**
+
+```bash
+# Interactive platform selection
+gauss deploy
+
+# Deploy to Vercel
+gauss deploy vercel
+
+# Deploy to Railway
+gauss deploy railway
+
+# Deploy to AWS with custom region
+gauss deploy aws --region us-west-2
+```
+
+**Pre-deployment:**
+- Validates configuration
+- Checks environment variables
+- Runs build
+- Performs health checks
+
+## Environment Variables
+
+Create a `.env.local` file in your project root:
+
+```bash
+# API keys
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-...
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost/gauss
+
+# Redis (for memory/caching)
+REDIS_URL=redis://localhost:6379
+
+# Deployment
+VERCEL_TOKEN=...
+RAILWAY_TOKEN=...
+```
+
+## Global Options
+
+All commands support:
+- `--help` or `-h` — Show help
+- `--version` or `-v` — Show version
+- `--verbose` — Enable verbose logging
+- `--no-color` — Disable colored output
+
+**Examples:**
+
+```bash
+gauss init --help
+gauss dev --verbose
+gauss build --version
+```
+
+## Project Structure
+
+After `gauss init`, your project follows this structure:
+
+```
+my-project/
+├── src/
+│   ├── agents/          # Agent definitions
+│   ├── tools/           # Tool implementations
+│   ├── workflows/       # Workflow definitions
+│   └── index.ts         # Entry point
+├── docs/                # Documentation
+├── tests/               # Test files
+├── gauss.config.ts      # Gauss configuration
+├── package.json
+└── tsconfig.json
+```
+
+## Configuration
+
+The `gauss.config.ts` file controls behavior:
+
+```typescript
+import { defineConfig } from 'gauss';
+
+export default defineConfig({
+  agents: {
+    defaultModel: 'gpt-4-turbo',
+    timeout: 30000
+  },
+  voice: {
+    provider: 'elevenlabs'
+  },
+  memory: {
+    backend: 'redis'
+  },
+  deploy: {
+    platform: 'vercel'
+  }
+});
+```
+
+## Troubleshooting
+
+**Port already in use:**
+```bash
+gauss dev --port 3001
+```
+
+**Clear cache:**
+```bash
+rm -rf .gauss/
+gauss dev
+```
+
+**View detailed errors:**
+```bash
+gauss dev --verbose
+```
+
+## Getting Help
+
+- [Documentation](/docs)
+- [Examples](/docs/cookbook)
+- [GitHub Issues](https://github.com/gaussai/gauss/issues)
+- [Community Discord](https://discord.gg/gauss)
+

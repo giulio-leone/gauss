@@ -1,210 +1,852 @@
 ---
-sidebar_position: 10
+sidebar_position: 3
+title: Cookbook
+description: 20+ practical recipes for building agents with Gauss AI framework
 ---
 
-# Cookbook: 20 Copy-Paste Recipes
+# Gauss Cookbook
 
-Ready-to-use patterns for common tasks. Each recipe is self-contained.
+Practical, copy-pasteable recipes for building AI agents with Gauss. Each recipe is self-contained and ready to run.
 
-## 1. Simple Chat Agent
+## 1. Hello World Agent
 
-```typescript
-import { agent } from "gauss";
-import { openai } from "gauss/providers";
-
-const chat = agent({ model: openai("gpt-4o-mini"), instructions: "Be helpful." }).build();
-const { text } = await chat.run("Hello!");
-```
-
-## 2. Streaming Response
+The simplest possible agent—one line of code.
 
 ```typescript
-const stream = await chat.run("Tell me a story", { stream: true });
-for await (const chunk of stream) {
-  process.stdout.write(chunk);
+import { gauss } from 'gauss';
+
+async function main() {
+  const result = await gauss('What is 2 + 2?');
+  console.log(result);
 }
+
+main();
 ```
 
-## 3. Custom Tool
+## 2. Custom Tool Agent
+
+Create an agent with custom tools for weather and calculations.
 
 ```typescript
-import { tool } from "ai";
-import { z } from "zod";
+import { gauss, createAgent, tool } from 'gauss';
 
-const myTool = tool({
-  description: "Search the database",
-  parameters: z.object({ query: z.string() }),
-  execute: async ({ query }) => db.search(query),
-});
-```
-
-## 4. Agent with Tools
-
-```typescript
-const a = agent({
-  model: openai("gpt-4o"),
-  instructions: "Use tools when helpful.",
-  tools: { search: myTool },
-}).build();
-```
-
-## 5. Multi-Provider Setup
-
-```typescript
-import { openai, anthropic, ollama } from "gauss/providers";
-
-const fast = agent({ model: openai("gpt-4o-mini"), instructions: "..." }).build();
-const smart = agent({ model: anthropic("claude-sonnet-4-20250514"), instructions: "..." }).build();
-const local = agent({ model: ollama("llama3.2"), instructions: "..." }).build();
-```
-
-## 6. RAG with Vector Store
-
-```typescript
-import { rag, InMemoryVectorStore } from "gauss";
-const pipeline = rag({ vectorStore: new InMemoryVectorStore(), topK: 5 });
-await pipeline.ingest([{ id: "1", content: "Docs...", metadata: {} }]);
-```
-
-## 7. PostgreSQL Vector Store (Production)
-
-```typescript
-import { PgVectorStoreAdapter } from "gauss";
-const store = new PgVectorStoreAdapter({
-  connectionString: process.env.DATABASE_URL!,
-  dimensions: 1536,
-});
-await store.initialize();
-```
-
-## 8. Redis Caching Layer
-
-```typescript
-import { RedisStorageAdapter } from "gauss";
-const cache = new RedisStorageAdapter({ url: "redis://localhost:6379", ttl: 3600 });
-await cache.initialize();
-```
-
-## 9. S3 Object Storage
-
-```typescript
-import { S3ObjectStorageAdapter } from "gauss";
-const s3 = new S3ObjectStorageAdapter({ bucket: "my-agents", region: "us-east-1" });
-await s3.put("report.pdf", fileBuffer, { contentType: "application/pdf" });
-```
-
-## 10. Background Job Queue
-
-```typescript
-import { BullMQQueueAdapter } from "gauss";
-const queue = new BullMQQueueAdapter({ queueName: "agent-tasks" });
-await queue.add("process", { agentId: "123", prompt: "Analyze this" });
-await queue.process(async (job) => {
-  const result = await myAgent.run(job.data.prompt);
-  return result.text;
-});
-```
-
-## 11. Multi-Agent Graph
-
-```typescript
-import { graph } from "gauss";
-const workflow = graph({
-  name: "pipeline",
-  nodes: {
-    a: { agent: researcher },
-    b: { agent: writer, dependsOn: ["a"] },
+const weatherTool = tool({
+  name: 'get_weather',
+  description: 'Get current weather for a city',
+  parameters: { city: 'string' },
+  execute: async ({ city }) => {
+    // Mock weather API
+    return `${city}: 72°F, Sunny`;
   },
-  output: "b",
 });
-```
 
-## 12. Plugin System
+const calculatorTool = tool({
+  name: 'calculate',
+  description: 'Perform math calculations',
+  parameters: { expression: 'string' },
+  execute: async ({ expression }) => {
+    try {
+      return `Result: ${eval(expression)}`;
+    } catch (e) {
+      return `Error: ${e.message}`;
+    }
+  },
+});
 
-```typescript
-import { BasePlugin } from "gauss";
-class LogPlugin extends BasePlugin {
-  name = "logger";
-  async beforeRun(ctx) { console.log("Starting:", ctx.prompt); }
-  async afterRun(res) { console.log("Done:", res.text.slice(0, 100)); }
+async function main() {
+  const agent = createAgent({
+    tools: [weatherTool, calculatorTool],
+    model: 'gpt-4',
+  });
+
+  const result = await agent.run('What is the weather in Paris and what is 15 * 8?');
+  console.log(result);
 }
+
+main();
 ```
 
-## 13. Guardrails (Input Validation)
+## 3. RAG Chatbot
+
+Ingest documents, embed them, retrieve relevant chunks, and answer questions.
 
 ```typescript
-import { z } from "zod";
-const a = agent({
-  model: openai("gpt-4o"),
-  instructions: "Only answer coding questions.",
-  inputSchema: z.object({ prompt: z.string().max(1000) }),
-}).build();
+import { gauss, createRAGPipeline } from 'gauss';
+
+async function main() {
+  // Create RAG pipeline
+  const rag = createRAGPipeline({
+    embeddingModel: 'text-embedding-3-small',
+    llmModel: 'gpt-4',
+    chunkSize: 500,
+    overlapSize: 50,
+  });
+
+  // Ingest documents
+  await rag.ingest([
+    {
+      id: 'doc1',
+      text: 'Gauss is an AI agent framework. It provides tools, memory, and orchestration.',
+    },
+    {
+      id: 'doc2',
+      text: 'Agents can have custom tools, use RAG, and form teams for complex tasks.',
+    },
+  ]);
+
+  // Query
+  const answer = await rag.query('What is Gauss?');
+  console.log(answer);
+}
+
+main();
 ```
 
-## 14. Circuit Breaker
+## 4. Multi-Agent Team
+
+Coordinator delegates to specialists, each with different tools.
 
 ```typescript
-import { CircuitBreaker } from "gauss";
-const breaker = new CircuitBreaker({ failureThreshold: 5, resetTimeoutMs: 30000 });
-const a = Agent.create({ model: openai("gpt-4o") })
-  .withCircuitBreaker(breaker)
-  .build();
+import { gauss, createTeam, createAgent } from 'gauss';
+
+async function main() {
+  // Create specialist agents
+  const dataAnalyst = createAgent({
+    name: 'data_analyst',
+    model: 'gpt-4',
+    systemPrompt: 'You are a data analysis expert.',
+  });
+
+  const dataEngineer = createAgent({
+    name: 'data_engineer',
+    model: 'gpt-4',
+    systemPrompt: 'You are a data engineering expert.',
+  });
+
+  // Create team with coordinator
+  const team = createTeam({
+    coordinator: createAgent({
+      name: 'coordinator',
+      model: 'gpt-4',
+      systemPrompt: 'You delegate tasks to the right specialists.',
+    }),
+    members: [dataAnalyst, dataEngineer],
+    delegationStrategy: 'skill-match',
+  });
+
+  // Run task
+  const result = await team.run(
+    'Extract sales data from a CSV and identify top 3 regions by revenue'
+  );
+  console.log(result);
+}
+
+main();
 ```
 
-## 15. Rate Limiter
+## 5. Pipeline Workflow
+
+Build an ETL pipeline with branching and parallel execution.
 
 ```typescript
-import { RateLimiter } from "gauss";
-const limiter = new RateLimiter({ maxTokens: 10, refillRatePerSecond: 2 });
-const a = Agent.create({ model: openai("gpt-4o") })
-  .withRateLimiter(limiter)
-  .build();
+import { gauss, createPipeline } from 'gauss';
+
+async function main() {
+  const pipeline = createPipeline()
+    .then(async (input) => {
+      console.log('Extract:', input);
+      return { raw: input, timestamp: Date.now() };
+    })
+    .then(async (data) => {
+      console.log('Transform:', data);
+      return { ...data, transformed: true };
+    })
+    .branch(
+      async (data) => {
+        // Branch 1: Load to warehouse
+        console.log('Loading to warehouse...');
+        return { ...data, warehouse: true };
+      },
+      async (data) => {
+        // Branch 2: Load to cache
+        console.log('Loading to cache...');
+        return { ...data, cache: true };
+      }
+    )
+    .parallel([
+      async (data) => ({ ...data, metric1: Math.random() }),
+      async (data) => ({ ...data, metric2: Math.random() }),
+    ])
+    .then(async (results) => {
+      console.log('Final output:', results);
+      return results;
+    });
+
+  await pipeline.run('Sample data');
+}
+
+main();
 ```
 
-## 16. Playground Setup
+## 6. Voice Assistant
+
+Speech-to-text → Agent → Text-to-speech pipeline.
 
 ```typescript
-import { registerPlaygroundRoutes, PlaygroundCollector } from "gauss";
-const collector = new PlaygroundCollector();
-registerPlaygroundRoutes({
-  server: myHttpServer,
-  agents: [collector.asPlaygroundAgent({ name: "main", invoke: (p) => myAgent.run(p) })],
+import { gauss, createAgent, createVoicePipeline } from 'gauss';
+
+async function main() {
+  const agent = createAgent({
+    model: 'gpt-4',
+    systemPrompt: 'You are a helpful voice assistant.',
+  });
+
+  const voicePipeline = createVoicePipeline({
+    sttProvider: 'openai-whisper',
+    ttsProvider: 'openai-tts',
+    agent: agent,
+  });
+
+  // Process audio file
+  const result = await voicePipeline.process({
+    audioPath: './sample.wav',
+    language: 'en',
+  });
+
+  console.log('Transcription:', result.transcription);
+  console.log('Response:', result.response);
+  console.log('Audio output saved to:', result.audioPath);
+}
+
+main();
+```
+
+## 7. Image Analyzer
+
+Describe images, extract text (OCR), and compare multiple images.
+
+```typescript
+import { gauss, createAgent, tool } from 'gauss';
+
+const imageAnalyzerTool = tool({
+  name: 'analyze_image',
+  description: 'Analyze an image, extract text, and describe content',
+  parameters: { imagePath: 'string' },
+  execute: async ({ imagePath }) => {
+    // Mock vision API
+    return {
+      description: 'A sunny day with blue sky and green trees',
+      text: 'Welcome to Gauss',
+      objects: ['sky', 'trees', 'person'],
+    };
+  },
 });
+
+const compareImagesTool = tool({
+  name: 'compare_images',
+  description: 'Compare two images and find differences',
+  parameters: { image1Path: 'string', image2Path: 'string' },
+  execute: async ({ image1Path, image2Path }) => {
+    // Mock comparison API
+    return {
+      similarity: 0.85,
+      differences: ['Different lighting', 'Person in second image'],
+    };
+  },
+});
+
+async function main() {
+  const agent = createAgent({
+    tools: [imageAnalyzerTool, compareImagesTool],
+    model: 'gpt-4-vision',
+  });
+
+  const result = await agent.run(
+    'Describe image.jpg and compare it to image2.jpg'
+  );
+  console.log(result);
+}
+
+main();
 ```
 
-## 17. REST API Server
+## 8. Video Summarizer
+
+Extract frames from video and describe content to create summaries.
 
 ```typescript
-import { GaussRestServer } from "gauss/rest";
-const server = new GaussRestServer({ agent: myAgent, port: 3000 });
-await server.start();
-// POST /api/chat { prompt: "..." } → { text: "..." }
+import { gauss, createAgent, tool } from 'gauss';
+
+const frameExtractorTool = tool({
+  name: 'extract_frames',
+  description: 'Extract frames from a video at intervals',
+  parameters: { videoPath: 'string', interval: 'number' },
+  execute: async ({ videoPath, interval }) => {
+    // Mock frame extraction
+    return [
+      { frameNumber: 0, timestamp: '00:00:00' },
+      { frameNumber: 30, timestamp: '00:01:00' },
+      { frameNumber: 60, timestamp: '00:02:00' },
+    ];
+  },
+});
+
+async function main() {
+  const agent = createAgent({
+    tools: [frameExtractorTool],
+    model: 'gpt-4-vision',
+    systemPrompt: 'Summarize videos by analyzing extracted frames.',
+  });
+
+  const result = await agent.run(
+    'Summarize video.mp4 by extracting frames every 30 frames'
+  );
+  console.log(result);
+}
+
+main();
 ```
 
-## 18. Session Memory
+## 9. Code Review Agent
+
+Agent that reviews code using linting and analysis tools.
 
 ```typescript
-const result1 = await myAgent.run("My name is Alice", { sessionId: "s1" });
-const result2 = await myAgent.run("What's my name?", { sessionId: "s1" });
-// result2.text → "Your name is Alice"
+import { gauss, createAgent, tool } from 'gauss';
+
+const lintTool = tool({
+  name: 'lint_code',
+  description: 'Lint code for style and error issues',
+  parameters: { code: 'string', language: 'string' },
+  execute: async ({ code, language }) => {
+    // Mock linting
+    return {
+      issues: [
+        { line: 5, message: 'Variable unused', severity: 'warning' },
+        { line: 12, message: 'Missing error handling', severity: 'error' },
+      ],
+    };
+  },
+});
+
+const analyzeTool = tool({
+  name: 'analyze_code',
+  description: 'Analyze code for complexity, security, and performance',
+  parameters: { code: 'string' },
+  execute: async ({ code }) => {
+    return {
+      complexity: 'medium',
+      security_issues: ['SQL injection risk'],
+      performance: 'could use caching',
+    };
+  },
+});
+
+async function main() {
+  const codeReviewer = createAgent({
+    tools: [lintTool, analyzeTool],
+    model: 'gpt-4',
+    systemPrompt:
+      'You are an expert code reviewer. Review code thoroughly and provide actionable feedback.',
+  });
+
+  const result = await codeReviewer.run(`
+    Review this code:
+    function getUserData(id) {
+      const query = "SELECT * FROM users WHERE id=" + id;
+      return db.query(query);
+    }
+  `);
+
+  console.log(result);
+}
+
+main();
 ```
 
-## 19. Composite Storage (Multi-Backend)
+## 10. Customer Support Bot
+
+Agent with memory, escalation, and multi-tool support.
 
 ```typescript
-import { CompositeStorageAdapter, InMemoryStorageAdapter, PostgresStorageAdapter } from "gauss";
-const storage = new CompositeStorageAdapter(
-  new InMemoryStorageAdapter(),  // fast default
-  { scores: new PostgresStorageAdapter({ connectionString: "..." }) }  // durable for scores
-);
+import { gauss, createAgent, tool, createMemory } from 'gauss';
+
+const ticketTool = tool({
+  name: 'create_ticket',
+  description: 'Create a support ticket for escalation',
+  parameters: { issue: 'string', priority: 'string' },
+  execute: async ({ issue, priority }) => {
+    return { ticketId: 'TICKET-' + Date.now(), status: 'created' };
+  },
+});
+
+const knowledgeBaseTool = tool({
+  name: 'search_kb',
+  description: 'Search knowledge base for common issues',
+  parameters: { query: 'string' },
+  execute: async ({ query }) => {
+    // Mock KB search
+    const articles = {
+      'password reset': 'Visit /reset-password and follow the steps',
+      'billing issue': 'Contact billing@company.com',
+      'account delete': 'Submit request in Account Settings',
+    };
+    return articles[query] || 'No articles found';
+  },
+});
+
+async function main() {
+  const memory = createMemory({ type: 'conversation' });
+
+  const supportBot = createAgent({
+    tools: [ticketTool, knowledgeBaseTool],
+    model: 'gpt-4',
+    memory: memory,
+    systemPrompt:
+      'You are a helpful customer support agent. Try to resolve issues with the knowledge base. Escalate complex issues to tickets.',
+  });
+
+  // Multi-turn conversation
+  let result = await supportBot.run('I forgot my password');
+  console.log('Response 1:', result);
+
+  result = await supportBot.run('I already tried that, please create a ticket');
+  console.log('Response 2:', result);
+}
+
+main();
 ```
 
-## 20. OpenRouter (Access 100+ Models)
+## 11. Research Assistant
+
+Agent that searches the web and synthesizes information.
 
 ```typescript
-import { openrouter } from "gauss/providers";
-const a = agent({
-  model: openrouter("anthropic/claude-sonnet-4-20250514"),
-  instructions: "You are helpful.",
-}).build();
+import { gauss, createAgent, tool } from 'gauss';
+
+const webSearchTool = tool({
+  name: 'web_search',
+  description: 'Search the web for information',
+  parameters: { query: 'string', maxResults: 'number' },
+  execute: async ({ query, maxResults = 5 }) => {
+    // Mock web search
+    return [
+      { title: 'Result 1', url: 'example.com/1', snippet: 'Content...' },
+      { title: 'Result 2', url: 'example.com/2', snippet: 'Content...' },
+    ];
+  },
+});
+
+const fetchUrlTool = tool({
+  name: 'fetch_url',
+  description: 'Fetch and extract content from a URL',
+  parameters: { url: 'string' },
+  execute: async ({ url }) => {
+    // Mock URL fetching
+    return 'Full page content here...';
+  },
+});
+
+async function main() {
+  const researcher = createAgent({
+    tools: [webSearchTool, fetchUrlTool],
+    model: 'gpt-4',
+    systemPrompt:
+      'You are a research assistant. Search for information, fetch relevant pages, and synthesize findings into a coherent report.',
+  });
+
+  const result = await researcher.run(
+    'Research the latest trends in AI agents and provide a summary'
+  );
+  console.log(result);
+}
+
+main();
 ```
+
+## 12. Data Extraction Pipeline
+
+Graph with parallel extractors for structured data.
+
+```typescript
+import { gauss, createPipeline } from 'gauss';
+
+async function main() {
+  const pipeline = createPipeline()
+    .then(async (input) => {
+      // Input: raw document
+      return { document: input, parsed: true };
+    })
+    .parallel([
+      async (data) => {
+        // Extract named entities
+        return { ...data, entities: ['Company A', 'Person B'] };
+      },
+      async (data) => {
+        // Extract relationships
+        return { ...data, relationships: [['Company A', 'works with', 'Person B']] };
+      },
+      async (data) => {
+        // Extract amounts
+        return { ...data, amounts: [100000, 50000] };
+      },
+    ])
+    .then(async (results) => {
+      // Merge results
+      return {
+        entities: results[0].entities,
+        relationships: results[1].relationships,
+        amounts: results[2].amounts,
+      };
+    });
+
+  const output = await pipeline.run('Raw document text...');
+  console.log('Extracted data:', output);
+}
+
+main();
+```
+
+## 13. Content Moderation
+
+Agent with guardrails plugin to moderate content.
+
+```typescript
+import { gauss, createAgent, plugin } from 'gauss';
+
+const moderationPlugin = plugin({
+  name: 'content_moderation',
+  description: 'Prevent unsafe content generation',
+  beforeExecution: async (input) => {
+    const unsafe = ['explicit', 'offensive', 'dangerous'];
+    if (unsafe.some((word) => input.toLowerCase().includes(word))) {
+      throw new Error('Input contains unsafe content');
+    }
+    return input;
+  },
+  afterExecution: async (output) => {
+    // Check output as well
+    return output;
+  },
+});
+
+async function main() {
+  const moderator = createAgent({
+    model: 'gpt-4',
+    plugins: [moderationPlugin],
+    systemPrompt: 'You are a helpful assistant. Decline inappropriate requests.',
+  });
+
+  try {
+    const result = await moderator.run('Write something helpful');
+    console.log(result);
+  } catch (e) {
+    console.log('Moderation blocked:', e.message);
+  }
+}
+
+main();
+```
+
+## 14. LLM Testing with Recording
+
+Record and replay LLM calls for deterministic tests.
+
+```typescript
+import { gauss, createAgent, createRecorder } from 'gauss';
+
+async function main() {
+  const recorder = createRecorder({ filepath: './test_recordings.json' });
+
+  const agent = createAgent({
+    model: 'gpt-4',
+    recorder: recorder,
+    recorderMode: 'record', // or 'replay' for tests
+  });
+
+  // Record mode: saves actual LLM calls
+  const result1 = await agent.run('What is 2+2?');
+  console.log('Recording:', result1);
+
+  // Later, switch to replay mode for tests
+  // This will return recorded responses instead of calling LLM
+  const testAgent = createAgent({
+    model: 'gpt-4',
+    recorder: recorder,
+    recorderMode: 'replay',
+  });
+
+  const testResult = await testAgent.run('What is 2+2?');
+  console.log('Replayed:', testResult);
+}
+
+main();
+```
+
+## 15. Visual Agent Builder
+
+Create agents from JSON configuration.
+
+```typescript
+import { gauss, createAgentFromConfig } from 'gauss';
+
+async function main() {
+  const agentConfig = {
+    name: 'content_creator',
+    model: 'gpt-4',
+    systemPrompt: 'You are a creative content writer.',
+    tools: [
+      {
+        name: 'search_images',
+        description: 'Search for images',
+        parameters: { query: { type: 'string' } },
+      },
+      {
+        name: 'generate_title',
+        description: 'Generate catchy titles',
+        parameters: { topic: { type: 'string' } },
+      },
+    ],
+    memory: { type: 'conversation', maxTurns: 10 },
+    plugins: ['content_moderation'],
+  };
+
+  const agent = createAgentFromConfig(agentConfig);
+
+  const result = await agent.run('Create a blog post about AI');
+  console.log(result);
+}
+
+main();
+```
+
+## 16. Streaming Response
+
+Real-time token streaming for responsive UIs.
+
+```typescript
+import { gauss, createAgent } from 'gauss';
+
+async function main() {
+  const agent = createAgent({
+    model: 'gpt-4',
+    streaming: true,
+  });
+
+  console.log('Streaming response:');
+
+  const stream = await agent.stream('Write a poem about programming');
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.token);
+  }
+
+  console.log('\n✓ Complete');
+}
+
+main();
+```
+
+## 17. MCP Client
+
+Connect to Model Context Protocol servers for expanded tools.
+
+```typescript
+import { gauss, createAgent, createMCPClient } from 'gauss';
+
+async function main() {
+  const mcpClient = createMCPClient({
+    serverUrl: 'http://localhost:3000/mcp',
+  });
+
+  // Connect to MCP server
+  const tools = await mcpClient.getTools();
+  console.log('Available MCP tools:', tools);
+
+  const agent = createAgent({
+    model: 'gpt-4',
+    mcpClient: mcpClient,
+  });
+
+  // Agent can now use tools from MCP server
+  const result = await agent.run(
+    'Use available tools to complete this task: fetch weather data'
+  );
+  console.log(result);
+}
+
+main();
+```
+
+## 18. PostgreSQL Memory
+
+Persistent agent memory with PostgreSQL backend.
+
+```typescript
+import { gauss, createAgent, createMemory } from 'gauss';
+
+async function main() {
+  const memory = createMemory({
+    type: 'postgresql',
+    connectionString: 'postgresql://user:password@localhost/gauss_memory',
+    tableName: 'agent_conversations',
+    autoCleanup: { enabled: true, maxAge: '30 days' },
+  });
+
+  const agent = createAgent({
+    model: 'gpt-4',
+    memory: memory,
+    systemPrompt: 'You are a helpful assistant with persistent memory.',
+  });
+
+  // Conversation is automatically persisted
+  let result = await agent.run('Remember: My name is Alice');
+  console.log('Turn 1:', result);
+
+  // Memory persists across sessions
+  result = await agent.run('What is my name?');
+  console.log('Turn 2:', result);
+}
+
+main();
+```
+
+## 19. Agent with Planning
+
+Multi-step task decomposition and execution planning.
+
+```typescript
+import { gauss, createAgent, createPlanner } from 'gauss';
+
+async function main() {
+  const planner = createPlanner({
+    model: 'gpt-4',
+    strategy: 'hierarchical', // or 'linear', 'tree'
+  });
+
+  const agent = createAgent({
+    model: 'gpt-4',
+    planner: planner,
+    systemPrompt: 'You are a task execution agent.',
+  });
+
+  // Complex task automatically decomposed
+  const plan = await agent.createPlan(
+    'Build a marketing campaign: research audience, create content, schedule posts'
+  );
+
+  console.log('Generated plan:', plan.steps);
+
+  // Execute plan
+  const result = await agent.executePlan(plan);
+  console.log('Results:', result);
+}
+
+main();
+```
+
+## 20. Error Handling
+
+Comprehensive error handling with retry patterns and suggestions.
+
+```typescript
+import {
+  gauss,
+  createAgent,
+  GaussError,
+  RetryPolicy,
+} from 'gauss';
+
+async function main() {
+  const retryPolicy = new RetryPolicy({
+    maxRetries: 3,
+    backoff: 'exponential',
+    baseDelay: 1000,
+  });
+
+  const agent = createAgent({
+    model: 'gpt-4',
+    retryPolicy: retryPolicy,
+    errorHandler: async (error) => {
+      if (error instanceof GaussError) {
+        console.log('Error code:', error.code);
+        console.log('Suggestions:', error.suggestions);
+        console.log('Recoverable:', error.isRecoverable);
+      }
+      throw error;
+    },
+  });
+
+  try {
+    const result = await agent.run('Process this data...');
+    console.log(result);
+  } catch (error) {
+    if (error instanceof GaussError) {
+      console.log(`Error: ${error.message}`);
+      console.log(`Try: ${error.suggestions.join(', ')}`);
+    } else {
+      console.log('Unexpected error:', error);
+    }
+  }
+}
+
+main();
+```
+
+## 21. Universal Provider
+
+Use any AI SDK provider dynamically without changing code.
+
+```typescript
+import { gauss, createAgent, useProvider } from 'gauss';
+
+async function main() {
+  // Switch providers at runtime
+  const providers = ['openai', 'anthropic', 'google', 'cohere'];
+
+  for (const providerName of providers) {
+    // Initialize provider
+    await useProvider(providerName, {
+      apiKey: process.env[`${providerName.toUpperCase()}_API_KEY`],
+    });
+
+    const agent = createAgent({
+      provider: providerName,
+      model: getModelForProvider(providerName),
+    });
+
+    const result = await agent.run('What is AI?');
+    console.log(`${providerName}: ${result}`);
+  }
+
+  function getModelForProvider(provider: string): string {
+    const models = {
+      openai: 'gpt-4',
+      anthropic: 'claude-3-opus',
+      google: 'gemini-pro',
+      cohere: 'command',
+    };
+    return models[provider] || 'default';
+  }
+}
+
+main();
+```
+
+---
+
+## Tips for Production
+
+- **Rate limiting**: Use `agent.configure({ rateLimit: 100 })` for API rate management
+- **Caching**: Enable response caching with `cache: { ttl: 3600 }`
+- **Monitoring**: Integrate with observability tools via plugins
+- **Testing**: Use recording mode to create deterministic test suites
+- **Error recovery**: Always implement retry policies and error handlers
+- **Memory management**: Set appropriate memory limits and cleanup policies
+- **Security**: Validate user inputs and use moderation guardrails
+
+## Next Steps
+
+- Explore [API Reference](/docs/api-reference/ports) for detailed documentation
+- Check [Workflows & Graphs](/docs/workflows) for complex scenarios
+- Visit [GitHub](https://github.com/giulio-leone/gauss) for questions and discussions

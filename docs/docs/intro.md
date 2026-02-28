@@ -1,125 +1,146 @@
 ---
 sidebar_position: 1
 title: Getting Started
-description: Install Gauss and create your first AI agent
+description: Install Gauss and build AI agents in seconds
+slug: /
 ---
 
 # Getting Started
 
-Gauss is an AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai/) with hexagonal architecture, a plugin system, multi-runtime support, and multi-agent collaboration.
+**Gauss** is the most complete AI agent framework for TypeScript — 57 features, hexagonal architecture, zero config to start.
 
-## Installation
-
-```bash
-pnpm add gauss
-```
-
-Gauss requires `ai` (v6+) and `zod` (v4+) as direct dependencies.
-
-### Optional Peer Dependencies
-
-Install only the packages you need:
-
-| Package | Purpose |
-|---------|---------|
-| `@supabase/supabase-js` | Supabase-backed persistent memory |
-| `tiktoken` | Accurate BPE token counting |
-| `@ai-sdk/mcp` | AI SDK MCP client adapter |
-| `onecrawl` | Web scraping tools (OneCrawlPlugin) |
-| `@giulio-leone/gaussflow-vectorless` | RAG/knowledge extraction (VectorlessPlugin) |
+## Install
 
 ```bash
-pnpm add @supabase/supabase-js tiktoken
+npm install @giulio-leone/gauss
 ```
 
-## Quick Start
+## One-liner (Zero Config)
 
-```typescript
-import { Agent } from "gauss";
-import { openai } from "@ai-sdk/openai";
+```ts
+import gauss from 'gauss'
 
-const agent = Agent.minimal({
-  model: openai("gpt-4o"),
-  instructions: "You are a helpful coding assistant.",
-});
-
-const result = await agent.run("Create a utility function that debounces input.");
-
-console.log(result.text);
-console.log(`Steps: ${result.steps.length}`);
-console.log(`Session: ${result.sessionId}`);
+// Auto-detects OPENAI_API_KEY from environment
+const answer = await gauss('Explain quantum computing in 3 sentences')
+console.log(answer)
 ```
 
-`Agent.minimal()` creates an agent with a virtual filesystem and planning tools enabled, using in-memory storage and approximate token counting.
+## Agent Builder (Full Control)
 
-## Your First Agent with the Builder API
+```ts
+import { agent } from 'gauss'
+import { openai } from 'gauss/providers'
 
-For more control, use the builder pattern:
+const assistant = agent({
+  model: openai('gpt-4o'),
+  instructions: 'You are a helpful coding assistant.',
+}).build()
 
-```typescript
-import { Agent } from "gauss";
-import { openai } from "@ai-sdk/openai";
+const result = await assistant.run('Write a fizzbuzz in TypeScript')
+console.log(result.text)
+```
 
-const agent = Agent.create({
-  model: openai("gpt-4o"),
-  instructions: "You are a project manager. Break tasks into todos.",
+## Team of Agents
+
+```ts
+import { team } from 'gauss'
+
+const devTeam = team()
+  .id('dev-team')
+  .coordinator(architect, 'lead')
+  .specialist(frontend, { id: 'ui', specialties: ['react'] })
+  .specialist(backend, { id: 'api', specialties: ['node'] })
+  .strategy('delegate')
+  .build()
+
+const result = await devTeam.run('Build a REST API for user management')
+```
+
+## Workflow DSL
+
+```ts
+import { workflow } from 'gauss'
+
+const pipeline = workflow('data-pipeline')
+  .then({ id: 'fetch', execute: async (ctx) => ({ ...ctx, data: await fetchData() }) })
+  .branch(
+    (ctx) => ctx.data.length > 100,
+    { id: 'summarize', execute: async (ctx) => ({ ...ctx, summary: summarize(ctx.data) }) },
+    { id: 'passthrough', execute: async (ctx) => ctx }
+  )
+  .parallel(
+    { id: 'store', execute: async (ctx) => { await store(ctx); return ctx } },
+    { id: 'notify', execute: async (ctx) => { await notify(ctx); return ctx } }
+  )
+  .build()
+```
+
+## Multimodal (Images + Video)
+
+```ts
+import { multimodal, videoProcessor } from 'gauss'
+import { openai } from 'gauss/providers'
+
+const vision = multimodal({ model: openai('gpt-4o') })
+const description = await vision.describeImage({
+  source: { type: 'url', url: 'https://example.com/photo.jpg' }
 })
-  .withPlanning()         // Enable todo management tools
-  .withSubagents()        // Enable child agent spawning
-  .withMaxSteps(50)       // Set max tool-loop iterations
-  .build();
 
-const result = await agent.run("Set up a REST API with user auth endpoints.");
-console.log(result.text);
-
-// Always clean up when done
-await agent.dispose();
-```
-
-## Static Factory Methods
-
-| Method | Description |
-|--------|-------------|
-| `Agent.create(config)` | Returns a `AgentBuilder` for full control |
-| `Agent.minimal(config)` | Planning enabled, default adapters |
-| `Agent.full(config)` | Planning + subagents + optional overrides |
-| `Agent.auto(config)` | Universal adapters, works in any runtime |
-
-## Adding Plugins
-
-Plugins extend agent capabilities with lifecycle hooks and tools:
-
-```typescript
-import {
-  Agent,
-  createGuardrailsPlugin,
-  createEvalsPlugin,
-  createObservabilityPlugin,
-  ConsoleLoggingAdapter,
-} from "gauss";
-import { z } from "zod";
-
-const agent = Agent.create({
-  model: openai("gpt-4o"),
-  instructions: "You are a helpful assistant.",
+const video = videoProcessor({ model: openai('gpt-4o') })
+const analysis = await video.describeVideo({
+  source: { type: 'url', url: 'https://example.com/video.mp4' },
+  duration: 30
 })
-  .use(createGuardrailsPlugin({
-    inputSchema: z.string().min(1).max(10000),
-    onFailure: "throw",
-  }))
-  .use(createObservabilityPlugin({
-    logger: new ConsoleLoggingAdapter(),
-  }))
-  .use(createEvalsPlugin({
-    onEval: (result) => console.log(`Latency: ${result.metrics.latencyMs}ms`),
-  }))
-  .withPlanning()
-  .build();
 ```
+
+## Voice (STT/TTS)
+
+```ts
+import { OpenAIVoiceAdapter, VoicePipeline } from 'gauss'
+
+const voice = new OpenAIVoiceAdapter({ apiKey: process.env.OPENAI_API_KEY! })
+const pipeline = new VoicePipeline({ voice, agent: myAgent })
+const { audio } = await pipeline.process(userAudioBuffer)
+```
+
+## 40+ Providers
+
+```ts
+import { universalProvider } from 'gauss/providers'
+
+const provider = universalProvider()
+const model = await provider.get('openai:gpt-4o')
+const model2 = await provider.get('anthropic:claude-sonnet-4-20250514')
+
+// Discover what's installed
+const installed = await provider.discoverInstalled()
+```
+
+## Environment Variables
+
+Gauss auto-detects AI providers:
+
+| Variable | Provider | Default Model |
+|----------|----------|---------------|
+| `OPENAI_API_KEY` | OpenAI | gpt-4o |
+| `ANTHROPIC_API_KEY` | Anthropic | claude-sonnet-4-20250514 |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google | gemini-2.0-flash |
+| `GROQ_API_KEY` | Groq | llama-3.3-70b-versatile |
+| `MISTRAL_API_KEY` | Mistral | mistral-large-latest |
+
+## Architecture
+
+Gauss uses **Hexagonal Architecture** (Ports & Adapters):
+
+- **Ports** — Interfaces (LLM, memory, vector store, voice, queue, etc.)
+- **Adapters** — Implementations (PostgreSQL, Redis, OpenAI, ElevenLabs, S3, etc.)
+- **Domain** — Pure business logic (agents, graphs, workflows, planning)
+
+Every component is swappable and independently testable.
 
 ## Next Steps
 
-- [Architecture](/docs/architecture) — Understand the hexagonal architecture
-- [Plugins](/docs/plugins/) — Explore built-in plugins
-- [Multi-Runtime](/docs/runtime/) — Run on Node.js, Deno, Bun, Edge, or Browser
-- [AgentGraph](/docs/graph/) — Multi-agent collaboration with DAG execution
+- [Concepts](/docs/concepts) — Core concepts and architecture
+- [Cookbook](/docs/cookbook) — 20+ practical recipes
+- [API Reference](/docs/api-reference/ports) — Complete API documentation
+- [Comparison](/docs/comparison) — How Gauss compares to Mastra, LangChain, Agno

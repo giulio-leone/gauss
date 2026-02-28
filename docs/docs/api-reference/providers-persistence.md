@@ -1,159 +1,505 @@
 ---
 sidebar_position: 3
+title: Providers & Persistence
 ---
 
-# Providers API Reference
+# Providers & Persistence
 
-Official provider adapters for Gauss. Import from `gauss/providers`.
+## UniversalProvider API
 
-## openai
+The `UniversalProvider` is a dynamic provider factory that automatically handles model resolution across multiple LLM providers.
+
+### Usage
 
 ```typescript
-import { openai } from "gauss/providers";
-const model = openai(modelId: string, options?: OpenAIProviderOptions);
+import { universalProvider } from 'gauss/providers';
+
+// Automatically resolve provider from model identifier
+const provider = await universalProvider('openai:gpt-4o');
+const response = await provider.generate('Your prompt');
+
+// Or use the factory class
+const factory = new UniversalProvider();
+const provider = factory.get('anthropic:claude-3-opus');
 ```
 
-**Parameters:**
-- `modelId` — Model identifier (e.g., `"gpt-4o"`, `"gpt-4o-mini"`)
-- `options.apiKey` — API key (default: `OPENAI_API_KEY` env)
-- `options.baseURL` — Custom base URL
-- `options.organization` — OpenAI organization ID
+### API Methods
 
-## anthropic
+#### `universalProvider(providerId: string): Promise<LLMPort>`
+
+Shorthand function to get a provider instance.
 
 ```typescript
-import { anthropic } from "gauss/providers";
-const model = anthropic(modelId: string, options?: AnthropicProviderOptions);
+const provider = await universalProvider('openai:gpt-4o');
+const response = await provider.generate('Hello!');
 ```
 
-**Parameters:**
-- `modelId` — Model identifier (e.g., `"claude-sonnet-4-20250514"`)
-- `options.apiKey` — API key (default: `ANTHROPIC_API_KEY` env)
+#### `.get(providerId: string): LLMPort`
 
-## google
+Get a provider instance synchronously.
 
 ```typescript
-import { google } from "gauss/providers";
-const model = google(modelId: string, options?: GoogleProviderOptions);
+const factory = new UniversalProvider();
+const provider = factory.get('openai:gpt-4o');
 ```
 
-**Parameters:**
-- `modelId` — Model identifier (e.g., `"gemini-2.0-flash"`)
-- `options.apiKey` — API key (default: `GOOGLE_GENERATIVE_AI_API_KEY` env)
+#### `.discoverInstalled(): string[]`
 
-## groq
+Discover which providers are installed and available.
 
 ```typescript
-import { groq } from "gauss/providers";
-const model = groq(modelId: string, options?: GroqProviderOptions);
+const factory = new UniversalProvider();
+const installed = factory.discoverInstalled();
+// Returns: ['openai', 'anthropic', 'google', ...]
 ```
 
-**Parameters:**
-- `modelId` — Model identifier (e.g., `"llama-3.3-70b-versatile"`)
-- `options.apiKey` — API key (default: `GROQ_API_KEY` env)
+#### `.listKnown(): KnownProvider[]`
 
-## ollama
+List all known providers (installed or not).
 
 ```typescript
-import { ollama } from "gauss/providers";
-const model = ollama(modelId: string, options?: OllamaProviderOptions);
+const factory = new UniversalProvider();
+const known = factory.listKnown();
+// Returns array of provider metadata
 ```
 
-**Parameters:**
-- `modelId` — Local model name (e.g., `"llama3.2"`, `"mistral"`)
-- `options.baseURL` — Ollama server URL (default: `http://localhost:11434/v1`)
+### Provider ID Format
 
-No API key required. Runs locally.
+Provider identifiers follow the format: `provider:model`
 
-## openrouter
-
-```typescript
-import { openrouter } from "gauss/providers";
-const model = openrouter(modelId: string, options?: OpenRouterProviderOptions);
+```
+openai:gpt-4o
+anthropic:claude-3-opus
+google:gemini-2.0-flash
+groq:mixtral-8x7b-32768
+ollama:llama2
 ```
 
-**Parameters:**
-- `modelId` — Provider/model path (e.g., `"anthropic/claude-sonnet-4-20250514"`)
-- `options.apiKey` — API key (default: `OPENROUTER_API_KEY` env)
-- `options.baseURL` — Custom base URL
+## Known Providers (18+)
 
----
+### OpenAI
+```typescript
+const provider = await universalProvider('openai:gpt-4o');
+```
+**Models**: gpt-4o, gpt-4-turbo, gpt-3.5-turbo  
+**Env Variable**: `OPENAI_API_KEY`
 
-# Persistence API Reference
+### Anthropic
+```typescript
+const provider = await universalProvider('anthropic:claude-3-opus');
+```
+**Models**: claude-3-opus, claude-3-sonnet, claude-3-haiku, claude-3-5-sonnet  
+**Env Variable**: `ANTHROPIC_API_KEY`
 
-## PostgresStorageAdapter
+### Google (Gemini)
+```typescript
+const provider = await universalProvider('google:gemini-2.0-flash');
+```
+**Models**: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash  
+**Env Variable**: `GOOGLE_API_KEY`
+
+### Mistral
+```typescript
+const provider = await universalProvider('mistral:mistral-large');
+```
+**Models**: mistral-large, mistral-medium, mistral-small  
+**Env Variable**: `MISTRAL_API_KEY`
+
+### Groq
+```typescript
+const provider = await universalProvider('groq:mixtral-8x7b-32768');
+```
+**Models**: mixtral-8x7b-32768, llama2-70b, llama-3.1-70b  
+**Env Variable**: `GROQ_API_KEY`
+
+### Ollama
+```typescript
+const provider = await universalProvider('ollama:llama2');
+```
+**Models**: llama2, mistral, neural-chat, orca-mini  
+**Note**: Requires local Ollama instance running on http://localhost:11434  
+**Env Variable**: `OLLAMA_BASE_URL` (optional)
+
+### Azure OpenAI
+```typescript
+const provider = await universalProvider('azure:gpt-4');
+```
+**Configuration**: Requires Azure-specific endpoint and key  
+**Env Variables**: `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`
+
+### Amazon Bedrock
+```typescript
+const provider = await universalProvider('amazon-bedrock:claude-3-sonnet');
+```
+**Models**: Anthropic Claude, Cohere Command, Llama 2/3  
+**Env Variables**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
+
+### Cohere
+```typescript
+const provider = await universalProvider('cohere:command-r-plus');
+```
+**Models**: command-r-plus, command-r, command  
+**Env Variable**: `COHERE_API_KEY`
+
+### Fireworks AI
+```typescript
+const provider = await universalProvider('fireworks:llama-v2-70b');
+```
+**Models**: llama-v2-70b, mixtral-8x7b, and more  
+**Env Variable**: `FIREWORKS_API_KEY`
+
+### DeepSeek
+```typescript
+const provider = await universalProvider('deepseek:deepseek-chat');
+```
+**Models**: deepseek-chat, deepseek-coder  
+**Env Variable**: `DEEPSEEK_API_KEY`
+
+### Cerebras
+```typescript
+const provider = await universalProvider('cerebras:llama-3.3-70b');
+```
+**Models**: llama-3.3-70b and variants  
+**Env Variable**: `CEREBRAS_API_KEY`
+
+### LM Squeeze
+```typescript
+const provider = await universalProvider('lmsqueezy:lmsqueezy-model');
+```
+**Env Variable**: `LMSQUEEZY_API_KEY`
+
+### Together AI
+```typescript
+const provider = await universalProvider('together:meta-llama/Llama-3-70b');
+```
+**Models**: Various open-source models  
+**Env Variable**: `TOGETHER_API_KEY`
+
+### Perplexity
+```typescript
+const provider = await universalProvider('perplexity:pplx-7b-online');
+```
+**Models**: pplx-7b-online, pplx-70b-online  
+**Env Variable**: `PERPLEXITY_API_KEY`
+
+### xAI
+```typescript
+const provider = await universalProvider('xai:grok-1');
+```
+**Models**: grok-1, grok-1-vision  
+**Env Variable**: `XAI_API_KEY`
+
+### TogetherAI (Alternative)
+```typescript
+const provider = await universalProvider('togetherai:meta-llama/Llama-3-70b');
+```
+**Env Variable**: `TOGETHER_API_KEY`
+
+### OpenRouter
+```typescript
+const provider = await universalProvider('openrouter:openai/gpt-4o');
+```
+**Models**: 100+ models from various providers  
+**Env Variable**: `OPENROUTER_API_KEY`
+
+## PostgreSQL Persistence
+
+### Configuration
 
 ```typescript
-import { PostgresStorageAdapter } from "gauss";
+import { PostgreSQLAdapter } from 'gauss/adapters/memory/postgresql';
 
-const storage = new PostgresStorageAdapter({
-  connectionString: string;   // PostgreSQL connection string
-  tableName?: string;          // Default: 'gauss_storage'
-  schema?: string;             // Default: 'public'
-  poolSize?: number;           // Default: 10
+const memory = new PostgreSQLAdapter({
+  // Connection string (recommended for simplicity)
+  connectionString: process.env.DATABASE_URL,
+  // Or individual parameters
+  host: 'localhost',
+  port: 5432,
+  database: 'gauss_db',
+  user: 'postgres',
+  password: process.env.DB_PASSWORD,
+  ssl: process.env.NODE_ENV === 'production',
+  // Pool configuration
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
-await storage.initialize();    // Creates table if not exists
 ```
 
-Implements `StorageDomainPort`.
+### Schema Setup
 
-## RedisStorageAdapter
+```sql
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content TEXT NOT NULL,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-```typescript
-import { RedisStorageAdapter } from "gauss";
-
-const storage = new RedisStorageAdapter({
-  url?: string;       // Default: 'redis://localhost:6379'
-  prefix?: string;    // Key prefix. Default: 'gauss'
-  ttl?: number;       // TTL in seconds. Default: 0 (no expiry)
-});
-await storage.initialize();
+CREATE INDEX idx_conversation_id ON conversations(conversation_id);
+CREATE INDEX idx_created_at ON conversations(created_at);
+CREATE INDEX idx_metadata ON conversations USING GIN(metadata);
 ```
 
-Implements `StorageDomainPort`.
+### Connection String Examples
 
-## PgVectorStoreAdapter
-
-```typescript
-import { PgVectorStoreAdapter } from "gauss";
-
-const store = new PgVectorStoreAdapter({
-  connectionString: string;
-  tableName?: string;          // Default: 'gauss_vectors'
-  dimensions?: number;         // Default: 1536
-  useHnsw?: boolean;           // Default: true
-});
-await store.initialize();      // Creates extension + table + index
+```
+postgresql://username:password@localhost:5432/gauss_db
+postgres://user:pass@db.example.com:5432/mydb?sslmode=require
+postgresql://user@localhost/gauss_db
 ```
 
-Implements `VectorStorePort`.
+## Redis Persistence
 
-## S3ObjectStorageAdapter
+### Configuration
 
 ```typescript
-import { S3ObjectStorageAdapter } from "gauss";
+import { RedisCache } from 'gauss/adapters/cache/redis';
 
-const s3 = new S3ObjectStorageAdapter({
-  bucket: string;
-  region?: string;
-  prefix?: string;             // Key prefix
-  endpoint?: string;           // For MinIO, R2, etc.
-  forcePathStyle?: boolean;    // For MinIO
+const cache = new RedisCache({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  db: 0,
+  prefix: 'gauss:',
+  retryStrategy: (times) => Math.min(times * 50, 2000),
+  enableOfflineQueue: true,
 });
 ```
 
-Implements `ObjectStoragePort`.
+### Connection String Format
 
-## BullMQQueueAdapter
+```
+redis://[:password@]host[:port][/db]
+redis://:mypassword@redis.example.com:6380/1
+redis://localhost:6379
+```
+
+### Usage with Docker
+
+```bash
+docker run -d -p 6379:6379 redis:7-alpine
+```
 
 ```typescript
-import { BullMQQueueAdapter } from "gauss";
-
-const queue = new BullMQQueueAdapter({
-  queueName: string;
-  redisUrl?: string;           // Default: 'redis://localhost:6379'
-  defaultJobOptions?: QueueJobOptions;
+// Connect to Docker Redis
+const cache = new RedisCache({
+  host: 'localhost',
+  port: 6379,
 });
 ```
 
-Implements `QueuePort`.
+## AWS S3 Configuration
+
+### Setup
+
+```typescript
+import { S3Filesystem } from 'gauss/adapters/filesystem/s3';
+
+const fs = new S3Filesystem({
+  bucket: process.env.S3_BUCKET_NAME,
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  prefix: 'gauss/', // Optional key prefix
+});
+```
+
+### Environment Variables
+
+```bash
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=wJal...
+S3_BUCKET_NAME=my-gauss-bucket
+```
+
+### IAM Policy
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::my-gauss-bucket",
+        "arn:aws:s3:::my-gauss-bucket/*"
+      ]
+    }
+  ]
+}
+```
+
+## BullMQ Configuration
+
+### Setup
+
+```typescript
+import { BullMQAdapter } from 'gauss/adapters/queue/bullmq';
+
+const queue = new BullMQAdapter({
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+    db: 1, // Separate DB from cache
+  },
+  prefix: 'bull:',
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 2000,
+    },
+    removeOnComplete: true,
+  },
+});
+```
+
+### Job Configuration
+
+```typescript
+const taskId = await queue.enqueue('notifications', {
+  data: {
+    userId: '123',
+    message: 'Hello!',
+  },
+  priority: 1,
+  retries: 3,
+  timeout: 30000, // 30 seconds
+});
+```
+
+### Docker Compose Example
+
+```yaml
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
+```
+
+## pgvector Configuration
+
+### Installation
+
+```sql
+-- Install pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create embeddings table
+CREATE TABLE embeddings (
+  id VARCHAR(255) PRIMARY KEY,
+  embedding vector(1536),
+  metadata JSONB,
+  namespace VARCHAR(255) DEFAULT 'default',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indices for performance
+CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_namespace ON embeddings(namespace);
+CREATE INDEX idx_metadata ON embeddings USING GIN(metadata);
+```
+
+### Configuration
+
+```typescript
+import { PgVectorAdapter } from 'gauss/adapters/vectorstore/pgvector';
+
+const vectorStore = new PgVectorAdapter({
+  connectionString: process.env.DATABASE_URL,
+  tableName: 'embeddings',
+  dimensions: 1536, // OpenAI embedding dimensions
+  similarityMetric: 'cosine', // cosine | l2 | inner_product
+  timeout: 30000,
+});
+```
+
+### Usage with Embeddings
+
+```typescript
+// Generate embeddings
+const embedding = await embedding.embed(['Your text here']);
+
+// Store in pgvector
+await vectorStore.upsert([
+  {
+    id: 'doc-1',
+    embedding: embedding[0],
+    metadata: { source: 'docs', chunk: 1 },
+  },
+]);
+
+// Query similar documents
+const results = await vectorStore.query(queryEmbedding, k=10, namespace='docs');
+```
+
+### Index Configuration
+
+For different dataset sizes, adjust the IVFFlat index lists parameter:
+
+```sql
+-- Small datasets (< 100k vectors)
+CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 10);
+
+-- Medium datasets (100k - 1M vectors)
+CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Large datasets (> 1M vectors)
+CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 1000);
+```
+
+## Complete Integration Example
+
+```typescript
+import { Gauss } from 'gauss';
+import { universalProvider } from 'gauss/providers';
+import { PostgreSQLAdapter } from 'gauss/adapters/memory/postgresql';
+import { PgVectorAdapter } from 'gauss/adapters/vectorstore/pgvector';
+import { RedisCache } from 'gauss/adapters/cache/redis';
+import { BullMQAdapter } from 'gauss/adapters/queue/bullmq';
+import { S3Filesystem } from 'gauss/adapters/filesystem/s3';
+
+const gauss = new Gauss({
+  llm: await universalProvider(process.env.LLM_PROVIDER || 'openai:gpt-4o'),
+  memory: new PostgreSQLAdapter({ connectionString: process.env.DATABASE_URL }),
+  vectorStore: new PgVectorAdapter({ connectionString: process.env.DATABASE_URL }),
+  cache: new RedisCache({ host: process.env.REDIS_HOST }),
+  queue: new BullMQAdapter({ redis: { host: process.env.REDIS_HOST } }),
+  filesystem: new S3Filesystem({
+    bucket: process.env.S3_BUCKET,
+    region: process.env.AWS_REGION,
+  }),
+});
+
+export default gauss;
+```
+

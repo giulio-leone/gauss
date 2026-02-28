@@ -1,249 +1,435 @@
 ---
-sidebar_position: 6
-title: Port Interfaces
-description: Complete reference for all Gauss port interfaces
+sidebar_position: 1
+title: Ports (Interfaces)
 ---
 
-# Port Interfaces
+# Ports (Interfaces)
 
-Ports define the contracts for Gauss's hexagonal architecture. Implement any port to provide a custom adapter.
+Gauss framework uses **ports** as pluggable interfaces that define contracts for various system capabilities. Each port is technology-agnostic and can have multiple adapter implementations.
 
-## FilesystemPort
+## LLMPort
 
-File operations with zone-based isolation (`transient` or `persistent`).
+Interface for language model interactions.
 
 ```typescript
-interface FilesystemPort {
-  read(path: string, zone?: FilesystemZone): Promise<string>;
-  write(path: string, content: string, zone?: FilesystemZone): Promise<void>;
-  exists(path: string, zone?: FilesystemZone): Promise<boolean>;
-  delete(path: string, zone?: FilesystemZone): Promise<void>;
-  list(path: string, options?: ListOptions, zone?: FilesystemZone): Promise<FileEntry[]>;
-  search(pattern: string, options?: SearchOptions, zone?: FilesystemZone): Promise<SearchResult[]>;
-  glob(pattern: string, zone?: FilesystemZone): Promise<string[]>;
-  stat(path: string, zone?: FilesystemZone): Promise<FileStat>;
-  syncToPersistent?(): Promise<void>;
-  clearTransient?(): Promise<void>;
+interface LLMPort {
+  /**
+   * Generate a completion from an LLM.
+   * @param prompt - The input prompt or messages
+   * @param options - Generation options (temperature, max_tokens, etc.)
+   * @returns Promise resolving to an LLM response
+   */
+  generate(
+    prompt: string | Message[],
+    options?: GenerateOptions
+  ): Promise<LLMResponse>;
+}
+
+interface LLMResponse {
+  /** The generated text content */
+  content: string;
+  /** Usage statistics (prompt_tokens, completion_tokens, total_tokens) */
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  /** Model identifier that was used */
+  model: string;
+  /** Optional stop reason */
+  stop_reason?: string;
+}
+
+interface GenerateOptions {
+  temperature?: number;
+  max_tokens?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
 }
 ```
 
 ## MemoryPort
 
-Persistent state storage for todos, checkpoints, conversations, and metadata.
+Interface for managing conversation history and context persistence.
 
 ```typescript
 interface MemoryPort {
-  saveTodos(sessionId: string, todos: Todo[]): Promise<void>;
-  loadTodos(sessionId: string): Promise<Todo[]>;
-  saveCheckpoint(sessionId: string, checkpoint: Checkpoint): Promise<void>;
-  loadLatestCheckpoint(sessionId: string): Promise<Checkpoint | null>;
-  listCheckpoints(sessionId: string): Promise<Checkpoint[]>;
-  deleteOldCheckpoints(sessionId: string, keepCount: number): Promise<void>;
-  saveConversation(sessionId: string, messages: Message[]): Promise<void>;
-  loadConversation(sessionId: string): Promise<Message[]>;
-  saveMetadata(sessionId: string, key: string, value: unknown): Promise<void>;
-  loadMetadata<T>(sessionId: string, key: string): Promise<T | null>;
-  deleteMetadata(sessionId: string, key: string): Promise<void>;
+  /**
+   * Save a message to conversation history.
+   * @param conversationId - Unique conversation identifier
+   * @param message - Message to save
+   * @returns Promise resolving when saved
+   */
+  save(
+    conversationId: string,
+    message: Message
+  ): Promise<void>;
+
+  /**
+   * Load messages from conversation history.
+   * @param conversationId - Unique conversation identifier
+   * @param limit - Maximum messages to retrieve (default: 50)
+   * @returns Promise resolving to array of messages
+   */
+  load(
+    conversationId: string,
+    limit?: number
+  ): Promise<Message[]>;
+
+  /**
+   * Search messages in conversation history.
+   * @param conversationId - Unique conversation identifier
+   * @param query - Search query
+   * @returns Promise resolving to matching messages
+   */
+  search(
+    conversationId: string,
+    query: string
+  ): Promise<Message[]>;
+
+  /**
+   * Delete a specific message.
+   * @param conversationId - Unique conversation identifier
+   * @param messageId - ID of message to delete
+   * @returns Promise resolving when deleted
+   */
+  delete(
+    conversationId: string,
+    messageId: string
+  ): Promise<void>;
+}
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
 }
 ```
 
-## ModelPort
+## VectorStorePort
 
-LLM invocation abstraction.
+Interface for storing and querying vector embeddings.
 
 ```typescript
-interface ModelPort {
-  getModel(): LanguageModel;
-  getContextWindowSize(): number;
-  getModelId(): string;
-  generate(options: ModelGenerateOptions): Promise<ModelGenerateResult>;
-  generateStream?(options: ModelGenerateOptions): Promise<ModelStreamResult>;
+interface VectorStorePort {
+  /**
+   * Upsert (insert or update) vectors into the store.
+   * @param vectors - Array of vectors with ids and embeddings
+   * @param namespace - Optional namespace/collection for organization
+   * @returns Promise resolving when upserted
+   */
+  upsert(
+    vectors: Vector[],
+    namespace?: string
+  ): Promise<void>;
+
+  /**
+   * Query vectors by similarity.
+   * @param query - Query vector or embedding
+   * @param k - Number of top results to return
+   * @param namespace - Optional namespace to search in
+   * @returns Promise resolving to similar vectors with scores
+   */
+  query(
+    query: number[],
+    k: number,
+    namespace?: string
+  ): Promise<QueryResult[]>;
+
+  /**
+   * Delete vectors by id.
+   * @param ids - Vector IDs to delete
+   * @param namespace - Optional namespace
+   * @returns Promise resolving when deleted
+   */
+  delete(
+    ids: string[],
+    namespace?: string
+  ): Promise<void>;
+}
+
+interface Vector {
+  id: string;
+  embedding: number[];
+  metadata?: Record<string, any>;
+}
+
+interface QueryResult {
+  id: string;
+  score: number;
+  metadata?: Record<string, any>;
 }
 ```
 
-## RuntimePort
+## EmbeddingPort
 
-Platform-agnostic runtime APIs.
+Interface for generating text embeddings.
 
 ```typescript
-interface RuntimePort {
-  randomUUID(): string;
-  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
-  getEnv(key: string): string | undefined;
-  setTimeout(callback: () => void, ms: number): { clear(): void };
+interface EmbeddingPort {
+  /**
+   * Generate embeddings for one or more texts.
+   * @param texts - Array of texts to embed
+   * @returns Promise resolving to 2D array of embeddings
+   */
+  embed(texts: string[]): Promise<number[][]>;
 }
 ```
 
-## McpPort
+## FilesystemPort
 
-MCP server discovery and tool execution.
+Interface for file system operations.
 
 ```typescript
-interface McpPort {
-  discoverTools(): Promise<Record<string, McpToolDefinition>>;
-  executeTool(name: string, args: unknown): Promise<McpToolResult>;
-  listServers(): Promise<McpServerInfo[]>;
-  connect(config: McpServerConfig): Promise<void>;
-  disconnect(serverId: string): Promise<void>;
-  closeAll(): Promise<void>;
+interface FilesystemPort {
+  /**
+   * Read file contents.
+   * @param path - File path
+   * @param encoding - File encoding (default: utf-8)
+   * @returns Promise resolving to file contents
+   */
+  read(
+    path: string,
+    encoding?: string
+  ): Promise<string | Buffer>;
+
+  /**
+   * Write contents to a file.
+   * @param path - File path
+   * @param contents - File contents
+   * @param encoding - File encoding (default: utf-8)
+   * @returns Promise resolving when written
+   */
+  write(
+    path: string,
+    contents: string | Buffer,
+    encoding?: string
+  ): Promise<void>;
+
+  /**
+   * List files in a directory.
+   * @param path - Directory path
+   * @param recursive - Whether to list recursively
+   * @returns Promise resolving to file paths
+   */
+  list(
+    path: string,
+    recursive?: boolean
+  ): Promise<string[]>;
+
+  /**
+   * Delete a file.
+   * @param path - File path
+   * @returns Promise resolving when deleted
+   */
+  delete(path: string): Promise<void>;
 }
 ```
 
-## TokenCounterPort
+## QueuePort
 
-Token counting, budgeting, and cost estimation.
+Interface for task queuing and processing.
 
 ```typescript
-interface TokenCounterPort {
-  count(text: string, model?: string): number;
-  countMessages(messages: Message[], model?: string): number;
-  getContextWindowSize(model: string): number;
-  estimateCost(inputTokens: number, outputTokens: number, model: string): number;
-  truncate(text: string, maxTokens: number, model?: string): string;
+interface QueuePort {
+  /**
+   * Enqueue a task.
+   * @param queueName - Queue identifier
+   * @param task - Task to enqueue
+   * @returns Promise resolving to task ID
+   */
+  enqueue(
+    queueName: string,
+    task: QueuedTask
+  ): Promise<string>;
+
+  /**
+   * Dequeue a task for processing.
+   * @param queueName - Queue identifier
+   * @returns Promise resolving to next task or null
+   */
+  dequeue(queueName: string): Promise<QueuedTask | null>;
+
+  /**
+   * Acknowledge (mark as completed) a task.
+   * @param queueName - Queue identifier
+   * @param taskId - Task ID to acknowledge
+   * @returns Promise resolving when acknowledged
+   */
+  ack(
+    queueName: string,
+    taskId: string
+  ): Promise<void>;
+}
+
+interface QueuedTask {
+  id: string;
+  data: Record<string, any>;
+  priority?: number;
+  retries?: number;
 }
 ```
 
-## LearningPort
+## VoicePort
 
-Cross-session learning with user profiles, memories, and shared knowledge.
+Interface for speech-to-text and text-to-speech operations.
 
 ```typescript
-interface LearningPort {
-  getProfile(userId: string): Promise<UserProfile | null>;
-  updateProfile(userId: string, updates: Partial<Omit<UserProfile, "userId" | "createdAt">>): Promise<UserProfile>;
-  deleteProfile(userId: string): Promise<void>;
-  addMemory(userId: string, memory: Omit<UserMemoryInput, "id" | "createdAt">): Promise<UserMemory>;
-  getMemories(userId: string, options?: { tags?: string[]; limit?: number; since?: number }): Promise<UserMemory[]>;
-  deleteMemory(userId: string, memoryId: string): Promise<void>;
-  clearMemories(userId: string): Promise<void>;
-  addKnowledge(knowledge: Omit<SharedKnowledgeInput, "id" | "createdAt" | "usageCount">): Promise<SharedKnowledge>;
-  queryKnowledge(query: string, options?: { category?: string; limit?: number }): Promise<SharedKnowledge[]>;
-  incrementKnowledgeUsage(knowledgeId: string): Promise<void>;
-  deleteKnowledge(knowledgeId: string): Promise<void>;
+interface VoicePort {
+  /**
+   * Transcribe audio to text.
+   * @param audio - Audio buffer or file path
+   * @param language - Optional language code (e.g., 'en', 'es')
+   * @returns Promise resolving to transcribed text
+   */
+  transcribe(
+    audio: Buffer | string,
+    language?: string
+  ): Promise<string>;
+
+  /**
+   * Generate speech from text.
+   * @param text - Text to synthesize
+   * @param voice - Voice identifier
+   * @returns Promise resolving to audio buffer
+   */
+  speak(
+    text: string,
+    voice?: string
+  ): Promise<Buffer>;
 }
 ```
 
-## ValidationPort
+## FrameExtractorPort
 
-Engine-agnostic validation contract.
+Interface for extracting frames from video/image sources.
 
 ```typescript
-interface ValidationPort {
-  validate<T>(schema: unknown, data: unknown): ValidationResult<T>;
-  validateOrThrow<T>(schema: unknown, data: unknown): T;
+interface FrameExtractorPort {
+  /**
+   * Extract frames from a video or image source.
+   * @param source - Video file path, URL, or stream
+   * @param options - Extraction options
+   * @returns Promise resolving to array of frames
+   */
+  extractFrames(
+    source: string | Buffer,
+    options?: FrameExtractionOptions
+  ): Promise<Frame[]>;
 }
 
-interface ValidationResult<T = unknown> {
-  readonly success: boolean;
-  readonly data?: T;
-  readonly error?: string;
+interface Frame {
+  data: Buffer;
+  timestamp: number;
+  format: 'png' | 'jpeg';
+}
+
+interface FrameExtractionOptions {
+  interval?: number;
+  maxFrames?: number;
+  width?: number;
+  height?: number;
 }
 ```
 
-## TracingPort
+## CachePort
 
-Distributed tracing contract.
+Interface for caching operations.
 
 ```typescript
-interface TracingPort {
-  startSpan(name: string, parentSpan?: Span): Span;
+interface CachePort {
+  /**
+   * Get a value from cache.
+   * @param key - Cache key
+   * @returns Promise resolving to cached value or null
+   */
+  get(key: string): Promise<any | null>;
+
+  /**
+   * Set a value in cache.
+   * @param key - Cache key
+   * @param value - Value to cache
+   * @param ttl - Time-to-live in seconds (optional)
+   * @returns Promise resolving when set
+   */
+  set(
+    key: string,
+    value: any,
+    ttl?: number
+  ): Promise<void>;
+
+  /**
+   * Delete a cache entry.
+   * @param key - Cache key
+   * @returns Promise resolving when deleted
+   */
+  delete(key: string): Promise<void>;
+
+  /**
+   * Clear all cache entries.
+   * @returns Promise resolving when cleared
+   */
+  clear(): Promise<void>;
+}
+```
+
+## TelemetryPort
+
+Interface for observability (tracing, metrics, logging).
+
+```typescript
+interface TelemetryPort {
+  /**
+   * Start a distributed trace span.
+   * @param name - Span name
+   * @param attributes - Optional span attributes
+   * @returns Span object for tracking
+   */
+  span(
+    name: string,
+    attributes?: Record<string, any>
+  ): Span;
+
+  /**
+   * Record an event.
+   * @param name - Event name
+   * @param attributes - Event attributes
+   * @returns Promise resolving when recorded
+   */
+  event(
+    name: string,
+    attributes?: Record<string, any>
+  ): Promise<void>;
+
+  /**
+   * Flush pending telemetry data.
+   * @returns Promise resolving when flushed
+   */
+  flush(): Promise<void>;
 }
 
 interface Span {
-  readonly traceId: string;
-  readonly spanId: string;
-  readonly name: string;
-  setAttribute(key: string, value: string | number | boolean): void;
-  setStatus(status: "ok" | "error", message?: string): void;
+  addAttribute(key: string, value: any): void;
+  addEvent(name: string, attributes?: Record<string, any>): void;
   end(): void;
 }
 ```
 
-## MetricsPort
+## Summary
 
-Metrics collection contract.
+| Port | Purpose | Key Methods |
+|------|---------|------------|
+| **LLMPort** | Language model interactions | `generate()` |
+| **MemoryPort** | Conversation history | `save()`, `load()`, `search()`, `delete()` |
+| **VectorStorePort** | Vector similarity search | `upsert()`, `query()`, `delete()` |
+| **EmbeddingPort** | Text embeddings | `embed()` |
+| **FilesystemPort** | File operations | `read()`, `write()`, `list()`, `delete()` |
+| **QueuePort** | Task queuing | `enqueue()`, `dequeue()`, `ack()` |
+| **VoicePort** | Speech processing | `transcribe()`, `speak()` |
+| **FrameExtractorPort** | Video frame extraction | `extractFrames()` |
+| **CachePort** | Data caching | `get()`, `set()`, `delete()`, `clear()` |
+| **TelemetryPort** | Observability | `span()`, `event()`, `flush()` |
 
-```typescript
-interface MetricsPort {
-  incrementCounter(name: string, value?: number, labels?: Record<string, string>): void;
-  recordHistogram(name: string, value: number, labels?: Record<string, string>): void;
-  recordGauge(name: string, value: number, labels?: Record<string, string>): void;
-}
-```
-
-## LoggingPort
-
-Structured logging contract.
-
-```typescript
-type LogLevel = "debug" | "info" | "warn" | "error";
-
-interface LoggingPort {
-  log(level: LogLevel, message: string, context?: Record<string, unknown>): void;
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, context?: Record<string, unknown>): void;
-}
-
-interface LogEntry {
-  readonly level: LogLevel;
-  readonly message: string;
-  readonly timestamp: number;
-  readonly context?: Record<string, unknown>;
-}
-```
-
-## ConsensusPort
-
-Strategy for evaluating fork results in AgentGraph.
-
-```typescript
-interface ConsensusPort {
-  evaluate(results: Array<{ id: string; output: string }>): Promise<ConsensusResult>;
-}
-
-interface ConsensusResult {
-  winnerId: string;
-  winnerOutput: string;
-  scores?: Record<string, number>;
-  merged?: string;
-  reasoning?: string;
-}
-```
-
-## PluginPort
-
-Plugin contracts and lifecycle hooks.
-
-```typescript
-interface Plugin {
-  readonly name: string;
-  readonly version?: string;
-  readonly hooks?: PluginHooks;
-  readonly tools?: Record<string, Tool>;
-  setup?(ctx: PluginSetupContext): Promise<void> | void;
-  dispose?(): Promise<void> | void;
-}
-
-interface PluginHooks {
-  beforeRun?(ctx: PluginContext, params: BeforeRunParams): Promise<BeforeRunResult | void>;
-  afterRun?(ctx: PluginContext, params: AfterRunParams): Promise<void>;
-  beforeTool?(ctx: PluginContext, params: BeforeToolParams): Promise<BeforeToolResult | void>;
-  afterTool?(ctx: PluginContext, params: AfterToolParams): Promise<void>;
-  beforeStep?(ctx: PluginContext, params: BeforeStepParams): Promise<BeforeStepResult | void>;
-  afterStep?(ctx: PluginContext, params: AfterStepParams): Promise<void>;
-  onError?(ctx: PluginContext, params: OnErrorParams): Promise<OnErrorResult | void>;
-}
-
-interface PluginContext {
-  readonly sessionId: string;
-  readonly agentName?: string;
-  readonly config: Readonly<{ instructions: string; maxSteps: number }>;
-  readonly filesystem: FilesystemPort;
-  readonly memory: MemoryPort;
-  readonly learning?: LearningPort;
-  readonly toolNames: readonly string[];
-  readonly runMetadata?: PluginRunMetadata;
-}
-```
