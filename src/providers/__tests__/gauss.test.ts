@@ -3,6 +3,11 @@ import {
   gauss,
   gaussAgentRun,
   gaussAgentStream,
+  gaussFallback,
+  createNativeMiddlewareChain,
+  nativeMiddleware,
+  nativeBenchmark,
+  nativeBenchmarkCompare,
   countTokens,
   countTokensForModel,
   cosineSimilarity,
@@ -39,7 +44,6 @@ const mockNapi = {
     };
   }),
   agentStreamWithToolExecutor: vi.fn(async (_name: string, _handle: number, _tools: any[], _msgs: any[], _opts: any, streamCallback: (s: string) => void, _toolExecutor: any) => {
-    // Simulate streaming events
     streamCallback(JSON.stringify({ type: "step_start", step: 0 }));
     streamCallback(JSON.stringify({ type: "text_delta", step: 0, delta: "Hello " }));
     streamCallback(JSON.stringify({ type: "text_delta", step: 0, delta: "World!" }));
@@ -49,6 +53,11 @@ const mockNapi = {
   countTokens: vi.fn(() => 5),
   countTokensForModel: vi.fn(() => 6),
   cosineSimilarity: vi.fn(() => 0.95),
+  createFallbackProvider: vi.fn(() => 99),
+  createMiddlewareChain: vi.fn(() => 77),
+  middlewareUseLogging: vi.fn(),
+  middlewareUseCaching: vi.fn(),
+  destroyMiddlewareChain: vi.fn(),
 };
 
 describe("GaussProvider", () => {
@@ -259,6 +268,106 @@ describe("GaussProvider", () => {
       const model = gauss("openai", "gpt-4o", { apiKey: "test-key" });
       model.destroy();
       expect(mockNapi.destroyProvider).toHaveBeenCalledWith(42);
+    });
+  });
+
+  describe("gaussFallback()", () => {
+    it("throws if no providers given", () => {
+      expect(() => gaussFallback({ providers: [] })).toThrow("at least one provider");
+    });
+
+    it("returns single provider unchanged", () => {
+      const model = gauss("openai", "gpt-4o", { apiKey: "test-key" });
+      const fallback = gaussFallback({ providers: [model] });
+      expect(fallback).toBe(model);
+    });
+
+    it("creates fallback chain via NAPI", () => {
+      const m1 = gauss("openai", "gpt-4o", { apiKey: "k1" });
+      const m2 = gauss("anthropic", "claude-sonnet-4-20250514", { apiKey: "k2" });
+      const fallback = gaussFallback({ providers: [m1, m2] });
+
+      expect(mockNapi.createFallbackProvider).toHaveBeenCalledWith([42, 42]);
+      expect(fallback.provider).toBe("gauss-fallback");
+      expect(fallback.modelId).toContain("fallback:");
+    });
+  });
+
+  describe("createNativeMiddlewareChain()", () => {
+    it("creates chain with logging", () => {
+      const chain = createNativeMiddlewareChain({ logging: true });
+      expect(mockNapi.createMiddlewareChain).toHaveBeenCalled();
+      expect(mockNapi.middlewareUseLogging).toHaveBeenCalledWith(77);
+      expect(chain.handle).toBe(77);
+      chain.destroy();
+      expect(mockNapi.destroyMiddlewareChain).toHaveBeenCalledWith(77);
+    });
+
+    it("creates chain with caching", () => {
+      const chain = createNativeMiddlewareChain({ caching: { ttlMs: 5000 } });
+      expect(mockNapi.middlewareUseCaching).toHaveBeenCalledWith(77, 5000);
+      chain.destroy();
+    });
+
+    it("creates chain with both logging and caching", () => {
+      mockNapi.middlewareUseLogging.mockClear();
+      mockNapi.middlewareUseCaching.mockClear();
+      const chain = createNativeMiddlewareChain({ logging: true, caching: { ttlMs: 10000 } });
+      expect(mockNapi.middlewareUseLogging).toHaveBeenCalled();
+      expect(mockNapi.middlewareUseCaching).toHaveBeenCalledWith(77, 10000);
+      chain.destroy();
+    });
+  });
+
+  describe("nativeMiddleware() decorator", () => {
+    it("returns a decorator with name, initialize, and destroy", () => {
+      const decorator = nativeMiddleware({ logging: true });
+      expect(decorator.name).toBe("native-middleware");
+
+      const ctx = decorator.initialize!();
+      expect(ctx.middlewareChainHandle).toBe(77);
+
+      decorator.destroy!(ctx);
+      expect(mockNapi.destroyMiddlewareChain).toHaveBeenCalledWith(77);
+    });
+  });
+
+  describe("nativeBenchmark()", () => {
+    it("benchmarks a sync function", () => {
+      let counter = 0;
+      const result = nativeBenchmark("increment", 100, () => { counter++; });
+      expect(result.name).toBe("increment");
+      expect(result.iterations).toBe(100);
+      expect(result.totalMs).toBeGreaterThan(0);
+      expect(result.avgMs).toBeGreaterThan(0);
+      expect(result.opsPerSec).toBeGreaterThan(0);
+      // 100 iterations + 10 warmup
+      expect(counter).toBe(110);
+    });
+  });
+
+  describe("nativeBenchmarkCompare()", () => {
+    it("compares native vs JS and returns speedup", () => {
+      const result = nativeBenchmarkCompare(
+        "cos-sim",
+        50,
+        () => cosineSimilarity([1, 0], [0, 1]),
+        () => {
+          // JS fallback
+          const a = [1, 0], b = [0, 1];
+          let dot = 0, na = 0, nb = 0;
+          for (let i = 0; i < a.length; i++) {
+            dot += a[i]! * b[i]!;
+            na += a[i]! * a[i]!;
+            nb += b[i]! * b[i]!;
+          }
+          return dot / (Math.sqrt(na) * Math.sqrt(nb));
+        },
+      );
+      expect(result.native.name).toBe("cos-sim (native)");
+      expect(result.js.name).toBe("cos-sim (js)");
+      expect(typeof result.speedup).toBe("number");
+      expect(result.speedup).toBeGreaterThan(0);
     });
   });
 });

@@ -105,6 +105,13 @@ interface NapiModule {
     outputTokens: number;
     structuredOutput?: unknown;
   }>;
+  // Fallback provider
+  createFallbackProvider(providerHandles: number[]): number;
+  // Middleware
+  createMiddlewareChain(): number;
+  middlewareUseLogging(handle: number): void;
+  middlewareUseCaching(handle: number, ttlMs: number): void;
+  destroyMiddlewareChain(handle: number): void;
 }
 
 let _napi: NapiModule | null = null;
@@ -219,6 +226,17 @@ class GaussLanguageModel implements LanguageModel {
     this.provider = `gauss-${type}`;
     this.modelId = model;
     this.handle = createHandle(type, model, options);
+  }
+
+  /** Create from an existing NAPI handle (for fallback chains). */
+  static fromHandle(handle: number, provider: string, modelId: string): GaussLanguageModel {
+    const instance = Object.create(GaussLanguageModel.prototype) as GaussLanguageModel;
+    (instance as any).specificationVersion = "v1";
+    (instance as any).provider = provider;
+    (instance as any).modelId = modelId;
+    (instance as any).defaultObjectGenerationMode = "json";
+    (instance as any).handle = handle;
+    return instance;
   }
 
   /** Get the raw NAPI provider handle (for advanced usage). */
@@ -711,4 +729,199 @@ export function isNativeAvailable(): boolean {
 /** Get gauss-core version string. */
 export function nativeVersion(): string {
   return getNapi().version();
+}
+
+// ---------------------------------------------------------------------------
+// Fallback Provider Chain (M6.3)
+// ---------------------------------------------------------------------------
+
+export interface FallbackProviderOptions {
+  /** List of providers in priority order. First available wins. */
+  providers: GaussLanguageModel[];
+}
+
+/**
+ * Create a fallback provider chain.
+ * Tries each provider in order; falls back to next on failure.
+ *
+ * @example
+ * ```ts
+ * const model = gaussFallback({
+ *   providers: [
+ *     gauss('openai', 'gpt-4o'),
+ *     gauss('anthropic', 'claude-sonnet-4-20250514'),
+ *     gauss('groq', 'llama-3.1-70b'),
+ *   ]
+ * })
+ * ```
+ */
+export function gaussFallback(
+  options: FallbackProviderOptions,
+): GaussLanguageModel {
+  if (options.providers.length === 0) {
+    throw new Error("gaussFallback requires at least one provider");
+  }
+  if (options.providers.length === 1) {
+    return options.providers[0]!;
+  }
+
+  const napi = getNapi();
+  const handles = options.providers.map((p) => p.getHandle());
+  const fallbackHandle = napi.createFallbackProvider(handles);
+
+  const modelId = `fallback:${options.providers.map((p) => p.modelId).join(",")}`;
+  return GaussLanguageModel.fromHandle(fallbackHandle, "gauss-fallback", modelId);
+}
+
+// ---------------------------------------------------------------------------
+// Native Middleware Bridge (M8)
+// ---------------------------------------------------------------------------
+
+/** Built-in native middleware types available in Rust. */
+export type NativeMiddlewareType = "logging" | "caching";
+
+export interface NativeMiddlewareConfig {
+  logging?: boolean;
+  caching?: { ttlMs: number };
+}
+
+/** Handle to a native middleware chain. */
+export interface NativeMiddlewareChain {
+  readonly handle: number;
+  destroy(): void;
+}
+
+/**
+ * Create a native Rust middleware chain.
+ *
+ * @example
+ * ```ts
+ * const chain = createNativeMiddlewareChain({
+ *   logging: true,
+ *   caching: { ttlMs: 60_000 },
+ * })
+ * // Use chain.handle with gaussAgentRun options
+ * ```
+ */
+export function createNativeMiddlewareChain(
+  config: NativeMiddlewareConfig,
+): NativeMiddlewareChain {
+  const napi = getNapi();
+  const handle = napi.createMiddlewareChain();
+
+  if (config.logging) {
+    napi.middlewareUseLogging(handle);
+  }
+  if (config.caching) {
+    napi.middlewareUseCaching(handle, config.caching.ttlMs);
+  }
+
+  return {
+    handle,
+    destroy() {
+      napi.destroyMiddlewareChain(handle);
+    },
+  };
+}
+
+/**
+ * Create a Gauss Decorator that wraps native Rust middleware.
+ * Maps the Decorator lifecycle hooks to Rust's Middleware trait.
+ *
+ * @example
+ * ```ts
+ * import { Agent } from 'gauss-ai'
+ * import { gauss, nativeMiddleware } from 'gauss-ai/providers'
+ *
+ * const agent = Agent({ model: gauss('openai', 'gpt-4o'), instructions: '...' })
+ *   .with(nativeMiddleware({ logging: true, caching: { ttlMs: 60_000 } }))
+ * ```
+ */
+export function nativeMiddleware(config: NativeMiddlewareConfig) {
+  return {
+    name: "native-middleware" as const,
+    initialize: () => {
+      const chain = createNativeMiddlewareChain(config);
+      return { middlewareChainHandle: chain.handle, _chain: chain };
+    },
+    destroy: (_ctx: { middlewareChainHandle: number; _chain: NativeMiddlewareChain }) => {
+      _ctx._chain.destroy();
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Performance Module (M10)
+// ---------------------------------------------------------------------------
+
+export interface BenchmarkResult {
+  /** Operation name */
+  name: string;
+  /** Number of iterations */
+  iterations: number;
+  /** Total time in ms */
+  totalMs: number;
+  /** Average time per iteration in ms */
+  avgMs: number;
+  /** Operations per second */
+  opsPerSec: number;
+}
+
+/**
+ * Benchmark a native operation.
+ *
+ * @example
+ * ```ts
+ * const result = nativeBenchmark('tokenCount', 1000, () => countTokens('Hello world'))
+ * console.log(`${result.opsPerSec.toFixed(0)} ops/sec`)
+ * ```
+ */
+export function nativeBenchmark(
+  name: string,
+  iterations: number,
+  fn: () => unknown,
+): BenchmarkResult {
+  // Warmup
+  for (let i = 0; i < Math.min(10, iterations); i++) fn();
+
+  const start = performance.now();
+  for (let i = 0; i < iterations; i++) fn();
+  const totalMs = performance.now() - start;
+
+  return {
+    name,
+    iterations,
+    totalMs,
+    avgMs: totalMs / iterations,
+    opsPerSec: (iterations / totalMs) * 1000,
+  };
+}
+
+/**
+ * Benchmark native vs JS implementations of an operation.
+ *
+ * @example
+ * ```ts
+ * const { native, js, speedup } = nativeBenchmarkCompare(
+ *   'cosineSimilarity',
+ *   10_000,
+ *   () => cosineSimilarity([1,0,1], [0,1,1]),  // native
+ *   () => jsCosineSimilarity([1,0,1], [0,1,1]), // JS fallback
+ * )
+ * console.log(`Native is ${speedup.toFixed(1)}x faster`)
+ * ```
+ */
+export function nativeBenchmarkCompare(
+  name: string,
+  iterations: number,
+  nativeFn: () => unknown,
+  jsFn: () => unknown,
+): { native: BenchmarkResult; js: BenchmarkResult; speedup: number } {
+  const native = nativeBenchmark(`${name} (native)`, iterations, nativeFn);
+  const js = nativeBenchmark(`${name} (js)`, iterations, jsFn);
+  return {
+    native,
+    js,
+    speedup: js.avgMs / native.avgMs,
+  };
 }
