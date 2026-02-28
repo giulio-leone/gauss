@@ -2,14 +2,12 @@
 // gauss — Clean Public API Surface
 // =============================================================================
 //
-// Usage:
-//   import { agent, graph, rag } from 'gauss'
+// Zero-config quickstart:
+//   import gauss from 'gauss'
+//   const answer = await gauss('Explain quantum computing')
 //
-//   const a = agent({ model, instructions: 'You are helpful.' })
-//     .withMemory(memory)
-//     .build()
-//
-//   const result = await a.run('Hello')
+// Power user:
+//   import { agent, graph, rag, team, workflow } from 'gauss'
 //
 // =============================================================================
 
@@ -20,6 +18,114 @@ import { AgentBuilder } from "./agent/agent-builder.js";
 import { AgentGraph } from "./graph/agent-graph.js";
 import { RAGPipeline } from "./rag/pipeline.js";
 import type { RAGPipelineConfig } from "./rag/pipeline.js";
+
+// =============================================================================
+// Smart model detection from environment
+// =============================================================================
+
+interface QuickOptions {
+  model?: string | LanguageModel;
+  instructions?: string;
+  temperature?: number;
+}
+
+const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defaultModel: string }> = [
+  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-4o" },
+  { env: "ANTHROPIC_API_KEY", pkg: "@ai-sdk/anthropic", factory: "createAnthropic", defaultModel: "claude-sonnet-4-20250514" },
+  { env: "GOOGLE_GENERATIVE_AI_API_KEY", pkg: "@ai-sdk/google", factory: "createGoogleGenerativeAI", defaultModel: "gemini-2.0-flash" },
+  { env: "GROQ_API_KEY", pkg: "@ai-sdk/groq", factory: "createGroq", defaultModel: "llama-3.3-70b-versatile" },
+  { env: "MISTRAL_API_KEY", pkg: "@ai-sdk/mistral", factory: "createMistral", defaultModel: "mistral-large-latest" },
+];
+
+async function detectModel(): Promise<LanguageModel> {
+  for (const { env, pkg, factory, defaultModel } of ENV_PROVIDER_MAP) {
+    if (process.env[env]) {
+      try {
+        const mod = await import(pkg);
+        const create = mod[factory] ?? mod.default;
+        if (typeof create === "function") {
+          return create()(defaultModel) as LanguageModel;
+        }
+      } catch {
+        // Package not installed, try next
+      }
+    }
+  }
+  throw new GaussError(
+    "No AI provider detected",
+    "Set one of these environment variables: " +
+      ENV_PROVIDER_MAP.map((p) => p.env).join(", ") +
+      "\n\nOr provide a model explicitly:\n" +
+      "  import { openai } from 'gauss/providers'\n" +
+      "  const answer = await gauss('Hello', { model: openai('gpt-4o') })"
+  );
+}
+
+// =============================================================================
+// GaussError — Actionable error messages
+// =============================================================================
+
+export class GaussError extends Error {
+  readonly suggestion: string;
+
+  constructor(message: string, suggestion: string) {
+    super(`${message}\n\n💡 ${suggestion}`);
+    this.name = "GaussError";
+    this.suggestion = suggestion;
+  }
+}
+
+// =============================================================================
+// gauss() — Zero-config one-liner
+// =============================================================================
+
+/**
+ * The simplest way to use Gauss. Auto-detects model from environment.
+ *
+ * @example
+ * ```ts
+ * // One-liner (auto-detects OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+ * const answer = await gauss('Explain quantum computing')
+ *
+ * // With options
+ * const answer = await gauss('Translate to Italian', {
+ *   model: 'gpt-4o',
+ *   instructions: 'You are a translator.',
+ *   temperature: 0.3,
+ * })
+ * ```
+ */
+async function gauss(prompt: string, options?: QuickOptions): Promise<string> {
+  let model: LanguageModel;
+
+  if (options?.model) {
+    if (typeof options.model === "string") {
+      // String shorthand: "gpt-4o" → use detected provider
+      model = await detectModel();
+    } else {
+      model = options.model;
+    }
+  } else {
+    model = await detectModel();
+  }
+
+  const { generateText } = await import("ai");
+  const result = await (generateText as any)({
+    model,
+    prompt,
+    system: options?.instructions,
+    temperature: options?.temperature,
+  });
+
+  return result.text;
+}
+
+// Attach named exports as properties for `import gauss from 'gauss'` usage
+gauss.agent = agent;
+gauss.graph = graph;
+gauss.rag = rag;
+
+export default gauss;
 
 // =============================================================================
 // agent() — Create an agent via builder pattern
