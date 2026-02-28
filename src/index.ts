@@ -765,3 +765,21 @@ export { AbstractBuilder } from "./utils/abstract-builder.js";
 
 export { DocGenerator } from "./docs/doc-generator.js";
 export type { DocGeneratorOptions, DocPage } from "./docs/doc-generator.js";
+
+// ─── Agent Debugger ─────────────────────────────────────────────────────────
+
+export type {
+  AgentDebuggerPort,
+  DebugSession,
+  DebugCheckpoint,
+  DebugState,
+  BreakpointCondition,
+  BreakpointHit,
+  DebugDiff,
+  DebugSessionSummary,
+} from "./ports/agent-debugger.port.js";
+export {
+  DebugSessionImpl,
+  InMemoryAgentDebuggerAdapter,
+  createDebugMiddleware,
+} from "./adapters/agent-debugger/index.js";

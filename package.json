@@ -1,6 +1,6 @@
 {
-  "name": "@gauss/flow",
-  "version": "3.5.0",
+  "name": "gauss",
+  "version": "3.6.0",
   "description": "Gauss — The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
   "license": "MIT",
   "type": "module",
