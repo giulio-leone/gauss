@@ -695,6 +695,17 @@ export type {
   MultimodalResult,
 } from "./domain/multimodal.js";
 
+export { VideoProcessor, DefaultFrameExtractor, videoProcessor } from "./domain/video-processor.js";
+export type {
+  VideoSource,
+  VideoInput,
+  VideoFrame,
+  FrameExtractionOptions,
+  VideoAnalysisResult,
+  AudioExtractionResult,
+  FrameExtractorPort,
+} from "./domain/video-processor.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,

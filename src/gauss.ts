@@ -110,3 +110,10 @@ export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js"
 
 export { multimodal } from "./domain/multimodal.js";
 export type { ImageInput, MultimodalMessage, MultimodalResult } from "./domain/multimodal.js";
+
+// =============================================================================
+// videoProcessor() — Create a video analysis pipeline
+// =============================================================================
+
+export { videoProcessor } from "./domain/video-processor.js";
+export type { VideoInput, VideoFrame, VideoAnalysisResult } from "./domain/video-processor.js";
