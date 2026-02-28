@@ -132,7 +132,7 @@ export class SemanticWebSearchPlugin extends BasePlugin {
     this.reranker = options.reranker ?? new DefaultReRankingAdapter();
     this.telemetry = options.telemetry;
     this.costTracker = options.costTracker;
-    this.costModel = options.costModel ?? "gpt-4o-mini";
+    this.costModel = options.costModel ?? "gpt-5.2-mini";
     this.emitTelemetry = options.emitTelemetry ?? true;
     this.cache = options.cache ?? new ToolCache();
     this.circuitBreaker = options.circuitBreaker ?? new CircuitBreaker();

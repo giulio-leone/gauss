@@ -16,12 +16,12 @@ export const SUPPORTED_PROVIDERS = [
 export type ProviderName = (typeof SUPPORTED_PROVIDERS)[number];
 
 const DEFAULT_MODELS: Record<ProviderName, string> = {
-  openai: "gpt-4o",
+  openai: "gpt-5.2",
   anthropic: "claude-sonnet-4-20250514",
-  google: "gemini-2.0-flash",
+  google: "gemini-2.5-flash-preview-05-20",
   groq: "llama-3.3-70b-versatile",
   mistral: "mistral-large-latest",
-  openrouter: "openai/gpt-4o",
+  openrouter: "openai/gpt-5.2",
 };
 
 export function isValidProvider(name: string): name is ProviderName {

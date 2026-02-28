@@ -111,8 +111,8 @@ describe("CLI Config", () => {
 
   it("setDefaultModel and getDefaultModelFromConfig round-trip", async () => {
     const { setDefaultModel, getDefaultModelFromConfig } = await import("../config.js");
-    setDefaultModel("gpt-4o-mini");
-    expect(getDefaultModelFromConfig()).toBe("gpt-4o-mini");
+    setDefaultModel("gpt-5.2-mini");
+    expect(getDefaultModelFromConfig()).toBe("gpt-5.2-mini");
   });
 
   it("loadConfig preserves defaultProvider and defaultModel", async () => {

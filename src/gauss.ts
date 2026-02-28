@@ -30,9 +30,9 @@ interface QuickOptions {
 }
 
 const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defaultModel: string }> = [
-  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-4o" },
+  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-5.2" },
   { env: "ANTHROPIC_API_KEY", pkg: "@ai-sdk/anthropic", factory: "createAnthropic", defaultModel: "claude-sonnet-4-20250514" },
-  { env: "GOOGLE_GENERATIVE_AI_API_KEY", pkg: "@ai-sdk/google", factory: "createGoogleGenerativeAI", defaultModel: "gemini-2.0-flash" },
+  { env: "GOOGLE_GENERATIVE_AI_API_KEY", pkg: "@ai-sdk/google", factory: "createGoogleGenerativeAI", defaultModel: "gemini-2.5-flash-preview-05-20" },
   { env: "GROQ_API_KEY", pkg: "@ai-sdk/groq", factory: "createGroq", defaultModel: "llama-3.3-70b-versatile" },
   { env: "MISTRAL_API_KEY", pkg: "@ai-sdk/mistral", factory: "createMistral", defaultModel: "mistral-large-latest" },
 ];
@@ -57,7 +57,7 @@ async function detectModel(): Promise<LanguageModel> {
       ENV_PROVIDER_MAP.map((p) => p.env).join(", ") +
       "\n\nOr provide a model explicitly:\n" +
       "  import { openai } from 'gauss/providers'\n" +
-      "  const answer = await gauss('Hello', { model: openai('gpt-4o') })"
+      "  const answer = await gauss('Hello', { model: openai('gpt-5.2') })"
   );
 }
 
@@ -89,7 +89,7 @@ export class GaussError extends Error {
  *
  * // With options
  * const answer = await gauss('Translate to Italian', {
- *   model: 'gpt-4o',
+ *   model: 'gpt-5.2',
  *   instructions: 'You are a translator.',
  *   temperature: 0.3,
  * })
@@ -100,7 +100,7 @@ async function gauss(prompt: string, options?: QuickOptions): Promise<string> {
 
   if (options?.model) {
     if (typeof options.model === "string") {
-      // String shorthand: "gpt-4o" → use detected provider
+      // String shorthand: "gpt-5.2" → use detected provider
       model = await detectModel();
     } else {
       model = options.model;
@@ -137,7 +137,7 @@ export default gauss;
  * @example
  * ```ts
  * const myAgent = agent({
- *   model: openai('gpt-4o'),
+ *   model: openai('gpt-5.2'),
  *   instructions: 'You are a helpful assistant.',
  * })
  *   .withPlanning()

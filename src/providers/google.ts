@@ -17,7 +17,7 @@ export type GoogleProviderOptions = GoogleGenerativeAIProviderSettings;
  * import { google } from 'gauss/providers'
  * import { agent } from 'gauss'
  *
- * const a = agent({ model: google('gemini-2.0-flash'), instructions: '...' }).build()
+ * const a = agent({ model: google('gemini-2.5-flash-preview-05-20'), instructions: '...' }).build()
  * ```
  */
 export function google(modelId: string, options?: GoogleProviderOptions) {

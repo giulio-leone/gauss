@@ -44,7 +44,7 @@ ${bold("Commands:")}
 
 ${bold("Options:")}
   --provider  AI provider (${SUPPORTED_PROVIDERS.join(", ")})
-  --model     Model ID override (e.g. gpt-4o-mini, claude-sonnet-4-20250514)
+  --model     Model ID override (e.g. gpt-5.2-mini, claude-sonnet-4-20250514)
   --api-key   API key (overrides config file and env vars)
   --format    Output format for graph command (ascii, mermaid)
   --yolo      Skip confirmations for tool execution (bash, file writes)

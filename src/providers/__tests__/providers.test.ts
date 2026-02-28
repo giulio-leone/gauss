@@ -27,9 +27,9 @@ describe("gauss/providers", () => {
 
   it("openai() returns a LanguageModel-compatible object", async () => {
     const { openai } = await import("../openai.js");
-    const model = openai("gpt-4o");
+    const model = openai("gpt-5.2");
     expect(model).toBeDefined();
-    expect(model.modelId).toBe("gpt-4o");
+    expect(model.modelId).toBe("gpt-5.2");
     expect(model.provider).toContain("openai");
   });
 
@@ -43,9 +43,9 @@ describe("gauss/providers", () => {
 
   it("google() returns a LanguageModel-compatible object", async () => {
     const { google } = await import("../google.js");
-    const model = google("gemini-2.0-flash");
+    const model = google("gemini-2.5-flash-preview-05-20");
     expect(model).toBeDefined();
-    expect(model.modelId).toBe("gemini-2.0-flash");
+    expect(model.modelId).toBe("gemini-2.5-flash-preview-05-20");
     expect(model.provider).toContain("google");
   });
 

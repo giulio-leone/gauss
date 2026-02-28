@@ -26,7 +26,7 @@ export class GaussServer {
       port: options?.port ?? 3456,
       apiKey: options?.apiKey ?? "",
       defaultProvider: options?.defaultProvider ?? "openai",
-      defaultModel: options?.defaultModel ?? "gpt-4o",
+      defaultModel: options?.defaultModel ?? "gpt-5.2",
       cors: options?.cors ?? true,
     };
 

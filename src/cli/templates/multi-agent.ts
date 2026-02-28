@@ -11,19 +11,19 @@ import { openai } from "gauss/providers";
 
 // 1. Define specialized agents
 const researcher = agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: `You are a research analyst. Gather and summarize key facts about the given topic.
 Output a structured summary with bullet points.`,
 }).build();
 
 const writer = agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: `You are a professional writer. Take research notes and produce a polished article.
 Write clearly, use headers, and make it engaging.`,
 }).build();
 
 const editor = agent({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-5.2-mini"),
   instructions: `You are an editor. Review the article for clarity, grammar, and completeness.
 Provide the final polished version.`,
 }).build();

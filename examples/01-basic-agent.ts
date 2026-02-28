@@ -8,7 +8,7 @@
 // Usage: npx tsx examples/01-basic-agent.ts
 
 // import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-4o");
+// const model = openai("gpt-5.2");
 
 import { Agent } from "gauss";
 import type { AgentResult } from "gauss";

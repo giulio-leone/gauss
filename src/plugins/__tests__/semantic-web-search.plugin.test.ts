@@ -272,7 +272,7 @@ describe("SemanticWebSearchPlugin", () => {
         ]),
       },
       costTracker,
-      costModel: "gpt-4o-mini",
+      costModel: "gpt-5.2-mini",
       reranker: createMockReranker(),
       cache: new ToolCache(),
     });

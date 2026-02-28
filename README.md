@@ -30,7 +30,7 @@ import { agent, tool } from 'gauss'
 import { openai } from 'gauss/providers'
 
 const myAgent = agent({
-  model: openai('gpt-4o'),
+  model: openai('gpt-5.2'),
   instructions: 'You are a helpful assistant.',
   tools: [
     tool({
@@ -97,11 +97,11 @@ const { audio } = await pipeline.process(userAudioBuffer)
 import { multimodal, videoProcessor } from 'gauss'
 import { openai } from 'gauss/providers'
 
-const vision = multimodal({ model: openai('gpt-4o') })
+const vision = multimodal({ model: openai('gpt-5.2') })
 const desc = await vision.describeImage({ source: { type: 'url', url: '...' } })
 const text = await vision.extractText({ source: { type: 'url', url: '...' } })  // OCR
 
-const video = videoProcessor({ model: openai('gpt-4o') })
+const video = videoProcessor({ model: openai('gpt-5.2') })
 const analysis = await video.describeVideo({ source: { type: 'url', url: '...' }, duration: 30 })
 ```
 
@@ -111,9 +111,9 @@ const analysis = await video.describeVideo({ source: { type: 'url', url: '...' }
 import { universalProvider } from 'gauss/providers'
 
 const provider = universalProvider()
-const gpt = await provider.get('openai:gpt-4o')
+const gpt = await provider.get('openai:gpt-5.2')
 const claude = await provider.get('anthropic:claude-sonnet-4-20250514')
-const gemini = await provider.get('google:gemini-2.0-flash')
+const gemini = await provider.get('google:gemini-2.5-flash-preview-05-20')
 
 // Auto-discover installed providers
 const installed = await provider.discoverInstalled()

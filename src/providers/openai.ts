@@ -17,7 +17,7 @@ export type OpenAIProviderOptions = OpenAIProviderSettings;
  * import { openai } from 'gauss/providers'
  * import { agent } from 'gauss'
  *
- * const a = agent({ model: openai('gpt-4o'), instructions: '...' }).build()
+ * const a = agent({ model: openai('gpt-5.2'), instructions: '...' }).build()
  * ```
  */
 export function openai(modelId: string, options?: OpenAIProviderOptions) {

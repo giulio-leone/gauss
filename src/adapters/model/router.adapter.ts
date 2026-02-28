@@ -16,11 +16,11 @@ import type {
 // =============================================================================
 
 export interface ModelProviderInfo {
-  /** Unique provider identifier (e.g., "openai:gpt-4o") */
+  /** Unique provider identifier (e.g., "openai:gpt-5.2") */
   id: string;
   /** Provider name (e.g., "openai") */
   provider: string;
-  /** Model name (e.g., "gpt-4o") */
+  /** Model name (e.g., "gpt-5.2") */
   model: string;
   /** Cost per 1K input tokens */
   costPerInputKToken?: number;

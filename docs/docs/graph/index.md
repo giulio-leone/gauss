@@ -14,7 +14,7 @@ description: Multi-agent collaboration with DAG execution, forking, and consensu
 import { AgentGraph, LlmJudgeConsensus } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
-const model = openai("gpt-4o");
+const model = openai("gpt-5.2");
 
 const graph = AgentGraph.create({ maxConcurrency: 3 })
   .node("research", {
@@ -67,7 +67,7 @@ Add an agent node:
 
 ```typescript
 builder.node("analyst", {
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a data analyst.",
   maxSteps: 20,
 });

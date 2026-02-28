@@ -54,7 +54,7 @@ curl -X POST http://localhost:3456/api/run \
     "prompt": "What is AI?",
     "provider": "openai",
     "apiKey": "sk-...",
-    "model": "gpt-4o",
+    "model": "gpt-5.2",
     "instructions": "Be concise"
   }'
 ```
@@ -135,7 +135,7 @@ interface ServerOptions {
   port?: number;           // default: 3456
   apiKey?: string;         // Bearer token for auth
   defaultProvider?: string; // default: "openai"
-  defaultModel?: string;   // default: "gpt-4o"
+  defaultModel?: string;   // default: "gpt-5.2"
   cors?: boolean;          // default: true
 }
 ```

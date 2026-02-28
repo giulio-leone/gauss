@@ -14,7 +14,7 @@ vi.mock("ai", () => ({
   }),
 }));
 
-const mockModel = { modelId: "gpt-4o" } as any;
+const mockModel = { modelId: "gpt-5.2" } as any;
 
 describe("MultimodalAgent", () => {
   it("creates via factory", () => {

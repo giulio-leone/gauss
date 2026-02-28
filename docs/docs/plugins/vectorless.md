@@ -20,7 +20,7 @@ pnpm add @giulio-leone/gaussflow-vectorless
 import { Agent, createVectorlessPlugin } from "gauss";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You can extract and query knowledge from text.",
 })
   .use(createVectorlessPlugin())

@@ -15,7 +15,7 @@ import { Agent, createGuardrailsPlugin, createPiiFilter } from "gauss";
 import { z } from "zod";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a helpful assistant.",
 })
   .use(createGuardrailsPlugin({

@@ -24,7 +24,7 @@ const metrics = new InMemoryMetricsAdapter();
 const logger = new ConsoleLoggingAdapter();
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a helpful assistant.",
 })
   .use(createObservabilityPlugin({ tracer, metrics, logger }))

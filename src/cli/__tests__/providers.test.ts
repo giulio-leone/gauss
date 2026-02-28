@@ -26,16 +26,16 @@ describe("CLI Providers", () => {
   });
 
   describe("getDefaultModel", () => {
-    it("returns gpt-4o for openai", () => {
-      expect(getDefaultModel("openai")).toBe("gpt-4o");
+    it("returns gpt-5.2 for openai", () => {
+      expect(getDefaultModel("openai")).toBe("gpt-5.2");
     });
 
     it("returns claude-sonnet-4-20250514 for anthropic", () => {
       expect(getDefaultModel("anthropic")).toBe("claude-sonnet-4-20250514");
     });
 
-    it("returns gemini-2.0-flash for google", () => {
-      expect(getDefaultModel("google")).toBe("gemini-2.0-flash");
+    it("returns gemini-2.5-flash-preview-05-20 for google", () => {
+      expect(getDefaultModel("google")).toBe("gemini-2.5-flash-preview-05-20");
     });
 
     it("returns llama-3.3-70b-versatile for groq", () => {
@@ -46,8 +46,8 @@ describe("CLI Providers", () => {
       expect(getDefaultModel("mistral")).toBe("mistral-large-latest");
     });
 
-    it("returns openai/gpt-4o for openrouter", () => {
-      expect(getDefaultModel("openrouter")).toBe("openai/gpt-4o");
+    it("returns openai/gpt-5.2 for openrouter", () => {
+      expect(getDefaultModel("openrouter")).toBe("openai/gpt-5.2");
     });
   });
 

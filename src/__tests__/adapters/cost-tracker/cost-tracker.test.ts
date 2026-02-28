@@ -9,21 +9,21 @@ function usage(model: string, inputTokens: number, outputTokens: number, provide
 describe("DefaultCostTrackerAdapter", () => {
   it("records usage and returns correct estimate", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 1_000_000));
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 1_000_000));
 
     const est = tracker.getEstimate();
     expect(est.totalInputTokens).toBe(1_000_000);
     expect(est.totalOutputTokens).toBe(1_000_000);
-    // gpt-4o: $2.50/1M input + $10/1M output = $12.50
+    // gpt-5.2: $2.50/1M input + $10/1M output = $12.50
     expect(est.totalCost).toBeCloseTo(12.5);
     expect(est.currency).toBe("USD");
     expect(est.breakdown).toHaveLength(1);
-    expect(est.breakdown[0].model).toBe("gpt-4o");
+    expect(est.breakdown[0].model).toBe("gpt-5.2");
   });
 
   it("handles multiple models in breakdown", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", 500_000, 500_000));
+    tracker.recordUsage(usage("gpt-5.2", 500_000, 500_000));
     tracker.recordUsage(usage("claude-sonnet-4-20250514", 200_000, 100_000, "anthropic"));
 
     const est = tracker.getEstimate();
@@ -31,7 +31,7 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(est.totalInputTokens).toBe(700_000);
     expect(est.totalOutputTokens).toBe(600_000);
 
-    const gptBreakdown = est.breakdown.find(b => b.model === "gpt-4o")!;
+    const gptBreakdown = est.breakdown.find(b => b.model === "gpt-5.2")!;
     // 500k input = $1.25, 500k output = $5 → $6.25
     expect(gptBreakdown.cost).toBeCloseTo(6.25);
 
@@ -42,8 +42,8 @@ describe("DefaultCostTrackerAdapter", () => {
 
   it("aggregates multiple usages for the same model", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o-mini", 100_000, 50_000));
-    tracker.recordUsage(usage("gpt-4o-mini", 200_000, 100_000));
+    tracker.recordUsage(usage("gpt-5.2-mini", 100_000, 50_000));
+    tracker.recordUsage(usage("gpt-5.2-mini", 200_000, 100_000));
 
     const est = tracker.getEstimate();
     expect(est.breakdown).toHaveLength(1);
@@ -73,14 +73,14 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(tracker.isOverBudget()).toBe(false);
     expect(tracker.getSessionBudget()).toBe(1.0);
 
-    // gpt-4o: 1M input = $2.50, already over $1 budget
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 0));
+    // gpt-5.2: 1M input = $2.50, already over $1 budget
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 0));
     expect(tracker.isOverBudget()).toBe(true);
   });
 
   it("returns false for isOverBudget when no budget is set", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", 10_000_000, 10_000_000));
+    tracker.recordUsage(usage("gpt-5.2", 10_000_000, 10_000_000));
     expect(tracker.isOverBudget()).toBe(false);
     expect(tracker.getSessionBudget()).toBeNull();
   });
@@ -89,11 +89,11 @@ describe("DefaultCostTrackerAdapter", () => {
     const callback = vi.fn();
     const tracker = new DefaultCostTrackerAdapter({ budget: 0.01, onBudgetExceeded: callback });
 
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 0));
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 0));
     expect(callback).toHaveBeenCalledTimes(1);
 
     // Recording more usage should not fire again
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 0));
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 0));
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
@@ -102,7 +102,7 @@ describe("DefaultCostTrackerAdapter", () => {
     const callback = vi.fn();
     const tracker = new DefaultCostTrackerAdapter({ budget: 0.01, onBudgetExceeded: callback });
 
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 1_000_000));
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 1_000_000));
     tracker.recordUsage(usage("mystery-model", 100, 100));
     expect(callback).toHaveBeenCalledTimes(1);
     expect(tracker.unpricedModels.size).toBe(1);
@@ -117,32 +117,32 @@ describe("DefaultCostTrackerAdapter", () => {
     expect(tracker.unpricedModels.size).toBe(0);
 
     // Callback should fire again after reset
-    tracker.recordUsage(usage("gpt-4o", 1_000_000, 0));
+    tracker.recordUsage(usage("gpt-5.2", 1_000_000, 0));
     expect(callback).toHaveBeenCalledTimes(2);
     warnSpy.mockRestore();
   });
 
   it("exports usage as JSON", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    const u = usage("gpt-4o", 100, 200);
+    const u = usage("gpt-5.2", 100, 200);
     tracker.recordUsage(u);
 
     const exported = JSON.parse(tracker.exportUsage());
     expect(exported).toHaveLength(1);
-    expect(exported[0].model).toBe("gpt-4o");
+    expect(exported[0].model).toBe("gpt-5.2");
     expect(exported[0].inputTokens).toBe(100);
     expect(exported[0].outputTokens).toBe(200);
   });
 
   it("always uses USD currency", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", 1000, 1000));
+    tracker.recordUsage(usage("gpt-5.2", 1000, 1000));
     expect(tracker.getEstimate().currency).toBe("USD");
   });
 
   it("clamps negative token counts to 0", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", -500, -1000));
+    tracker.recordUsage(usage("gpt-5.2", -500, -1000));
 
     const est = tracker.getEstimate();
     expect(est.totalInputTokens).toBe(0);
@@ -152,7 +152,7 @@ describe("DefaultCostTrackerAdapter", () => {
 
   it("clamps NaN and Infinity token counts to 0", () => {
     const tracker = new DefaultCostTrackerAdapter();
-    tracker.recordUsage(usage("gpt-4o", NaN, Infinity));
+    tracker.recordUsage(usage("gpt-5.2", NaN, Infinity));
 
     const est = tracker.getEstimate();
     expect(est.totalInputTokens).toBe(0);
@@ -162,13 +162,13 @@ describe("DefaultCostTrackerAdapter", () => {
   it("calculates correct costs for all supported models", () => {
     const cases: Array<[string, number, number, number]> = [
       // [model, inputTokens, outputTokens, expectedCost]
-      ["gpt-4o",                   1_000_000, 1_000_000, 12.50],
-      ["gpt-4o-mini",              1_000_000, 1_000_000, 0.75],
+      ["gpt-5.2",                   1_000_000, 1_000_000, 12.50],
+      ["gpt-5.2-mini",              1_000_000, 1_000_000, 0.75],
       ["gpt-4-turbo",              1_000_000, 1_000_000, 40.00],
       ["claude-sonnet-4-20250514", 1_000_000, 1_000_000, 18.00],
       ["claude-3-haiku",           1_000_000, 1_000_000, 1.50],
       ["claude-opus-4-20250514",   1_000_000, 1_000_000, 90.00],
-      ["gemini-2.0-flash",         1_000_000, 1_000_000, 0.50],
+      ["gemini-2.5-flash-preview-05-20",         1_000_000, 1_000_000, 0.50],
       ["gemini-1.5-pro",           1_000_000, 1_000_000, 6.25],
       ["llama-3.1-70b",            1_000_000, 1_000_000, 1.38],
       ["mistral-large",            1_000_000, 1_000_000, 8.00],

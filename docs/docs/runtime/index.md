@@ -77,7 +77,7 @@ import { Agent } from "gauss";
 import { openai } from "@ai-sdk/openai";
 
 const agent = Agent.auto({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a helpful assistant.",
 });
 
@@ -94,7 +94,7 @@ import { Agent } from "gauss";
 import { McpServer, createStreamableHttpHandler } from "gauss/server";
 
 const agent = Agent.minimal({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a coding assistant.",
 });
 

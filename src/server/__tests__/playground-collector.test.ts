@@ -15,7 +15,7 @@ describe("PlaygroundCollector", () => {
       startTime: 1000,
       endTime: 1500,
       status: "ok",
-      attributes: { model: "gpt-4o" },
+      attributes: { model: "gpt-5.2" },
       events: [],
     });
     const traces = collector.getTraces();
@@ -27,7 +27,7 @@ describe("PlaygroundCollector", () => {
   it("records and retrieves token usage", () => {
     collector.recordTokenUsage({
       runId: "run-1",
-      model: "gpt-4o",
+      model: "gpt-5.2",
       inputTokens: 100,
       outputTokens: 50,
       totalTokens: 150,

@@ -15,7 +15,7 @@ The `UniversalProvider` is a dynamic provider factory that automatically handles
 import { universalProvider } from 'gauss/providers';
 
 // Automatically resolve provider from model identifier
-const provider = await universalProvider('openai:gpt-4o');
+const provider = await universalProvider('openai:gpt-5.2');
 const response = await provider.generate('Your prompt');
 
 // Or use the factory class
@@ -30,7 +30,7 @@ const provider = factory.get('anthropic:claude-3-opus');
 Shorthand function to get a provider instance.
 
 ```typescript
-const provider = await universalProvider('openai:gpt-4o');
+const provider = await universalProvider('openai:gpt-5.2');
 const response = await provider.generate('Hello!');
 ```
 
@@ -40,7 +40,7 @@ Get a provider instance synchronously.
 
 ```typescript
 const factory = new UniversalProvider();
-const provider = factory.get('openai:gpt-4o');
+const provider = factory.get('openai:gpt-5.2');
 ```
 
 #### `.discoverInstalled(): string[]`
@@ -68,9 +68,9 @@ const known = factory.listKnown();
 Provider identifiers follow the format: `provider:model`
 
 ```
-openai:gpt-4o
+openai:gpt-5.2
 anthropic:claude-3-opus
-google:gemini-2.0-flash
+google:gemini-2.5-flash-preview-05-20
 groq:mixtral-8x7b-32768
 ollama:llama2
 ```
@@ -79,9 +79,9 @@ ollama:llama2
 
 ### OpenAI
 ```typescript
-const provider = await universalProvider('openai:gpt-4o');
+const provider = await universalProvider('openai:gpt-5.2');
 ```
-**Models**: gpt-4o, gpt-4-turbo, gpt-3.5-turbo  
+**Models**: gpt-5.2, gpt-4-turbo, gpt-3.5-turbo  
 **Env Variable**: `OPENAI_API_KEY`
 
 ### Anthropic
@@ -93,9 +93,9 @@ const provider = await universalProvider('anthropic:claude-3-opus');
 
 ### Google (Gemini)
 ```typescript
-const provider = await universalProvider('google:gemini-2.0-flash');
+const provider = await universalProvider('google:gemini-2.5-flash-preview-05-20');
 ```
-**Models**: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash  
+**Models**: gemini-2.5-flash-preview-05-20, gemini-1.5-pro, gemini-1.5-flash  
 **Env Variable**: `GOOGLE_API_KEY`
 
 ### Mistral
@@ -197,7 +197,7 @@ const provider = await universalProvider('togetherai:meta-llama/Llama-3-70b');
 
 ### OpenRouter
 ```typescript
-const provider = await universalProvider('openrouter:openai/gpt-4o');
+const provider = await universalProvider('openrouter:openai/gpt-5.2');
 ```
 **Models**: 100+ models from various providers  
 **Env Variable**: `OPENROUTER_API_KEY`
@@ -489,7 +489,7 @@ import { BullMQAdapter } from 'gauss/adapters/queue/bullmq';
 import { S3Filesystem } from 'gauss/adapters/filesystem/s3';
 
 const gauss = new Gauss({
-  llm: await universalProvider(process.env.LLM_PROVIDER || 'openai:gpt-4o'),
+  llm: await universalProvider(process.env.LLM_PROVIDER || 'openai:gpt-5.2'),
   memory: new PostgreSQLAdapter({ connectionString: process.env.DATABASE_URL }),
   vectorStore: new PgVectorAdapter({ connectionString: process.env.DATABASE_URL }),
   cache: new RedisCache({ host: process.env.REDIS_HOST }),

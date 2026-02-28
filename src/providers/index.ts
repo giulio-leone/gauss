@@ -9,7 +9,7 @@
 //
 // Usage:
 //   import { openai } from 'gauss/providers'
-//   const myAgent = agent({ model: openai('gpt-4o'), instructions: '...' })
+//   const myAgent = agent({ model: openai('gpt-5.2'), instructions: '...' })
 //
 // =============================================================================
 

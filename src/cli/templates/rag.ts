@@ -40,7 +40,7 @@ await ragPipeline.ingest([
 
 // 4. Create RAG-powered agent
 const ragAgent = agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: `You are a documentation assistant.
 Answer questions using ONLY the provided context.
 If the context doesn't contain the answer, say so.`,

@@ -14,7 +14,7 @@ import { z } from "zod";
 // ─── Agent Setup ─────────────────────────────────────────────────────────────
 
 const apiAgent = agent({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-5.2-mini"),
   instructions: `You are an API assistant. Help users with their requests.
 Be concise and return structured JSON when appropriate.`,
   tools: {

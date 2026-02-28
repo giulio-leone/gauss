@@ -236,7 +236,7 @@ describe("GaussServer", () => {
       const body = JSON.parse(res.body);
       expect(body.version).toBe("0.1.0");
       expect(body.defaultProvider).toBe("openai");
-      expect(body.defaultModel).toBe("gpt-4o");
+      expect(body.defaultModel).toBe("gpt-5.2");
       expect(body.endpoints).toBeInstanceOf(Array);
     });
   });
@@ -298,7 +298,7 @@ describe("GaussServer", () => {
     });
 
     it("returns 400 for missing prompt", async () => {
-      const res = await request(actualPort, "POST", "/api/run", { model: "gpt-4o" });
+      const res = await request(actualPort, "POST", "/api/run", { model: "gpt-5.2" });
       expect(res.status).toBe(400);
       const body = JSON.parse(res.body);
       expect(body.error.message).toContain("prompt");
@@ -465,7 +465,7 @@ describe("GaussServer with Agent", () => {
           port: 0,
           apiKey: API_KEY,
           defaultProvider: "openai",
-          defaultModel: "gpt-4o",
+          defaultModel: "gpt-5.2",
           cors: true,
         },
         mockAgent

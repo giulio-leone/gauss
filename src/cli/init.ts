@@ -136,7 +136,7 @@ import { agent } from "gauss";
 import { openai } from "gauss/providers";
 
 const myAgent = agent({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-5.2-mini"),
   instructions: "You are a helpful assistant.",
 }).build();
 

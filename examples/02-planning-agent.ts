@@ -8,7 +8,7 @@
 // Usage: npx tsx examples/02-planning-agent.ts
 
 // import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-4o");
+// const model = openai("gpt-5.2");
 
 import {
   Agent,

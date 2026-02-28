@@ -10,7 +10,7 @@ import { agent } from "gauss";
 import { openai } from "gauss/providers";
 
 const chatAgent = agent({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-5.2-mini"),
   instructions: `You are a helpful assistant. Be concise and friendly.`,
 }).build();
 

@@ -10,7 +10,7 @@
 // Usage:    npx tsx examples/05-persistent-memory.ts
 
 // import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-4o");
+// const model = openai("gpt-5.2");
 
 import { Agent, SupabaseMemoryAdapter } from "gauss";
 import type { CheckpointConfig } from "gauss";

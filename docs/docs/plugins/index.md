@@ -39,7 +39,7 @@ interface Plugin {
 import { Agent, createGuardrailsPlugin, createEvalsPlugin } from "gauss";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a helpful assistant.",
 })
   .use(createGuardrailsPlugin({ onFailure: "throw" }))

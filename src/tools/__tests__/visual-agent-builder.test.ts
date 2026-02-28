@@ -11,10 +11,10 @@ const mockModel = { modelId: "test-model" } as any;
 describe("ModelRegistry", () => {
   it("registers and retrieves models", () => {
     const reg = new ModelRegistry();
-    reg.register("gpt-4o", mockModel);
-    expect(reg.has("gpt-4o")).toBe(true);
-    expect(reg.get("gpt-4o")).toBe(mockModel);
-    expect(reg.list()).toEqual(["gpt-4o"]);
+    reg.register("gpt-5.2", mockModel);
+    expect(reg.has("gpt-5.2")).toBe(true);
+    expect(reg.get("gpt-5.2")).toBe(mockModel);
+    expect(reg.list()).toEqual(["gpt-5.2"]);
   });
 
   it("throws on unknown model", () => {

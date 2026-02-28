@@ -14,7 +14,7 @@ import { z } from "zod";
 // ─── MCP Client: Connect to an MCP server ────────────────────────────────────
 
 const mcpAgent = agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: `You are an assistant connected to external MCP tools.
 Use available tools to help users accomplish their tasks.`,
   // Connect to an MCP server (e.g., filesystem, database, or custom)
@@ -44,7 +44,7 @@ const searchTool = tool({
 });
 
 const serverAgent = agent({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-5.2-mini"),
   instructions: "You are a knowledge base assistant.",
   tools: { search: searchTool },
 }).build();

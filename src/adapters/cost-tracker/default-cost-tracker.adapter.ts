@@ -7,15 +7,15 @@ import type { CostTrackerPort, CostTokenUsage, CostEstimate } from "../../ports/
 // Pricing per 1M tokens: [input, output]
 const MODEL_PRICING: Record<string, [number, number]> = {
   // OpenAI
-  "gpt-4o":                    [2.50, 10.00],
-  "gpt-4o-mini":               [0.15, 0.60],
+  "gpt-5.2":                    [2.50, 10.00],
+  "gpt-5.2-mini":               [0.15, 0.60],
   "gpt-4-turbo":               [10.00, 30.00],
   // Anthropic
   "claude-sonnet-4-20250514":  [3.00, 15.00],
   "claude-3-haiku":            [0.25, 1.25],
   "claude-opus-4-20250514":    [15.00, 75.00],
   // Google
-  "gemini-2.0-flash":          [0.10, 0.40],
+  "gemini-2.5-flash-preview-05-20":          [0.10, 0.40],
   "gemini-1.5-pro":            [1.25, 5.00],
   // Groq
   "llama-3.1-70b":             [0.59, 0.79],

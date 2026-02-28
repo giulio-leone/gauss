@@ -22,7 +22,7 @@ const mockResolver = (name: string) => makeMockModel(name);
 
 const validConfig: AgentConfig = {
   name: "test-agent",
-  model: "gpt-4o",
+  model: "gpt-5.2",
   systemPrompt: "You are a helpful assistant.",
   maxSteps: 10,
 };
@@ -41,7 +41,7 @@ describe("AgentConfigLoader.fromConfig", () => {
   it("passes model string through modelResolver", () => {
     const resolver = vi.fn(mockResolver);
     AgentConfigLoader.fromConfig(validConfig, resolver);
-    expect(resolver).toHaveBeenCalledWith("gpt-4o");
+    expect(resolver).toHaveBeenCalledWith("gpt-5.2");
   });
 
   it("works with minimal config (no optional fields)", () => {
@@ -79,7 +79,7 @@ describe("AgentConfigLoader.loadFile", () => {
   });
 
   it("throws when required 'name' is missing", () => {
-    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ model: "gpt-4o" }));
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ model: "gpt-5.2" }));
     expect(() => AgentConfigLoader.loadFile("/missing-name.json")).toThrow("name");
   });
 
@@ -89,7 +89,7 @@ describe("AgentConfigLoader.loadFile", () => {
   });
 
   it("throws on empty name", () => {
-    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ name: "", model: "gpt-4o" }));
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ name: "", model: "gpt-5.2" }));
     expect(() => AgentConfigLoader.loadFile("/empty-name.json")).toThrow("name");
   });
 

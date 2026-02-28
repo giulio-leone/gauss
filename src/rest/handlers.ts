@@ -65,7 +65,7 @@ export function handleInfo(
     const body: InfoResponse = {
       version: VERSION,
       defaultProvider: options.defaultProvider ?? "openai",
-      defaultModel: options.defaultModel ?? "gpt-4o",
+      defaultModel: options.defaultModel ?? "gpt-5.2",
       endpoints: [
         "POST /api/run",
         "POST /api/stream",
@@ -117,7 +117,7 @@ export function handleRun(
     }
 
     const provider = body.provider ?? options.defaultProvider ?? "openai";
-    const modelId = body.model ?? options.defaultModel ?? "gpt-4o";
+    const modelId = body.model ?? options.defaultModel ?? "gpt-5.2";
 
     let model: LanguageModel;
     try {
@@ -172,7 +172,7 @@ export function handleStream(
     }
 
     const provider = body.provider ?? options.defaultProvider ?? "openai";
-    const modelId = body.model ?? options.defaultModel ?? "gpt-4o";
+    const modelId = body.model ?? options.defaultModel ?? "gpt-5.2";
 
     let model: LanguageModel;
     try {
@@ -256,7 +256,7 @@ export function handleGraphRun(
     }
 
     const defaultProvider = body.provider ?? options.defaultProvider ?? "openai";
-    const defaultModelId = body.model ?? options.defaultModel ?? "gpt-4o";
+    const defaultModelId = body.model ?? options.defaultModel ?? "gpt-5.2";
 
     const start = Date.now();
     try {

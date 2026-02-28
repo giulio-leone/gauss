@@ -3,7 +3,7 @@
 // Usage: npx tsx examples/06-full-featured.ts
 
 // import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-4o");
+// const model = openai("gpt-5.2");
 
 import {
   Agent, LocalFilesystem, SupabaseMemoryAdapter, AiSdkMcpAdapter,

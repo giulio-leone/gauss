@@ -33,15 +33,15 @@ describe("UniversalProvider", () => {
 
   it("gets model by provider + modelId", async () => {
     const p = new UniversalProvider();
-    const model = await p.model("openai", "gpt-4o");
-    expect((model as any).modelId).toBe("gpt-4o");
+    const model = await p.model("openai", "gpt-5.2");
+    expect((model as any).modelId).toBe("gpt-5.2");
     expect((model as any).provider).toBe("openai");
   });
 
   it("gets model by specifier string", async () => {
     const p = new UniversalProvider();
-    const model = await p.get("openai:gpt-4o");
-    expect((model as any).modelId).toBe("gpt-4o");
+    const model = await p.get("openai:gpt-5.2");
+    expect((model as any).modelId).toBe("gpt-5.2");
   });
 
   it("throws on invalid specifier format", async () => {
@@ -58,8 +58,8 @@ describe("UniversalProvider", () => {
 
   it("caches provider factories", async () => {
     const p = new UniversalProvider();
-    const m1 = await p.model("openai", "gpt-4o");
-    const m2 = await p.model("openai", "gpt-4o-mini");
+    const m1 = await p.model("openai", "gpt-5.2");
+    const m2 = await p.model("openai", "gpt-5.2-mini");
     // Both use the same cached factory
     expect((m1 as any).provider).toBe("openai");
     expect((m2 as any).provider).toBe("openai");
@@ -105,13 +105,13 @@ describe("UniversalProvider", () => {
     const p = new UniversalProvider({
       defaults: { apiKey: "test-key" },
     });
-    const model = await p.model("openai", "gpt-4o");
+    const model = await p.model("openai", "gpt-5.2");
     expect((model as any).apiKey).toBe("test-key");
   });
 
   it("handles specifiers with colons in model name", async () => {
     const p = new UniversalProvider();
-    const model = await p.get("openai:ft:gpt-4o:custom");
-    expect((model as any).modelId).toBe("ft:gpt-4o:custom");
+    const model = await p.get("openai:ft:gpt-5.2:custom");
+    expect((model as any).modelId).toBe("ft:gpt-5.2:custom");
   });
 });

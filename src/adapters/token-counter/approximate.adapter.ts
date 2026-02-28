@@ -9,8 +9,8 @@ const CHARS_PER_TOKEN = 4;
 const ROLE_OVERHEAD_TOKENS = 4;
 
 const CONTEXT_WINDOW_SIZES: Record<string, number> = {
-  "gpt-4o": 128_000,
-  "gpt-4o-mini": 128_000,
+  "gpt-5.2": 128_000,
+  "gpt-5.2-mini": 128_000,
   "gpt-4-turbo": 128_000,
   "gpt-4": 8_192,
   "gpt-3.5-turbo": 16_385,
@@ -19,7 +19,7 @@ const CONTEXT_WINDOW_SIZES: Record<string, number> = {
   "claude-3-haiku": 200_000,
   "claude-3-opus": 200_000,
   "claude-4-sonnet": 200_000,
-  "gemini-2.0-flash": 1_000_000,
+  "gemini-2.5-flash-preview-05-20": 1_000_000,
   "gemini-2.5-flash": 1_000_000,
   "gemini-2.5-pro": 1_000_000,
   "gemini-1.5-flash": 1_000_000,
@@ -30,11 +30,11 @@ const DEFAULT_CONTEXT_WINDOW = 128_000;
 
 // Cost per 1M tokens (USD): [input, output]
 const COST_TABLE: Record<string, [number, number]> = {
-  "gpt-4o": [2.5, 10],
-  "gpt-4o-mini": [0.15, 0.6],
+  "gpt-5.2": [2.5, 10],
+  "gpt-5.2-mini": [0.15, 0.6],
   "claude-3.5-sonnet": [3, 15],
   "claude-3-haiku": [0.25, 1.25],
-  "gemini-2.0-flash": [0.075, 0.3],
+  "gemini-2.5-flash-preview-05-20": [0.075, 0.3],
   "gemini-2.5-flash": [0.15, 0.6],
   "gemini-2.5-pro": [1.25, 10],
 };

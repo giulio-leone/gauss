@@ -42,7 +42,7 @@ function makeProvider(
 
 describe("Routing Policies", () => {
   const providers: ModelProviderInfo[] = [
-    makeProvider("openai:gpt-4o", {
+    makeProvider("openai:gpt-5.2", {
       costPerInputKToken: 5,
       costPerOutputKToken: 15,
       avgLatencyMs: 500,
@@ -93,19 +93,19 @@ describe("Routing Policies", () => {
   describe("CapabilityPolicy", () => {
     it("should select provider with most capabilities", () => {
       const selected = CapabilityPolicy.select(providers, {});
-      expect(selected?.id).toBe("openai:gpt-4o");
+      expect(selected?.id).toBe("openai:gpt-5.2");
     });
   });
 
   describe("FallbackPolicy", () => {
     it("should select first healthy provider", () => {
       const selected = FallbackPolicy.select(providers, {});
-      expect(selected?.id).toBe("openai:gpt-4o");
+      expect(selected?.id).toBe("openai:gpt-5.2");
     });
 
     it("should skip unhealthy providers", () => {
       const unhealthy = providers.map((p) =>
-        p.id === "openai:gpt-4o" ? { ...p, healthy: false } : p,
+        p.id === "openai:gpt-5.2" ? { ...p, healthy: false } : p,
       );
       const selected = FallbackPolicy.select(unhealthy, {});
       expect(selected?.id).toBe("anthropic:claude-3.5");
@@ -130,8 +130,8 @@ describe("ModelRouter", () => {
     const router = new ModelRouter(CostOptimalPolicy);
 
     router.register(
-      makeProvider("openai:gpt-4o", { costPerInputKToken: 5, costPerOutputKToken: 15 }),
-      mockModelPort("openai:gpt-4o"),
+      makeProvider("openai:gpt-5.2", { costPerInputKToken: 5, costPerOutputKToken: 15 }),
+      mockModelPort("openai:gpt-5.2"),
     );
     router.register(
       makeProvider("ollama:llama3", { costPerInputKToken: 0, costPerOutputKToken: 0 }),
@@ -148,8 +148,8 @@ describe("ModelRouter", () => {
   it("should switch policy at runtime", () => {
     const router = new ModelRouter(CostOptimalPolicy);
     router.register(
-      makeProvider("openai:gpt-4o", { costPerInputKToken: 5, costPerOutputKToken: 15, avgLatencyMs: 100 }),
-      mockModelPort("openai:gpt-4o"),
+      makeProvider("openai:gpt-5.2", { costPerInputKToken: 5, costPerOutputKToken: 15, avgLatencyMs: 100 }),
+      mockModelPort("openai:gpt-5.2"),
     );
     router.register(
       makeProvider("ollama:llama3", { costPerInputKToken: 0, costPerOutputKToken: 0, avgLatencyMs: 500 }),
@@ -160,7 +160,7 @@ describe("ModelRouter", () => {
 
     router.setPolicy(LatencyOptimalPolicy);
     const resolved = router.resolve();
-    expect(resolved.getModelId()).toBe("openai:gpt-4o");
+    expect(resolved.getModelId()).toBe("openai:gpt-5.2");
   });
 
   it("should track latency with EMA", () => {

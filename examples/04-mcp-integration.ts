@@ -9,7 +9,7 @@
 // Usage:    npx tsx examples/04-mcp-integration.ts
 
 // import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-4o");
+// const model = openai("gpt-5.2");
 
 import { Agent, AiSdkMcpAdapter } from "gauss";
 import type { McpServerConfig } from "gauss";

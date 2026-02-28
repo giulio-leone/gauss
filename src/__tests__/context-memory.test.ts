@@ -25,7 +25,7 @@ describe("ApproximateTokenCounter", () => {
   });
 
   it("returns context window size for known models", () => {
-    expect(counter.getContextWindowSize("gpt-4o")).toBeGreaterThan(0);
+    expect(counter.getContextWindowSize("gpt-5.2")).toBeGreaterThan(0);
   });
 
   it("truncates text", () => {

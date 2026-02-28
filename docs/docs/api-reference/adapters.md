@@ -16,17 +16,17 @@ import { GaussOpenAI } from 'gauss/providers/openai';
 
 const llm = new GaussOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  model: 'gpt-4o',
+  model: 'gpt-5.2',
   temperature: 0.7,
   max_tokens: 2000,
 });
 ```
 
-**Supported Models**: gpt-4o, gpt-4-turbo, gpt-3.5-turbo
+**Supported Models**: gpt-5.2, gpt-4-turbo, gpt-3.5-turbo
 
 **Configuration Options**:
 - `apiKey` — OpenAI API key
-- `model` — Model identifier (default: gpt-4o)
+- `model` — Model identifier (default: gpt-5.2)
 - `temperature` — Sampling temperature (0-2)
 - `max_tokens` — Maximum response tokens
 - `top_p` — Nucleus sampling parameter
@@ -60,11 +60,11 @@ import { GaussGoogle } from 'gauss/providers/google';
 
 const llm = new GaussGoogle({
   apiKey: process.env.GOOGLE_API_KEY,
-  model: 'gemini-2.0-flash',
+  model: 'gemini-2.5-flash-preview-05-20',
 });
 ```
 
-**Supported Models**: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash
+**Supported Models**: gemini-2.5-flash-preview-05-20, gemini-1.5-pro, gemini-1.5-flash
 
 ### Groq
 
@@ -104,7 +104,7 @@ import { GaussOpenRouter } from 'gauss/providers/openrouter';
 
 const llm = new GaussOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
-  model: 'openai/gpt-4o',
+  model: 'openai/gpt-5.2',
 });
 ```
 

@@ -47,7 +47,7 @@ const steps: WorkflowStep[] = [
 ];
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "Summarize the provisioned resources.",
 })
   .use(createWorkflowPlugin({

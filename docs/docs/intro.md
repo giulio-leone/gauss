@@ -32,7 +32,7 @@ import { agent } from 'gauss'
 import { openai } from 'gauss/providers'
 
 const assistant = agent({
-  model: openai('gpt-4o'),
+  model: openai('gpt-5.2'),
   instructions: 'You are a helpful coding assistant.',
 }).build()
 
@@ -81,12 +81,12 @@ const pipeline = workflow('data-pipeline')
 import { multimodal, videoProcessor } from 'gauss'
 import { openai } from 'gauss/providers'
 
-const vision = multimodal({ model: openai('gpt-4o') })
+const vision = multimodal({ model: openai('gpt-5.2') })
 const description = await vision.describeImage({
   source: { type: 'url', url: 'https://example.com/photo.jpg' }
 })
 
-const video = videoProcessor({ model: openai('gpt-4o') })
+const video = videoProcessor({ model: openai('gpt-5.2') })
 const analysis = await video.describeVideo({
   source: { type: 'url', url: 'https://example.com/video.mp4' },
   duration: 30
@@ -109,7 +109,7 @@ const { audio } = await pipeline.process(userAudioBuffer)
 import { universalProvider } from 'gauss/providers'
 
 const provider = universalProvider()
-const model = await provider.get('openai:gpt-4o')
+const model = await provider.get('openai:gpt-5.2')
 const model2 = await provider.get('anthropic:claude-sonnet-4-20250514')
 
 // Discover what's installed
@@ -122,9 +122,9 @@ Gauss auto-detects AI providers:
 
 | Variable | Provider | Default Model |
 |----------|----------|---------------|
-| `OPENAI_API_KEY` | OpenAI | gpt-4o |
+| `OPENAI_API_KEY` | OpenAI | gpt-5.2 |
 | `ANTHROPIC_API_KEY` | Anthropic | claude-sonnet-4-20250514 |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Google | gemini-2.0-flash |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google | gemini-2.5-flash-preview-05-20 |
 | `GROQ_API_KEY` | Groq | llama-3.3-70b-versatile |
 | `MISTRAL_API_KEY` | Mistral | mistral-large-latest |
 

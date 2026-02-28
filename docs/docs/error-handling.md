@@ -78,7 +78,7 @@ import {
 import { openai } from "@ai-sdk/openai";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a helpful assistant.",
 });
 
@@ -109,7 +109,7 @@ Gauss's event system provides centralized error handling:
 import { Agent, GaussError } from "gauss";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a resilient assistant.",
 })
   .on("error", (event) => {

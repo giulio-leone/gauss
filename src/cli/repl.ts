@@ -336,7 +336,7 @@ export async function startRepl(
         console.log("  /clear             Clear the screen");
         console.log("");
         console.log(bold("  Provider & Model:"));
-        console.log("  /model <name>      Switch model (e.g. /model gpt-4o-mini)");
+        console.log("  /model <name>      Switch model (e.g. /model gpt-5.2-mini)");
         console.log("  /provider <name>   Switch provider");
         console.log("  /info              Show current provider and model");
         console.log("  /settings          Show all current settings");

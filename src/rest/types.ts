@@ -9,7 +9,7 @@ export interface ServerOptions {
   apiKey?: string;
   /** Default AI provider. Default: "openai" */
   defaultProvider?: string;
-  /** Default model ID. Default: "gpt-4o" */
+  /** Default model ID. Default: "gpt-5.2" */
   defaultModel?: string;
   /** Enable CORS headers. Default: true */
   cors?: boolean;

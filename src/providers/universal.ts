@@ -67,7 +67,7 @@ export class UniversalProvider {
    * @example
    * ```ts
    * const provider = new UniversalProvider()
-   * const model = await provider.model('openai', 'gpt-4o')
+   * const model = await provider.model('openai', 'gpt-5.2')
    * const model2 = await provider.model('anthropic', 'claude-sonnet-4-20250514')
    * ```
    */
@@ -85,7 +85,7 @@ export class UniversalProvider {
    *
    * @example
    * ```ts
-   * const model = await provider.get('openai:gpt-4o')
+   * const model = await provider.get('openai:gpt-5.2')
    * const model2 = await provider.get('anthropic:claude-sonnet-4-20250514')
    * ```
    */
@@ -93,7 +93,7 @@ export class UniversalProvider {
     const colonIdx = specifier.indexOf(":");
     if (colonIdx === -1) {
       throw new Error(
-        `Invalid specifier "${specifier}". Expected format: "provider:model" (e.g., "openai:gpt-4o")`
+        `Invalid specifier "${specifier}". Expected format: "provider:model" (e.g., "openai:gpt-5.2")`
       );
     }
     const providerName = specifier.slice(0, colonIdx);

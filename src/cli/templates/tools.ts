@@ -44,7 +44,7 @@ const calculatorTool = tool({
 
 // Create agent with tools
 const toolAgent = agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: `You are a helpful assistant with access to weather and calculator tools.
 Always use tools when the user asks about weather or math.`,
   tools: { weather: weatherTool, calculator: calculatorTool },

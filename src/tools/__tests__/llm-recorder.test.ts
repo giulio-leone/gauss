@@ -90,7 +90,7 @@ describe("LLMReplayer", () => {
     {
       id: "call-1",
       timestamp: "2025-01-01T00:00:00.000Z",
-      model: "gpt-4o",
+      model: "gpt-5.2",
       input: { prompt: "Hello" },
       output: { text: "Hi there!" },
       durationMs: 100,
@@ -98,7 +98,7 @@ describe("LLMReplayer", () => {
     {
       id: "call-2",
       timestamp: "2025-01-01T00:00:01.000Z",
-      model: "gpt-4o",
+      model: "gpt-5.2",
       input: { prompt: "How are you?" },
       output: { text: "I am fine." },
       durationMs: 150,
@@ -149,7 +149,7 @@ describe("LLMReplayer", () => {
   it("finds by model and prompt", () => {
     const replayer = new LLMReplayer();
     replayer.loadFromRecords(sampleRecords);
-    const found = replayer.findByModelAndPrompt("gpt-4o", "Hello");
+    const found = replayer.findByModelAndPrompt("gpt-5.2", "Hello");
     expect(found?.output.text).toBe("Hi there!");
   });
 

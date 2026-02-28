@@ -50,7 +50,7 @@ const circuitBreaker = new CircuitBreaker({
 });
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a resilient assistant that handles failures gracefully.",
 })
   .withCircuitBreaker(circuitBreaker)
@@ -119,7 +119,7 @@ const rateLimiter = new RateLimiter({
 });
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a rate-limited assistant.",
 })
   .withRateLimiter(rateLimiter)
@@ -198,7 +198,7 @@ const toolCache = new ToolCache({
 });
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are an efficient assistant that caches expensive operations.",
 })
   .withToolCache(toolCache)
@@ -266,7 +266,7 @@ import {
 import { openai } from "@ai-sdk/openai";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You are a highly resilient assistant with comprehensive failure handling.",
 })
   .withCircuitBreaker(new CircuitBreaker({

@@ -20,7 +20,7 @@ pnpm add onecrawl
 import { Agent, createOneCrawlPlugin } from "gauss";
 
 const agent = Agent.create({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   instructions: "You can search and scrape the web.",
 })
   .use(createOneCrawlPlugin({
