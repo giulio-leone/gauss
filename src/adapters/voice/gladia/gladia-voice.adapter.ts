@@ -45,7 +45,8 @@ export class GladiaVoiceAdapter implements VoicePort {
     const formData = new FormData();
     formData.append(
       "audio",
-      new Blob([audio], { type: "audio/wav" }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      new Blob([audio as any], { type: "audio/wav" }),
       "audio.wav",
     );
 
@@ -62,7 +63,7 @@ export class GladiaVoiceAdapter implements VoicePort {
       throw new Error(`Gladia transcription failed: ${uploadResponse.status} ${err}`);
     }
 
-    const uploadResult = await uploadResponse.json();
+    const uploadResult = (await uploadResponse.json()) as { result_url: string };
     const resultUrl: string = uploadResult.result_url;
 
     // Poll for result
@@ -82,7 +83,11 @@ export class GladiaVoiceAdapter implements VoicePort {
         throw new Error(`Gladia poll failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        status: string;
+        result?: { transcription?: { full_transcript?: string } };
+        error?: string;
+      };
       if (data.status === "done") {
         return data.result?.transcription?.full_transcript ?? "";
       }

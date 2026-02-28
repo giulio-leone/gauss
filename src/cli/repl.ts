@@ -88,7 +88,7 @@ export async function startRepl(
   const sessionCostTracker = new DefaultCostTrackerAdapter();
 
   // Serialize tool confirmations to avoid concurrent readline conflicts
-  let confirmLock = Promise.resolve<void>();
+  let confirmLock = Promise.resolve();
 
   const { AiSdkMcpAdapter } = await import("../adapters/mcp/ai-sdk-mcp.adapter.js");
   const mcpAdapter = new AiSdkMcpAdapter();
@@ -224,9 +224,9 @@ export async function startRepl(
     try {
       const mcpDefs = await mcpAdapter.discoverTools();
       for (const [name, def] of Object.entries(mcpDefs)) {
-        tools[`mcp:${name}`] = aiTool({
+        (tools as Record<string, unknown>)[`mcp:${name}`] = aiTool({
           description: def.description,
-          parameters: z.object({}).passthrough(),
+          inputSchema: z.object({}).passthrough(),
           execute: async (args: unknown) => {
             const result = await mcpAdapter.executeTool(name, args);
             if (result.isError) throw new Error(result.content[0]?.text ?? "MCP tool error");

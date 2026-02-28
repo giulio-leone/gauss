@@ -219,7 +219,7 @@ export class CloudflareStoreAdapter implements VectorStorePort {
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
-      const json = await res.json();
+      const json = await res.json() as { success: boolean; errors?: unknown; result?: unknown };
       if (!json.success) {
         throw new Error(`Cloudflare API error: ${JSON.stringify(json.errors)}`);
       }

@@ -86,7 +86,7 @@ export function createCliTools(options: {
   return {
     readFile: tool({
       description: "Read a file from the filesystem",
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe("Path to the file to read"),
       }),
       execute: async ({ path }) => {
@@ -96,7 +96,7 @@ export function createCliTools(options: {
     }),
     writeFile: tool({
       description: "Write content to a file (creates or overwrites)",
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe("Path to write to"),
         content: z.string().describe("Content to write"),
       }),
@@ -125,7 +125,7 @@ export function createCliTools(options: {
     }),
     bash: tool({
       description: "Execute a bash command",
-      parameters: z.object({
+      inputSchema: z.object({
         command: z.string().describe("The bash command to execute"),
       }),
       execute: async ({ command }) => {
@@ -138,7 +138,7 @@ export function createCliTools(options: {
     }),
     listFiles: tool({
       description: "List files in a directory",
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe("Directory path").default("."),
         pattern: z.string().describe("Filename substring filter").optional(),
       }),
@@ -149,7 +149,7 @@ export function createCliTools(options: {
     }),
     searchFiles: tool({
       description: "Search for a text pattern in files (recursive)",
-      parameters: z.object({
+      inputSchema: z.object({
         pattern: z.string().describe("The text pattern to search for"),
         path: z.string().describe("Directory to search in").default("."),
       }),
@@ -161,7 +161,7 @@ export function createCliTools(options: {
     editFile: tool({
       description:
         "Edit a file by replacing specific text. Use this instead of writeFile when making targeted changes to existing files. The old_str must match exactly one occurrence in the file.",
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe("Path to the file to edit"),
         old_str: z.string().min(1).describe("The exact text to find and replace (must match exactly one occurrence)"),
         new_str: z.string().describe("The replacement text"),
@@ -204,7 +204,7 @@ export function createCliTools(options: {
     }),
     createFile: tool({
       description: "Create a new file. Fails if the file already exists. Use editFile for existing files.",
-      parameters: z.object({
+      inputSchema: z.object({
         path: z.string().describe("Path for the new file"),
         content: z.string().describe("Content for the new file"),
       }),
@@ -229,7 +229,7 @@ export function createCliTools(options: {
 
     gitStatus: tool({
       description: "Show git repository status including staged, unstaged, and untracked files",
-      parameters: z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         try {
           const raw = execSync("git status --porcelain=v1", GIT_EXEC_OPTS).trim();
@@ -254,7 +254,7 @@ export function createCliTools(options: {
 
     gitDiff: tool({
       description: "Show git diff. By default shows unstaged changes. Use staged:true for staged changes, or provide a file path.",
-      parameters: z.object({
+      inputSchema: z.object({
         staged: z.boolean().optional().describe("Show staged changes instead of unstaged"),
         path: z.string().optional().describe("Limit diff to a specific file"),
       }),
@@ -275,7 +275,7 @@ export function createCliTools(options: {
 
     gitCommit: tool({
       description: "Stage files and create a git commit. Requires confirmation unless in yolo mode.",
-      parameters: z.object({
+      inputSchema: z.object({
         message: z.string().describe("Commit message"),
         files: z.array(z.string()).optional().describe("Files to stage. If omitted, stages all changes."),
       }),
@@ -320,7 +320,7 @@ export function createCliTools(options: {
 
     gitLog: tool({
       description: "Show recent git commit history",
-      parameters: z.object({
+      inputSchema: z.object({
         count: z.number().optional().default(10).describe("Number of commits to show"),
       }),
       execute: async ({ count = 10 }) => {
@@ -335,7 +335,7 @@ export function createCliTools(options: {
 
     gitBranch: tool({
       description: "List, create, or switch git branches",
-      parameters: z.object({
+      inputSchema: z.object({
         action: z.enum(["list", "create", "switch"]).optional().default("list"),
         name: z.string().optional().describe("Branch name (required for create/switch)"),
       }),

@@ -20,7 +20,7 @@ Be concise and return structured JSON when appropriate.`,
   tools: {
     getUserProfile: tool({
       description: "Get user profile by ID",
-      parameters: z.object({ userId: z.string() }),
+      inputSchema: z.object({ userId: z.string() }),
       execute: async ({ userId }) => ({
         id: userId,
         name: "John Doe",

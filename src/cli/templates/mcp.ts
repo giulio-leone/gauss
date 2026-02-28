@@ -28,7 +28,7 @@ Use available tools to help users accomplish their tasks.`,
 // Define tools that will be exposed via MCP
 const searchTool = tool({
   description: "Search the knowledge base",
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe("Search query"),
     limit: z.number().default(5).describe("Max results"),
   }),

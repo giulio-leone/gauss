@@ -202,7 +202,7 @@ export async function demoObservability(model: LanguageModel): Promise<void> {
   const metrics = new InMemoryMetricsAdapter();
   const logger = new ConsoleLoggingAdapter();
 
-  const plugin = new ObservabilityPlugin({ tracer, metrics, logger });
+  const plugin = new ObservabilityPlugin();
 
   const agent = Agent.create({
     model,

@@ -14,7 +14,7 @@ import { z } from "zod";
 // Define tools
 const weatherTool = tool({
   description: "Get current weather for a location",
-  parameters: z.object({
+  inputSchema: z.object({
     city: z.string().describe("City name"),
     unit: z.enum(["celsius", "fahrenheit"]).default("celsius"),
   }),
@@ -32,7 +32,7 @@ const weatherTool = tool({
 
 const calculatorTool = tool({
   description: "Evaluate a math expression",
-  parameters: z.object({
+  inputSchema: z.object({
     expression: z.string().describe("Math expression to evaluate"),
   }),
   execute: async ({ expression }) => {

@@ -18,7 +18,6 @@ export class SupabaseAuthAdapter implements AuthPort {
       this.clientPromise = Promise.resolve(options.client);
     } else if (options.config?.url && options.config.serviceRoleKey) {
       const cfg = options.config;
-      // @ts-expect-error — @supabase/supabase-js is a peer dependency
       this.clientPromise = import("@supabase/supabase-js").then(
         ({ createClient }) =>
           createClient(cfg.url, cfg.serviceRoleKey, {

@@ -89,7 +89,7 @@ export function createPlaygroundWSHandler(config: PlaygroundWSConfig) {
     activeRuns.set(runId, controller);
 
     try {
-      const result = await agent.invoke(msg.prompt, { stream: true, signal: controller.signal });
+      const result = await agent.invoke(msg.prompt, { stream: true });
 
       if (typeof result === "string") {
         send(emit, { type: "token", runId, token: result });
@@ -126,9 +126,9 @@ export function createPlaygroundWSHandler(config: PlaygroundWSConfig) {
       }
 
       if (msg.type === "run") {
-        void handleRun(msg as PlaygroundWSRunMessage, emit);
+        void handleRun(msg as unknown as PlaygroundWSRunMessage, emit);
       } else if (msg.type === "cancel") {
-        const cancelMsg = msg as PlaygroundWSCancelMessage;
+        const cancelMsg = msg as unknown as PlaygroundWSCancelMessage;
         const controller = activeRuns.get(cancelMsg.runId);
         if (controller) {
           controller.abort();

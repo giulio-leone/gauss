@@ -40,7 +40,7 @@ export function handleInit(args: string[]): void {
   const dirArg = args.find((a) => !a.startsWith("-") && a !== templateArg) ?? `.`;
   const targetDir = join(process.cwd(), dirArg);
 
-  scaffold(template, targetDir);
+  scaffold(template, targetDir, dirArg);
 }
 
 function listTemplates(): void {
@@ -50,7 +50,7 @@ function listTemplates(): void {
   }
 }
 
-function scaffold(template: TemplateName, targetDir: string): void {
+function scaffold(template: TemplateName, targetDir: string, dirArg: string): void {
   const info = TEMPLATES[template];
 
   // Create directory

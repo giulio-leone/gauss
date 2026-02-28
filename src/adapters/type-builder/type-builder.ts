@@ -57,15 +57,15 @@ export function zodToTypeScript(
 }
 
 function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean): string {
-  // Unwrap optional/nullable/default
+  // Unwrap optional/nullable/default (cast needed: Zod 4 returns $ZodType)
   if (schema instanceof z.ZodOptional) {
-    return zodTypeToTS(schema.unwrap(), indent, includeDesc);
+    return zodTypeToTS(schema.unwrap() as z.ZodTypeAny, indent, includeDesc);
   }
   if (schema instanceof z.ZodNullable) {
-    return `${zodTypeToTS(schema.unwrap(), indent, includeDesc)} | null`;
+    return `${zodTypeToTS(schema.unwrap() as z.ZodTypeAny, indent, includeDesc)} | null`;
   }
   if (schema instanceof z.ZodDefault) {
-    return zodTypeToTS(schema.removeDefault(), indent, includeDesc);
+    return zodTypeToTS(schema.removeDefault() as z.ZodTypeAny, indent, includeDesc);
   }
 
   // Primitives
@@ -100,7 +100,7 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Array
   if (schema instanceof z.ZodArray) {
-    const inner = zodTypeToTS(schema.element, indent, includeDesc);
+    const inner = zodTypeToTS(schema.element as z.ZodTypeAny, indent, includeDesc);
     return inner.includes("|") ? `(${inner})[]` : `${inner}[]`;
   }
 
@@ -112,18 +112,18 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Record
   if (schema instanceof z.ZodRecord) {
-    const valType = zodTypeToTS(schema._def.valueType ?? (schema as any).valueSchema, indent, includeDesc);
+    const valType = zodTypeToTS((schema._def.valueType ?? (schema as any).valueSchema) as z.ZodTypeAny, indent, includeDesc);
     return `Record<string, ${valType}>`;
   }
 
   // Map
   if (schema instanceof z.ZodMap) {
-    return `Map<${zodTypeToTS(schema._def.keyType, indent, includeDesc)}, ${zodTypeToTS(schema._def.valueType, indent, includeDesc)}>`;
+    return `Map<${zodTypeToTS(schema._def.keyType as z.ZodTypeAny, indent, includeDesc)}, ${zodTypeToTS(schema._def.valueType as z.ZodTypeAny, indent, includeDesc)}>`;
   }
 
   // Set
   if (schema instanceof z.ZodSet) {
-    return `Set<${zodTypeToTS(schema._def.valueType, indent, includeDesc)}>`;
+    return `Set<${zodTypeToTS(schema._def.valueType as z.ZodTypeAny, indent, includeDesc)}>`;
   }
 
   // Union
@@ -134,8 +134,8 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Intersection
   if (schema instanceof z.ZodIntersection) {
-    const left = zodTypeToTS(schema._def.left, indent, includeDesc);
-    const right = zodTypeToTS(schema._def.right, indent, includeDesc);
+    const left = zodTypeToTS(schema._def.left as z.ZodTypeAny, indent, includeDesc);
+    const right = zodTypeToTS(schema._def.right as z.ZodTypeAny, indent, includeDesc);
     return `${left} & ${right}`;
   }
 
@@ -152,7 +152,7 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Promise
   if (schema instanceof z.ZodPromise) {
-    return `Promise<${zodTypeToTS(schema._def.type, indent, includeDesc)}>`;
+    return `Promise<${zodTypeToTS(schema._def.type as unknown as z.ZodTypeAny, indent, includeDesc)}>`;
   }
 
   // Function
@@ -162,7 +162,7 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Lazy
   if (schema instanceof z.ZodLazy) {
-    return zodTypeToTS(schema.schema, indent, includeDesc);
+    return zodTypeToTS((schema as any).schema ?? schema._def.getter(), indent, includeDesc);
   }
 
   // Effects (refinements, transforms — removed in Zod 4)

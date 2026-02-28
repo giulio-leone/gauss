@@ -55,8 +55,8 @@ export class MurfVoiceAdapter implements VoicePort {
       throw new Error(`Murf TTS failed: ${response.status} ${err}`);
     }
 
-    const json = await response.json();
-    const audioUrl: string = json.audioFile ?? json.url;
+    const json = (await response.json()) as { audioFile?: string; url?: string };
+    const audioUrl: string = json.audioFile ?? json.url ?? "";
 
     const audioResponse = await fetch(audioUrl);
     if (!audioResponse.ok) {

@@ -42,27 +42,27 @@ export async function createModel(
   switch (provider) {
     case "openai": {
       const { createOpenAI } = await import("@ai-sdk/openai");
-      return createOpenAI({ apiKey })(model);
+      return createOpenAI({ apiKey })(model) as unknown as LanguageModel;
     }
     case "anthropic": {
       const { createAnthropic } = await import("@ai-sdk/anthropic");
-      return createAnthropic({ apiKey })(model);
+      return createAnthropic({ apiKey })(model) as unknown as LanguageModel;
     }
     case "google": {
       const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
-      return createGoogleGenerativeAI({ apiKey })(model);
+      return createGoogleGenerativeAI({ apiKey })(model) as unknown as LanguageModel;
     }
     case "groq": {
       const { createGroq } = await import("@ai-sdk/groq");
-      return createGroq({ apiKey })(model);
+      return createGroq({ apiKey })(model) as unknown as LanguageModel;
     }
     case "mistral": {
       const { createMistral } = await import("@ai-sdk/mistral");
-      return createMistral({ apiKey })(model);
+      return createMistral({ apiKey })(model) as unknown as LanguageModel;
     }
     case "openrouter": {
       const { createOpenRouter } = await import("@openrouter/ai-sdk-provider");
-      return createOpenRouter({ apiKey })(model);
+      return createOpenRouter({ apiKey })(model) as unknown as LanguageModel;
     }
   }
 }
