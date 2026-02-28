@@ -19,3 +19,5 @@ export { google, type GoogleProviderOptions } from "./google.js";
 export { groq, type GroqProviderOptions } from "./groq.js";
 export { ollama, type OllamaProviderOptions } from "./ollama.js";
 export { openrouter, type OpenRouterProviderOptions } from "./openrouter.js";
+export { UniversalProvider, universalProvider } from "./universal.js";
+export type { ProviderConfig, UniversalProviderOptions } from "./universal.js";
