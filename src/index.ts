@@ -686,6 +686,15 @@ export { VisualAgentBuilder, ModelRegistry, AgentConfigSchema } from "./tools/vi
 export type { AgentConfigJSON, AgentNode, CompiledAgent, AgentBuilderResult } from "./tools/visual-agent-builder.js";
 export { AgentBuilderAPI } from "./tools/agent-builder-api.js";
 
+export { MultimodalAgent, multimodal } from "./domain/multimodal.js";
+export type {
+  ImageSource,
+  ImageInput,
+  MultimodalContent,
+  MultimodalMessage,
+  MultimodalResult,
+} from "./domain/multimodal.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,

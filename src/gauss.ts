@@ -103,3 +103,10 @@ export type { CoordinationStrategy, TeamResult } from "./graph/team-builder.js";
 
 export { workflow } from "./domain/workflow-dsl.js";
 export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js";
+
+// =============================================================================
+// multimodal() — Create a multimodal (text + image) agent
+// =============================================================================
+
+export { multimodal } from "./domain/multimodal.js";
+export type { ImageInput, MultimodalMessage, MultimodalResult } from "./domain/multimodal.js";
