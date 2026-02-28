@@ -1,119 +1,510 @@
 ---
-sidebar_position: 1
+sidebar_position: 2
+title: Core Concepts
 ---
 
-# What is Gauss?
+# Core Concepts
 
-**Gauss** is a production-ready AI agent framework built on [Vercel AI SDK v6](https://sdk.vercel.ai). It provides everything you need to build, deploy, and observe intelligent agents — from simple chat bots to complex multi-agent workflows.
+The Gauss AI agent framework provides a comprehensive toolkit for building intelligent, multi-agent systems. This guide covers the fundamental concepts that power the framework.
 
-## Why Gauss?
+## 1. Agents
 
-| Feature | Gauss | LangChain | Mastra |
-|---------|-------|-----------|--------|
-| **Architecture** | Hexagonal (Ports & Adapters) | Chain-based | Workflow-based |
-| **Type Safety** | Full TypeScript, Zod schemas | Partial | Partial |
-| **Multi-Runtime** | Node, Deno, Edge, Browser | Node only | Node only |
-| **Provider Lock-in** | Zero (AI SDK adapters) | Moderate | Low |
-| **Plugin System** | Middleware + lifecycle hooks | Limited | None |
-| **Built-in Observability** | Traces, metrics, logging | Via LangSmith | Basic |
-| **Graph Execution** | DAG with parallel, consensus | Sequential chains | Workflows |
+Agents are the core building blocks of Gauss. Each agent is an autonomous entity with a language model, instructions, tools, and memory.
 
-## Core Concepts
+**Key characteristics:**
+- Wrapped around an LLM (language model)
+- Given specific instructions and goals
+- Access to tools for interacting with the world
+- Persistent memory for context
 
-### Agents
-
-An agent is an AI model with instructions, tools, and memory. It runs in a tool-loop — the model decides which tools to call, processes results, and continues until the task is complete.
+**Basic usage:**
 
 ```typescript
-import { agent } from "gauss";
-import { openai } from "gauss/providers";
+import { agent } from 'gauss';
 
-const myAgent = agent({
-  model: openai("gpt-4o"),
-  instructions: "You are a helpful assistant.",
-}).build();
+const researcher = agent()
+  .model('gpt-4')
+  .instructions('You are a research assistant. Analyze topics thoroughly.')
+  .tools([searchTool, analyzeTool])
+  .memory('short-term') // or 'long-term'
+  .build();
 
-const result = await myAgent.run("Hello!");
+const response = await researcher.run('Research quantum computing');
 ```
 
-### Tools
+The `.build()` pattern ensures configuration is complete and optimized before execution.
 
-Tools are functions the agent can call. Define them with Zod schemas for automatic parameter validation.
+---
+
+## 2. Tools
+
+Tools are functions that agents can invoke to interact with external systems, perform computations, or retrieve information.
+
+**Tool structure:**
+- **Name**: Unique identifier
+- **Description**: What the tool does
+- **Parameters**: Zod-validated input schema
+- **Execute**: The actual function logic
+
+**Creating a tool:**
 
 ```typescript
-import { tool } from "ai";
-import { z } from "zod";
+import { tool } from 'gauss';
+import { z } from 'zod';
 
-const weatherTool = tool({
-  description: "Get weather for a city",
-  parameters: z.object({ city: z.string() }),
-  execute: async ({ city }) => ({ temp: 22, city }),
-});
+const searchTool = tool()
+  .name('search')
+  .description('Search the web for information')
+  .parameters(
+    z.object({
+      query: z.string().describe('Search query'),
+      limit: z.number().optional().describe('Number of results'),
+    })
+  )
+  .execute(async ({ query, limit = 10 }) => {
+    // Implementation
+    return results;
+  })
+  .build();
 ```
 
-### Graphs
+Tools are type-safe, self-documenting, and enable agents to take actions beyond pure reasoning.
 
-Graphs enable multi-agent workflows with dependency-based execution. Agents run in parallel when possible.
+---
+
+## 3. Graphs
+
+Graphs represent complex workflows as directed acyclic graphs (DAGs) with nodes and edges.
+
+**Structure:**
+- **Nodes**: Represent agents or processing steps
+- **Edges**: Define dependencies and data flow
+- **Conditional routing**: Branch based on node outputs
+
+**Building a graph:**
 
 ```typescript
-import { graph } from "gauss";
+import { graph } from 'gauss';
 
-const workflow = graph({
-  name: "pipeline",
-  nodes: {
-    research: { agent: researcher },
-    write: { agent: writer, dependsOn: ["research"] },
-  },
-  output: "write",
-});
+const pipeline = graph()
+  .node('extract', extractionAgent)
+  .node('validate', validationAgent)
+  .node('store', storageAgent)
+  .edge('extract', 'validate')
+  .edge('validate', 'store')
+  .build();
+
+const result = await pipeline.run(inputData);
 ```
 
-### RAG (Retrieval-Augmented Generation)
+Graphs enable orchestration of multiple agents and deterministic workflows.
 
-RAG pipelines retrieve relevant context from vector stores before generating responses.
+---
+
+## 4. RAG Pipeline
+
+Retrieval-Augmented Generation (RAG) enhances agents with domain-specific knowledge by ingesting, processing, and retrieving documents.
+
+**Pipeline stages:**
+1. **Document Ingestion**: Load files (PDFs, markdown, JSON, etc.)
+2. **Chunking**: Split documents into manageable pieces
+3. **Embedding**: Convert chunks into vector representations
+4. **Vector Storage**: Store embeddings in a vector database
+5. **Retrieval**: Fetch relevant chunks for agent queries
+
+**RAG setup:**
 
 ```typescript
-import { rag, InMemoryVectorStore } from "gauss";
+import { rag } from 'gauss';
 
-const pipeline = rag({ vectorStore: new InMemoryVectorStore(), topK: 5 });
-await pipeline.ingest([{ id: "1", content: "...", metadata: {} }]);
+const knowledgeBase = rag()
+  .ingest('./documents')
+  .chunkSize(512)
+  .chunkOverlap(50)
+  .embedModel('openai-embed-3')
+  .vectorStore('pinecone')
+  .build();
+
+const agent = agent()
+  .model('gpt-4')
+  .rag(knowledgeBase)
+  .tools([knowledgeBase.retriever()])
+  .build();
 ```
 
-### Ports & Adapters
+RAG transforms agents into domain experts by providing access to specific knowledge sources.
 
-Gauss uses hexagonal architecture. Every external dependency is abstracted behind a **port** (interface). You can swap implementations without changing business logic.
+---
 
-**Built-in Adapters:**
-- **Storage:** In-Memory, PostgreSQL, Redis
-- **Vector Store:** In-Memory, pgvector
-- **Object Storage:** S3/MinIO/R2
-- **Queue:** BullMQ/Redis
-- **Providers:** OpenAI, Anthropic, Google, Groq, Ollama, OpenRouter
+## 5. Planning
 
-## Architecture Overview
+Planning enables agents to decompose complex tasks into manageable steps with state tracking and multi-step reasoning.
 
+**Hierarchy:**
+- **Plan**: Overall task with goal
+- **Phase**: Major stages of execution
+- **Step**: Individual actions
+- **SubStep**: Granular operations
+
+**Planning example:**
+
+```typescript
+import { planning } from 'gauss';
+
+const plan = planning()
+  .goal('Build a customer support system')
+  .phase('Setup')
+    .step('Initialize database')
+    .step('Configure webhooks')
+  .phase('Implementation')
+    .step('Create response templates')
+    .step('Train sentiment classifier')
+    .subStep('Collect training data')
+    .subStep('Validate model')
+  .build();
+
+const executor = agent()
+  .plan(plan)
+  .build();
 ```
-┌─────────────────────────────────────┐
-│           Application Layer          │
-│  agent() · graph() · rag() · tool() │
-├─────────────────────────────────────┤
-│            Domain Layer              │
-│  Agent · Graph · RAG · Plugins       │
-├─────────────────────────────────────┤
-│             Port Layer               │
-│  StoragePort · VectorStorePort · ... │
-├─────────────────────────────────────┤
-│           Adapter Layer              │
-│  Postgres · Redis · S3 · BullMQ     │
-└─────────────────────────────────────┘
+
+Planning provides structure for multi-step reasoning and enables progress tracking.
+
+---
+
+## 6. Teams
+
+Teams coordinate multiple agents to solve complex problems through collaboration strategies.
+
+**Team strategies:**
+- **Round-robin**: Each agent takes turns
+- **Delegate**: Manager agent assigns tasks
+- **Broadcast**: All agents work on the same task
+- **Pipeline**: Sequential processing through agents
+
+**Team example:**
+
+```typescript
+import { team } from 'gauss';
+
+const supportTeam = team()
+  .strategy('delegate')
+  .manager(coordinatorAgent)
+  .member('triage', triageAgent)
+  .member('technical', technicalAgent)
+  .member('billing', billingAgent)
+  .build();
+
+const response = await supportTeam.run('Customer complaint about subscription');
 ```
 
-## Getting Started
+Teams enable division of labor and specialization in multi-agent systems.
 
-```bash
-npx gauss init --template chat my-agent
-cd my-agent && npm install
-npm run dev
+---
+
+## 7. Workflows
+
+Workflows provide a chainable DSL for building complex execution patterns with branching and parallelization.
+
+**Core operations:**
+- **`.then()`**: Sequential execution
+- **`.branch()`**: Conditional execution
+- **`.parallel()`**: Concurrent execution
+
+**Workflow example:**
+
+```typescript
+import { workflow } from 'gauss';
+
+const dataWorkflow = workflow()
+  .step(fetchAgent)
+  .then(validationAgent)
+  .branch(
+    { condition: 'isValid', agent: processingAgent },
+    { condition: 'invalid', agent: errorHandlerAgent }
+  )
+  .parallel([enrichmentAgent, analyticsAgent])
+  .then(storageAgent)
+  .build();
+
+const result = await dataWorkflow.run(input);
 ```
 
-See the [Templates](/docs/templates) for all available starter kits.
+Workflows provide elegant composition of complex execution patterns.
+
+---
+
+## 8. Voice
+
+Voice integration enables speech-to-text (STT) and text-to-speech (TTS) capabilities for audio-based interactions.
+
+**Supported adapters:**
+- **STT**: OpenAI Whisper, Google Cloud Speech-to-Text
+- **TTS**: ElevenLabs, OpenAI TTS, Google Cloud Text-to-Speech
+
+**Voice pipeline:**
+
+```typescript
+import { voice } from 'gauss';
+
+const voicePipeline = voice()
+  .stt('openai-whisper')
+  .tts('elevenlabs', { voice: 'Rachel' })
+  .agent(conversationalAgent)
+  .build();
+
+const audioResponse = await voicePipeline.process(audioInput);
+```
+
+Voice integration enables natural audio interactions with agents.
+
+---
+
+## 9. Multimodal
+
+Multimodal capabilities allow agents to process and generate images, video, and other non-text formats.
+
+**Supported operations:**
+- **Image Description**: Generate descriptions of images
+- **OCR**: Extract text from images
+- **Image Comparison**: Analyze differences between images
+- **Video Analysis**: Extract and analyze frames
+
+**Multimodal usage:**
+
+```typescript
+import { multimodal } from 'gauss';
+
+const visionAgent = agent()
+  .model('gpt-4-vision')
+  .tools([
+    multimodal.describeImage(),
+    multimodal.extractText(),
+    multimodal.analyzeVideo(),
+  ])
+  .build();
+
+const description = await visionAgent.run('Describe this image', { imageUrl });
+```
+
+Multimodal support extends agents beyond text-only interactions.
+
+---
+
+## 10. Providers
+
+Gauss wraps 40+ AI SDK providers through a universal interface for seamless provider switching.
+
+**Provider features:**
+- **Auto-discovery**: Automatically finds available providers
+- **Unified API**: Same interface regardless of provider
+- **Fallback support**: Automatic fallback to alternative providers
+- **Load balancing**: Distribute requests across providers
+
+**Provider usage:**
+
+```typescript
+import { provider } from 'gauss/providers';
+
+const universalProvider = provider()
+  .primary('openai')
+  .fallback('anthropic')
+  .fallback('google')
+  .loadBalance(['openai', 'azure', 'cohere'])
+  .build();
+
+const agent = agent()
+  .provider(universalProvider)
+  .model('gpt-4')
+  .build();
+```
+
+Universal provider abstracts away implementation details while supporting multiple LLM backends.
+
+---
+
+## 11. Ports & Adapters
+
+Gauss follows hexagonal architecture (ports & adapters) to maintain loose coupling and testability.
+
+**Architecture pattern:**
+- **Ports**: Interface definitions (what operations are needed)
+- **Adapters**: Concrete implementations (specific providers, databases, APIs)
+
+**Key ports:**
+- VectorStorePort: Vector database abstraction
+- MemoryPort: Memory storage abstraction
+- ToolPort: Tool execution abstraction
+- ProviderPort: LLM provider abstraction
+
+Every capability in Gauss is implemented as a port interface with multiple adapter implementations, enabling easy switching and testing.
+
+---
+
+## 12. Plugins
+
+Plugins extend agent capabilities with cross-cutting concerns without modifying core logic.
+
+**Plugin types:**
+- **Guardrails**: Enforce constraints on agent behavior
+- **Evals**: Continuous evaluation of agent responses
+- **Observability**: Logging, tracing, monitoring
+- **Caching**: Cache responses for efficiency
+- **Rate Limiting**: Control API usage
+
+**Plugin example:**
+
+```typescript
+import { agent } from 'gauss';
+
+const safeAgent = agent()
+  .model('gpt-4')
+  .plugin('guardrails', { rules: ['no-pii', 'no-malware'] })
+  .plugin('evals', { validators: [toxicityCheck, factualityCheck] })
+  .plugin('observability', { provider: 'datadog' })
+  .plugin('caching', { ttl: 3600 })
+  .build();
+```
+
+Plugins provide clean separation of concerns and enable modular agent composition.
+
+---
+
+## 13. MCP (Model Context Protocol)
+
+MCP support enables Gauss agents to interact with MCP-compatible servers for standardized tool integration.
+
+**MCP features:**
+- **Client mode**: Agents can call MCP server tools
+- **Server mode**: Gauss agents can expose themselves as MCP servers
+- **Resource access**: Standard resource types and schemas
+
+**MCP integration:**
+
+```typescript
+import { mcp } from 'gauss';
+
+const mcpClient = mcp()
+  .connect('file://localhost:3000')
+  .build();
+
+const agent = agent()
+  .model('gpt-4')
+  .tools([mcpClient.tools()])
+  .build();
+```
+
+MCP enables standardized inter-operability with other AI systems and tools.
+
+---
+
+## 14. A2A (Agent-to-Agent)
+
+A2A protocol enables secure, asynchronous communication between agents for distributed multi-agent systems.
+
+**A2A features:**
+- **Agent discovery**: Find agents by ID or capability
+- **Message routing**: Async, persistent message delivery
+- **Protocol versioning**: Backward-compatible evolution
+- **Trust model**: Cryptographic verification
+
+**A2A usage:**
+
+```typescript
+import { a2a } from 'gauss';
+
+const agentA = agent()
+  .a2a('agent-a', { endpoint: 'https://api.example.com' })
+  .instructions('Send analysis request to agent-b')
+  .tools([a2a.send('agent-b')])
+  .build();
+
+const agentB = agent()
+  .a2a('agent-b', { endpoint: 'https://api.example.com' })
+  .subscribe('agent-a', handleRequest)
+  .build();
+```
+
+A2A enables building distributed, loosely-coupled multi-agent systems.
+
+---
+
+## 15. Persistence
+
+Gauss provides multiple persistence adapters for storing agent state, memory, and data across sessions.
+
+**Supported backends:**
+- **PostgreSQL**: Relational data and structured state
+- **Redis**: Fast in-memory caching and sessions
+- **pgvector**: Vector embeddings and semantic search
+- **S3**: Long-term document and artifact storage
+- **BullMQ**: Distributed job queues and task persistence
+
+**Persistence setup:**
+
+```typescript
+import { persistence } from 'gauss';
+
+const persistenceLayer = persistence()
+  .state('postgres', { connectionString: 'postgresql://...' })
+  .cache('redis', { url: 'redis://...' })
+  .vectors('pgvector', { connectionString: 'postgresql://...' })
+  .documents('s3', { bucket: 'my-bucket' })
+  .jobs('bullmq', { redis: { url: 'redis://...' } })
+  .build();
+
+const agent = agent()
+  .model('gpt-4')
+  .persistence(persistenceLayer)
+  .build();
+```
+
+Persistence enables agents to maintain state across sessions and support production workloads.
+
+---
+
+## Putting It All Together
+
+These concepts work together to create powerful, scalable AI systems:
+
+```typescript
+import { agent, team, workflow, rag, persistence } from 'gauss';
+
+// Create specialized agents
+const researcher = agent()
+  .model('gpt-4')
+  .instructions('Research and analyze topics')
+  .tools([searchTool, analyzeTool])
+  .build();
+
+const writer = agent()
+  .model('gpt-4')
+  .instructions('Write clear, engaging content')
+  .tools([formatTool, validateTool])
+  .build();
+
+// Coordinate with a team
+const contentTeam = team()
+  .strategy('pipeline')
+  .member('research', researcher)
+  .member('writing', writer)
+  .build();
+
+// Define workflow
+const contentWorkflow = workflow()
+  .step(contentTeam)
+  .then(reviewAgent)
+  .then(publishAgent)
+  .build();
+
+// Add persistence
+const persistedWorkflow = contentWorkflow
+  .persistence(persistence()
+    .state('postgres')
+    .documents('s3')
+    .build())
+  .build();
+```
+
+This creates a robust system where teams collaborate, workflows coordinate execution, and persistence ensures reliability.
+
