@@ -1,5 +1,7 @@
 // =============================================================================
 // gauss/providers/openai — OpenAI adapter
+// @deprecated Use gauss('openai', modelId) from 'gauss-ai/providers' instead.
+// This wrapper will be removed in v6.0. The native Rust provider is faster.
 // =============================================================================
 
 import { createOpenAI } from "@ai-sdk/openai";
@@ -10,14 +12,17 @@ export type OpenAIProviderOptions = OpenAIProviderSettings;
 /**
  * Create an OpenAI provider instance.
  *
- * API key is auto-detected from `OPENAI_API_KEY` environment variable.
+ * @deprecated Use `gauss('openai', modelId)` instead for native Rust performance.
  *
  * @example
  * ```ts
- * import { openai } from 'gauss/providers'
- * import { agent } from 'gauss'
+ * // ❌ Deprecated
+ * import { openai } from 'gauss-ai/providers'
+ * const model = openai('gpt-4o')
  *
- * const a = agent({ model: openai('gpt-5.2'), instructions: '...' }).build()
+ * // ✅ Preferred — native Rust provider
+ * import { gauss } from 'gauss-ai/providers'
+ * const model = gauss('openai', 'gpt-4o')
  * ```
  */
 export function openai(modelId: string, options?: OpenAIProviderOptions) {

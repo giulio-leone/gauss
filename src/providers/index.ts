@@ -42,5 +42,7 @@ export {
   type FallbackProviderOptions,
   type NativeMiddlewareConfig,
   type NativeMiddlewareChain,
+  type GuardrailConfig,
+  type TelemetryConfig,
   type BenchmarkResult,
 } from "./gauss.js";

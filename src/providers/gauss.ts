@@ -20,6 +20,7 @@ import type {
   FinishReason,
   StreamPart,
 } from "../core/llm/types.js";
+import { GAUSS_NATIVE_MARKER } from "../core/llm/native-bridge.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -112,6 +113,30 @@ interface NapiModule {
   middlewareUseLogging(handle: number): void;
   middlewareUseCaching(handle: number, ttlMs: number): void;
   destroyMiddlewareChain(handle: number): void;
+  // Guardrails
+  createGuardrailChain(): number;
+  guardrailChainAddContentModeration(handle: number, threshold: number): void;
+  guardrailChainAddPiiDetection(handle: number, action: string): void;
+  guardrailChainAddTokenLimit(handle: number, maxTokens: number): void;
+  guardrailChainAddRegexFilter(handle: number, pattern: string, action: string): void;
+  guardrailChainAddSchema(handle: number, schemaJson: string): void;
+  destroyGuardrailChain(handle: number): void;
+  // Telemetry
+  createTelemetry(): number;
+  telemetryRecordSpan(handle: number, spanJson: string): void;
+  telemetryExportSpans(handle: number): unknown;
+  telemetryExportMetrics(handle: number): unknown;
+  telemetryClear(handle: number): void;
+  destroyTelemetry(handle: number): void;
+  // Resilience
+  createCircuitBreaker(failureThreshold: number, resetTimeoutMs: number): number;
+  createResilientProvider(
+    providerHandle: number,
+    enableCircuitBreaker: boolean | null,
+    fallbackHandles: number[],
+    maxRetries: number | null,
+    retryDelayMs: number | null,
+  ): number;
 }
 
 let _napi: NapiModule | null = null;
@@ -215,6 +240,7 @@ class GaussLanguageModel implements LanguageModel {
   readonly provider: string;
   readonly modelId: string;
   readonly defaultObjectGenerationMode = "json";
+  readonly [GAUSS_NATIVE_MARKER] = true;
 
   private handle: number;
 
@@ -235,6 +261,7 @@ class GaussLanguageModel implements LanguageModel {
     (instance as any).provider = provider;
     (instance as any).modelId = modelId;
     (instance as any).defaultObjectGenerationMode = "json";
+    (instance as any)[GAUSS_NATIVE_MARKER] = true;
     (instance as any).handle = handle;
     return instance;
   }
@@ -778,29 +805,51 @@ export function gaussFallback(
 // ---------------------------------------------------------------------------
 
 /** Built-in native middleware types available in Rust. */
-export type NativeMiddlewareType = "logging" | "caching";
+export type NativeMiddlewareType = "logging" | "caching" | "guardrail" | "telemetry" | "circuit-breaker";
+
+export interface GuardrailConfig {
+  contentModeration?: { threshold: number };
+  piiDetection?: { action: "mask" | "block" | "warn" };
+  tokenLimit?: { maxTokens: number };
+  regexFilter?: { pattern: string; action: "block" | "warn" };
+  schema?: Record<string, unknown>;
+}
+
+export interface TelemetryConfig {
+  enabled: boolean;
+}
 
 export interface NativeMiddlewareConfig {
   logging?: boolean;
   caching?: { ttlMs: number };
+  guardrail?: GuardrailConfig;
+  telemetry?: TelemetryConfig;
+  circuitBreaker?: { failureThreshold: number; resetTimeoutMs: number };
 }
 
 /** Handle to a native middleware chain. */
 export interface NativeMiddlewareChain {
   readonly handle: number;
+  readonly guardrailHandle?: number;
+  readonly telemetryHandle?: number;
   destroy(): void;
 }
 
 /**
- * Create a native Rust middleware chain.
+ * Create a native Rust middleware chain with optional guardrails and telemetry.
  *
  * @example
  * ```ts
  * const chain = createNativeMiddlewareChain({
  *   logging: true,
  *   caching: { ttlMs: 60_000 },
+ *   guardrail: {
+ *     contentModeration: { threshold: 0.8 },
+ *     piiDetection: { action: 'mask' },
+ *     tokenLimit: { maxTokens: 4096 },
+ *   },
+ *   telemetry: { enabled: true },
  * })
- * // Use chain.handle with gaussAgentRun options
  * ```
  */
 export function createNativeMiddlewareChain(
@@ -808,6 +857,8 @@ export function createNativeMiddlewareChain(
 ): NativeMiddlewareChain {
   const napi = getNapi();
   const handle = napi.createMiddlewareChain();
+  let guardrailHandle: number | undefined;
+  let telemetryHandle: number | undefined;
 
   if (config.logging) {
     napi.middlewareUseLogging(handle);
@@ -816,10 +867,40 @@ export function createNativeMiddlewareChain(
     napi.middlewareUseCaching(handle, config.caching.ttlMs);
   }
 
+  // Guardrails
+  if (config.guardrail) {
+    guardrailHandle = napi.createGuardrailChain();
+    const g = config.guardrail;
+    if (g.contentModeration) {
+      napi.guardrailChainAddContentModeration(guardrailHandle, g.contentModeration.threshold);
+    }
+    if (g.piiDetection) {
+      napi.guardrailChainAddPiiDetection(guardrailHandle, g.piiDetection.action);
+    }
+    if (g.tokenLimit) {
+      napi.guardrailChainAddTokenLimit(guardrailHandle, g.tokenLimit.maxTokens);
+    }
+    if (g.regexFilter) {
+      napi.guardrailChainAddRegexFilter(guardrailHandle, g.regexFilter.pattern, g.regexFilter.action);
+    }
+    if (g.schema) {
+      napi.guardrailChainAddSchema(guardrailHandle, JSON.stringify(g.schema));
+    }
+  }
+
+  // Telemetry
+  if (config.telemetry?.enabled) {
+    telemetryHandle = napi.createTelemetry();
+  }
+
   return {
     handle,
+    guardrailHandle,
+    telemetryHandle,
     destroy() {
       napi.destroyMiddlewareChain(handle);
+      if (guardrailHandle !== undefined) napi.destroyGuardrailChain(guardrailHandle);
+      if (telemetryHandle !== undefined) napi.destroyTelemetry(telemetryHandle);
     },
   };
 }

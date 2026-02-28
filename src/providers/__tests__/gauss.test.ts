@@ -58,6 +58,24 @@ const mockNapi = {
   middlewareUseLogging: vi.fn(),
   middlewareUseCaching: vi.fn(),
   destroyMiddlewareChain: vi.fn(),
+  // Guardrails
+  createGuardrailChain: vi.fn(() => 88),
+  guardrailChainAddContentModeration: vi.fn(),
+  guardrailChainAddPiiDetection: vi.fn(),
+  guardrailChainAddTokenLimit: vi.fn(),
+  guardrailChainAddRegexFilter: vi.fn(),
+  guardrailChainAddSchema: vi.fn(),
+  destroyGuardrailChain: vi.fn(),
+  // Telemetry
+  createTelemetry: vi.fn(() => 66),
+  telemetryRecordSpan: vi.fn(),
+  telemetryExportSpans: vi.fn(() => []),
+  telemetryExportMetrics: vi.fn(() => ({})),
+  telemetryClear: vi.fn(),
+  destroyTelemetry: vi.fn(),
+  // Resilience
+  createCircuitBreaker: vi.fn(() => 55),
+  createResilientProvider: vi.fn(() => 44),
 };
 
 describe("GaussProvider", () => {
@@ -315,6 +333,53 @@ describe("GaussProvider", () => {
       const chain = createNativeMiddlewareChain({ logging: true, caching: { ttlMs: 10000 } });
       expect(mockNapi.middlewareUseLogging).toHaveBeenCalled();
       expect(mockNapi.middlewareUseCaching).toHaveBeenCalledWith(77, 10000);
+      chain.destroy();
+    });
+
+    it("creates chain with guardrails", () => {
+      const chain = createNativeMiddlewareChain({
+        guardrail: {
+          contentModeration: { threshold: 0.8 },
+          piiDetection: { action: "mask" },
+          tokenLimit: { maxTokens: 4096 },
+          regexFilter: { pattern: "secret", action: "block" },
+        },
+      });
+      expect(mockNapi.createGuardrailChain).toHaveBeenCalled();
+      expect(mockNapi.guardrailChainAddContentModeration).toHaveBeenCalledWith(88, 0.8);
+      expect(mockNapi.guardrailChainAddPiiDetection).toHaveBeenCalledWith(88, "mask");
+      expect(mockNapi.guardrailChainAddTokenLimit).toHaveBeenCalledWith(88, 4096);
+      expect(mockNapi.guardrailChainAddRegexFilter).toHaveBeenCalledWith(88, "secret", "block");
+      expect(chain.guardrailHandle).toBe(88);
+      chain.destroy();
+      expect(mockNapi.destroyGuardrailChain).toHaveBeenCalledWith(88);
+    });
+
+    it("creates chain with telemetry", () => {
+      const chain = createNativeMiddlewareChain({
+        telemetry: { enabled: true },
+      });
+      expect(mockNapi.createTelemetry).toHaveBeenCalled();
+      expect(chain.telemetryHandle).toBe(66);
+      chain.destroy();
+      expect(mockNapi.destroyTelemetry).toHaveBeenCalledWith(66);
+    });
+
+    it("creates chain with all features", () => {
+      mockNapi.middlewareUseLogging.mockClear();
+      mockNapi.middlewareUseCaching.mockClear();
+      mockNapi.createGuardrailChain.mockClear();
+      mockNapi.createTelemetry.mockClear();
+      const chain = createNativeMiddlewareChain({
+        logging: true,
+        caching: { ttlMs: 30000 },
+        guardrail: { contentModeration: { threshold: 0.9 } },
+        telemetry: { enabled: true },
+      });
+      expect(mockNapi.middlewareUseLogging).toHaveBeenCalled();
+      expect(mockNapi.middlewareUseCaching).toHaveBeenCalled();
+      expect(mockNapi.createGuardrailChain).toHaveBeenCalled();
+      expect(mockNapi.createTelemetry).toHaveBeenCalled();
       chain.destroy();
     });
   });

@@ -1,5 +1,7 @@
 // =============================================================================
 // gauss/providers/anthropic — Anthropic adapter
+// @deprecated Use gauss('anthropic', modelId) from 'gauss-ai/providers' instead.
+// This wrapper will be removed in v6.0. The native Rust provider is faster.
 // =============================================================================
 
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -10,14 +12,17 @@ export type AnthropicProviderOptions = AnthropicProviderSettings;
 /**
  * Create an Anthropic provider instance.
  *
- * API key is auto-detected from `ANTHROPIC_API_KEY` environment variable.
+ * @deprecated Use `gauss('anthropic', modelId)` instead for native Rust performance.
  *
  * @example
  * ```ts
- * import { anthropic } from 'gauss/providers'
- * import { agent } from 'gauss'
+ * // ❌ Deprecated
+ * import { anthropic } from 'gauss-ai/providers'
+ * const model = anthropic('claude-sonnet-4-20250514')
  *
- * const a = agent({ model: anthropic('claude-sonnet-4-20250514'), instructions: '...' }).build()
+ * // ✅ Preferred — native Rust provider
+ * import { gauss } from 'gauss-ai/providers'
+ * const model = gauss('anthropic', 'claude-sonnet-4-20250514')
  * ```
  */
 export function anthropic(modelId: string, options?: AnthropicProviderOptions) {

@@ -1,5 +1,7 @@
 // =============================================================================
 // gauss/providers/google — Google Gemini adapter
+// @deprecated Use gauss('google', modelId) from 'gauss-ai/providers' instead.
+// This wrapper will be removed in v6.0. The native Rust provider is faster.
 // =============================================================================
 
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -10,15 +12,7 @@ export type GoogleProviderOptions = GoogleGenerativeAIProviderSettings;
 /**
  * Create a Google Gemini provider instance.
  *
- * API key is auto-detected from `GOOGLE_GENERATIVE_AI_API_KEY` environment variable.
- *
- * @example
- * ```ts
- * import { google } from 'gauss/providers'
- * import { agent } from 'gauss'
- *
- * const a = agent({ model: google('gemini-2.5-flash-preview-05-20'), instructions: '...' }).build()
- * ```
+ * @deprecated Use `gauss('google', modelId)` instead for native Rust performance.
  */
 export function google(modelId: string, options?: GoogleProviderOptions) {
   const provider = createGoogleGenerativeAI(options);

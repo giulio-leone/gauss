@@ -19,6 +19,7 @@ import type {
 } from "./types.js";
 import type { StopCondition } from "./stop-conditions.js";
 import type { OutputSpec } from "./output.js";
+import { isNativeModel, nativeStreamText } from "./native-bridge.js";
 
 // ---------------------------------------------------------------------------
 // Options
@@ -95,6 +96,24 @@ function buildMessages(options: StreamTextOptions): CoreMessage[] {
 export function streamText<TOOLS extends ToolSet = ToolSet>(
   options: StreamTextOptions<TOOLS>,
 ): StreamTextResult<TOOLS> {
+  // Native Rust fast-path: if model is GaussLanguageModel, delegate entirely to Rust
+  if (isNativeModel(options.model)) {
+    const nativeResult = nativeStreamText<TOOLS>({
+      model: options.model,
+      prompt: options.prompt,
+      messages: options.messages,
+      system: options.system,
+      tools: options.tools as ToolSet,
+      maxSteps: options.maxSteps,
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+      onStepFinish: options.onStepFinish,
+      onFinish: options.onFinish,
+    });
+    if (nativeResult) return nativeResult;
+    // If native failed, fall through to TS path
+  }
+
   const { model, tools, abortSignal } = options;
   const lmTools = tools ? toolsToLanguageModelTools(tools as ToolSet) : undefined;
   const messages = buildMessages(options);

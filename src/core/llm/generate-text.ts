@@ -18,6 +18,7 @@ import type {
 } from "./types.js";
 import type { StopCondition } from "./stop-conditions.js";
 import type { OutputSpec } from "./output.js";
+import { isNativeModel, nativeGenerateText } from "./native-bridge.js";
 
 // ---------------------------------------------------------------------------
 // Options
@@ -136,6 +137,25 @@ async function executeTools(
 export async function generateText<TOOLS extends ToolSet = ToolSet>(
   options: GenerateTextOptions<TOOLS>,
 ): Promise<GenerateTextResult<TOOLS>> {
+  // Native Rust fast-path: if model is GaussLanguageModel, delegate entirely to Rust
+  if (isNativeModel(options.model)) {
+    const nativeResult = await nativeGenerateText<TOOLS>({
+      model: options.model,
+      prompt: options.prompt,
+      messages: options.messages,
+      system: options.system,
+      tools: options.tools as ToolSet,
+      maxSteps: options.maxSteps,
+      temperature: options.temperature,
+      maxTokens: options.maxTokens,
+      output: options.output,
+      onStepFinish: options.onStepFinish,
+      onFinish: options.onFinish,
+    });
+    if (nativeResult) return nativeResult;
+    // If native failed, fall through to TS path
+  }
+
   const { model, tools, stopWhen, maxSteps, abortSignal, onStepFinish, onFinish } = options;
   const lmTools = tools ? toolsToLanguageModelTools(tools as ToolSet) : undefined;
 

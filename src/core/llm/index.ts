@@ -49,3 +49,4 @@ export { stepCountIs, hasToolCall } from "./stop-conditions.js";
 export type { StopCondition } from "./stop-conditions.js";
 export { Output } from "./output.js";
 export type { OutputSpec } from "./output.js";
+export { isNativeModel, GAUSS_NATIVE_MARKER } from "./native-bridge.js";
