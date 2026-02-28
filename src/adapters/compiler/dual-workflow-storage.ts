@@ -27,7 +27,7 @@ export class DualWorkflowStorage implements WorkflowStoragePort {
 
   async delete(id: string): Promise<boolean> {
     const result = await this.primary.delete(id);
-    await this.secondary.delete(id).catch(() => {});
+    await this.secondary.delete(id).catch(() => { /* best-effort secondary cleanup */ });
     return result;
   }
 

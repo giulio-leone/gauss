@@ -237,7 +237,7 @@ export class WorkerPool<T, R> {
       poolSize: this.workers.size,
     });
     // Fire-and-forget the worker loop
-    this.workerLoop(id).catch(() => {});
+    this.workerLoop(id).catch(() => { /* worker loop self-recovers */ });
   }
 
   private removeWorker(id: number, reason: string): void {

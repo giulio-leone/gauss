@@ -288,7 +288,7 @@ export class GraphExecutor {
       }
     } finally {
       clearTimeout(timeoutTimer);
-      await pool.drain(5_000).catch(() => {});
+      await pool.drain(5_000).catch(() => { /* best-effort pool drain */ });
     }
   }
 
