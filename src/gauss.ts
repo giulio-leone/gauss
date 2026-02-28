@@ -11,7 +11,7 @@
 //
 // =============================================================================
 
-import type { LanguageModel } from "core/llm/index.js";
+import type { LanguageModel } from "./core/llm/index.js";
 import type { AgentConfig } from "./types.js";
 import type { GraphConfig } from "./domain/graph.schema.js";
 import { AgentBuilder } from "./agent/agent-builder.js";
@@ -109,7 +109,7 @@ async function gauss(prompt: string, options?: QuickOptions): Promise<string> {
     model = await detectModel();
   }
 
-  const { generateText } = await import("ai");
+  const { generateText } = await import("./core/llm/index.js");
   const result = await (generateText as any)({
     model,
     prompt,

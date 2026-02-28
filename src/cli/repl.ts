@@ -210,7 +210,7 @@ export async function startRepl(
   async function chat(prompt: string): Promise<void> {
     history.push({ role: "user", content: prompt });
 
-    const { tool: aiTool } = await import("ai");
+    const { tool: aiTool } = await import("../core/llm/index.js");
     const { z } = await import("zod");
     const { Agent } = await import("../agent/agent.js");
     const { createCliTools } = await import("./tools.js");

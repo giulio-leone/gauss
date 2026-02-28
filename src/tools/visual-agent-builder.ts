@@ -270,7 +270,7 @@ export class VisualAgentBuilder {
               return `[agent:${node.id}] ${input}`;
             }
             // Dynamic import to avoid hard dependency
-            const { generateText } = await import("ai");
+            const { generateText } = await import("../core/llm/index.js");
             const result = await generateText({
               model: model as any,
               prompt: input,

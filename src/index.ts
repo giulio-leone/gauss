@@ -25,9 +25,9 @@ export type {
   ToolCallContext,
   OutputSpec,
   CostInfo,
-  GraphConfig,
-  GraphResult,
-  GraphPipeline,
+  GraphConfig as AgentGraphConfig,
+  GraphResult as AgentGraphResult,
+  GraphPipeline as AgentGraphPipeline,
 } from "./core/agent/index.js";
 
 // ─── Decorators ─────────────────────────────────────────────────────────────
@@ -819,13 +819,13 @@ export type {
 export {
   DebugSessionImpl,
   InMemoryAgentDebuggerAdapter,
-  createDebugMiddleware,
+  DebugMiddleware as createDebugMiddleware,
 } from "./adapters/agent-debugger/index.js";
 
 // ─── Agent Orchestrator ─────────────────────────────────────────────────────
 
 export type {
-  AgentOrchestorPort,
+  AgentOrchestratorPort as AgentOrchestorPort,
   OrchestrationPattern,
   OrchestrationConfig,
   OrchestrationAgent,
@@ -855,7 +855,7 @@ export type {
   ValidationError,
   OutputConstraint,
   FormatOptions,
-  ValidationResult,
+  ValidationResult as StructuredValidationResult,
   StreamParser,
 } from "./ports/structured-output.port.js";
 export {
@@ -873,10 +873,10 @@ export {
 export type {
   AgentMemoryPort as AdvancedAgentMemoryPort,
   MemoryType,
-  MemoryEntry,
+  MemoryEntry as AdvancedMemoryEntry,
   MemoryQuery,
   ConsolidationResult,
-  MemoryStats,
+  MemoryStats as AdvancedMemoryStats,
   ScopedMemory,
 } from "./ports/advanced-agent-memory.port.js";
 export {
@@ -901,7 +901,7 @@ export {
   PiiDetector,
   InjectionDetector,
   ContentModerator,
-  TokenBudget,
+  TokenBudget as GuardrailTokenBudget,
   SchemaValidator,
 } from "./adapters/guardrails/index.js";
 
@@ -910,11 +910,11 @@ export {
 export type {
   ObservabilityPipelinePort,
   Trace,
-  Span,
+  Span as ObservabilitySpan,
   SpanKind,
   SpanEvent,
-  LogLevel,
-  LogEntry,
+  LogLevel as ObservabilityLogLevel,
+  LogEntry as ObservabilityLogEntry,
   TraceData,
   SpanData,
   MetricsSummary,
