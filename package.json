@@ -1,7 +1,7 @@
 {
   "name": "gauss-ai",
   "version": "1.0.0",
-  "description": "Gauss \u2014 The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
+  "description": "Gauss — The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -53,18 +53,6 @@
       "import": "./dist/node/index.js",
       "require": "./dist/node/index.cjs"
     },
-    "./deno": {
-      "types": "./dist/deno/index.d.ts",
-      "import": "./dist/deno/index.js"
-    },
-    "./edge": {
-      "types": "./dist/edge/index.d.ts",
-      "import": "./dist/edge/index.js"
-    },
-    "./browser": {
-      "types": "./dist/browser/index.d.ts",
-      "import": "./dist/browser/index.js"
-    },
     "./server": {
       "types": "./dist/server/index.d.ts",
       "import": "./dist/server/index.js"
@@ -102,14 +90,6 @@
     "./runtime/node": {
       "types": "./dist/runtime-node.d.ts",
       "import": "./dist/runtime-node.js"
-    },
-    "./runtime/deno": {
-      "types": "./dist/runtime-deno.d.ts",
-      "import": "./dist/runtime-deno.js"
-    },
-    "./runtime/edge": {
-      "types": "./dist/runtime-edge.d.ts",
-      "import": "./dist/runtime-edge.js"
     },
     "./providers": {
       "types": "./dist/providers/index.d.ts",

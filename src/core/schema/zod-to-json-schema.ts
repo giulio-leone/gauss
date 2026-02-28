@@ -88,7 +88,7 @@ function v3Convert(schema: ZodV4Like): JsonSchema {
       return { ...base, type: "object", properties, ...(required.length > 0 ? { required } : {}), additionalProperties: false };
     }
     case "ZodArray": {
-      const item = schema._def.type;
+      const item = schema._def.type as unknown as ZodV4Like | undefined;
       return { ...base, type: "array", ...(item ? { items: v3Convert(item) } : {}) };
     }
     case "ZodTuple": {
