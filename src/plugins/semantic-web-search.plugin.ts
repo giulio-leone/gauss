@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { tool } from "../core/llm/index.js";
 import { z } from "zod";
 
 import { BasePlugin } from "./base.plugin.js";

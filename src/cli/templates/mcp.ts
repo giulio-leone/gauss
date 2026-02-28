@@ -8,7 +8,7 @@
 
 import { agent } from "gauss";
 import { openai } from "gauss/providers";
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 // ─── MCP Client: Connect to an MCP server ────────────────────────────────────

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { tool } from "ai";
-import type { Tool } from "ai";
+import { tool } from "../../core/llm/index.js";
+import type { Tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import { DefaultToolCompositionAdapter } from "../../adapters/tool-composition/default-tool-composition.adapter.js";

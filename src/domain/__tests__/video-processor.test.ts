@@ -7,13 +7,17 @@ import {
   type FrameExtractorPort,
 } from "../video-processor.js";
 
-vi.mock("ai", () => ({
-  generateText: vi.fn().mockResolvedValue({
-    text: "A person walking in a park.",
-    usage: { inputTokens: 50, outputTokens: 15 },
-    finishReason: "stop",
-  }),
-}));
+vi.mock("../../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../core/llm/index.js")>();
+  return {
+    ...actual,
+    generateText: vi.fn().mockResolvedValue({
+      text: "A person walking in a park.",
+      usage: { inputTokens: 50, outputTokens: 15 },
+      finishReason: "stop",
+    }),
+  };
+});
 
 const mockModel = { modelId: "gpt-5.2" } as any;
 

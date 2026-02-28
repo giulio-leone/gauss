@@ -11,7 +11,7 @@
 //
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "core/llm/index.js";
 import type { AgentConfig } from "./types.js";
 import type { GraphConfig } from "./domain/graph.schema.js";
 import { AgentBuilder } from "./agent/agent-builder.js";

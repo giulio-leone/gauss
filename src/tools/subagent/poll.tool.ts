@@ -2,7 +2,7 @@
 // poll_subagent tool — Non-blocking status check for dispatched subagents
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { SubagentRegistry } from "./subagent-registry.js";

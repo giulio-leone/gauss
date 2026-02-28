@@ -2,7 +2,7 @@
 // dispatch_subagent tool — Fire-and-forget subagent dispatch
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { DelegationHooks } from "../../types.js";

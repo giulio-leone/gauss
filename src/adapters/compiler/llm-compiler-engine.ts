@@ -4,8 +4,8 @@
 // with Zod schema enforcement for deterministic structure.
 // =============================================================================
 
-import { Output } from "ai";
-import type { LanguageModel } from "ai";
+import { Output } from "../../core/llm/index.js";
+import type { LanguageModel } from "../../core/llm/index.js";
 import {
   CompilerOutputSchema,
   type StructuredDeclaration,

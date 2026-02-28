@@ -2,7 +2,7 @@
 // plan:visualize — Output ASCII o Mermaid del piano
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { FilesystemPort } from "../../ports/filesystem.port.js";

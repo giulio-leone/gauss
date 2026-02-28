@@ -2,7 +2,7 @@
 // Middleware Port — Composable, typed, ordered middleware system
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 // =============================================================================
 // Priority — Determines middleware execution order

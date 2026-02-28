@@ -2,8 +2,8 @@
 // DebateConsensus — Multi-round debate until convergence
 // =============================================================================
 
-import { generateText } from "ai";
-import type { LanguageModel } from "ai";
+import { generateText } from "../../core/llm/index.js";
+import type { LanguageModel } from "../../core/llm/index.js";
 import type {
   ConsensusPort,
   ConsensusResult,

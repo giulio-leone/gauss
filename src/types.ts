@@ -2,7 +2,7 @@
 // gauss — Shared Type Definitions
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "core/llm/index.js";
 import type { PolicyEnginePort } from "./ports/policy.port.js";
 
 // =============================================================================

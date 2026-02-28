@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { z } from "zod";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 // =============================================================================
 // Config Schema — JSON declarative agent definition

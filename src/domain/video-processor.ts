@@ -2,7 +2,7 @@
 // Video Processing — Frame extraction, analysis, audio extraction
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 import {
   MultimodalAgent,
   type ImageInput,

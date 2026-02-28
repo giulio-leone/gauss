@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { LanguageModel, Tool } from "ai";
+import type { LanguageModel, Tool } from "../core/llm/index.js";
 
 import { Agent } from "../agent/agent.js";
 
@@ -7,26 +7,23 @@ const { generateFn, constructorSpy } = vi.hoisted(() => {
   const generateFn = vi.fn().mockResolvedValue({
     text: "plugin-test",
     steps: [{ type: "text" }],
+    usage: { inputTokens: 10, outputTokens: 20 },
+    finishReason: "stop",
+    toolCalls: [],
+    toolResults: [],
   });
   const constructorSpy = vi.fn();
   return { generateFn, constructorSpy };
 });
 
-vi.mock("ai", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("ai")>();
-
-  class MockToolLoopAgent {
-    constructor(settings: Record<string, unknown>) {
-      constructorSpy(settings);
-    }
-
-    generate = generateFn;
-    stream = vi.fn();
-  }
-
+vi.mock("../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../core/llm/index.js")>();
   return {
     ...actual,
-    ToolLoopAgent: MockToolLoopAgent,
+    generateText: (opts: Record<string, unknown>) => {
+      constructorSpy(opts);
+      return generateFn(opts);
+    },
   };
 });
 
@@ -66,7 +63,7 @@ describe("Agent + Plugins integration", () => {
 
     const result = await agent.run("start");
 
-    expect(generateFn).toHaveBeenCalledWith({ prompt: "[plugin] start" });
+    expect(generateFn).toHaveBeenCalledWith(expect.objectContaining({ prompt: "[plugin] start" }));
     expect(beforeStep).toHaveBeenCalledTimes(2);
     expect(afterStep).toHaveBeenCalledTimes(2);
     expect(result.steps).toHaveLength(2);

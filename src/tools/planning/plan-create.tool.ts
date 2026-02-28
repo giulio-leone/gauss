@@ -2,7 +2,7 @@
 // plan:create — Tool per creare un piano strutturato gerarchico
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { FilesystemPort } from "../../ports/filesystem.port.js";

@@ -5,13 +5,17 @@ import {
   type LLMCallRecord,
 } from "../llm-recorder.js";
 
-vi.mock("ai", () => ({
-  generateText: vi.fn().mockResolvedValue({
-    text: "Hello from the model!",
-    usage: { inputTokens: 10, outputTokens: 5 },
-    finishReason: "stop",
-  }),
-}));
+vi.mock("../../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../core/llm/index.js")>();
+  return {
+    ...actual,
+    generateText: vi.fn().mockResolvedValue({
+      text: "Hello from the model!",
+      usage: { inputTokens: 10, outputTokens: 5 },
+      finishReason: "stop",
+    }),
+  };
+});
 
 vi.mock("node:fs", () => ({
   writeFileSync: vi.fn(),

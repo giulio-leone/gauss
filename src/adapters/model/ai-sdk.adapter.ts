@@ -2,8 +2,8 @@
 // AiSdkModelAdapter — Wraps Vercel AI SDK LanguageModel into ModelPort
 // =============================================================================
 
-import type { LanguageModel } from "ai";
-import { generateText, streamText } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
+import { generateText, streamText } from "../../core/llm/index.js";
 
 import type {
   ModelPort,

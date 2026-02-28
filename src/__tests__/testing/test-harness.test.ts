@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 import {
   createMockProvider,
@@ -28,22 +28,24 @@ const { generateFn, constructorSpy } = vi.hoisted(() => {
   const generateFn = vi.fn().mockResolvedValue({
     text: "Mock response",
     steps: [],
+    usage: { inputTokens: 10, outputTokens: 20 },
+    finishReason: "stop",
+    toolCalls: [],
+    toolResults: [],
   });
   const constructorSpy = vi.fn();
   return { generateFn, constructorSpy };
 });
 
-vi.mock("ai", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("ai")>();
-
-  class MockToolLoopAgent {
-    constructor(settings: Record<string, unknown>) {
-      constructorSpy(settings);
-    }
-    generate = generateFn;
-  }
-
-  return { ...actual, ToolLoopAgent: MockToolLoopAgent };
+vi.mock("../../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../core/llm/index.js")>();
+  return {
+    ...actual,
+    generateText: (opts: Record<string, unknown>) => {
+      constructorSpy(opts);
+      return generateFn(opts);
+    },
+  };
 });
 
 // =============================================================================

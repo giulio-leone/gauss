@@ -9,7 +9,7 @@ export { agent, graph, rag } from "./gauss.js";
 
 // ─── AI SDK Re-exports ──────────────────────────────────────────────────────
 
-export { Output } from "ai";
+export { Output } from "core/llm/index.js";
 
 // ─── Errors ─────────────────────────────────────────────────────────────────
 

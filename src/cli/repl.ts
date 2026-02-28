@@ -5,7 +5,7 @@
 import { createInterface } from "node:readline/promises";
 import { execSync } from "node:child_process";
 import { stdin, stdout } from "node:process";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 import { createModel, getDefaultModel, isValidProvider, SUPPORTED_PROVIDERS } from "./providers.js";
 import type { ProviderName } from "./providers.js";
 import { resolveApiKey, listKeys, ENV_MAP, getMcpServers, addMcpServer, removeMcpServer, loadHistory, appendHistory } from "./config.js";

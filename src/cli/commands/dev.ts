@@ -4,7 +4,7 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { color, bold, createSpinner, formatDuration } from "../format.js";
 import { AgentConfigLoader } from "../../agent/agent-config-loader.js";
 import type { Agent } from "../../agent/agent.js";

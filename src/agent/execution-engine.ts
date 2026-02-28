@@ -2,8 +2,8 @@
 // ExecutionEngine — Run & stream orchestration
 // =============================================================================
 
-import { ToolLoopAgent, stepCountIs } from "ai";
-import type { LanguageModel, Tool } from "ai";
+import { generateText, streamText, stepCountIs } from "../core/llm/index.js";
+import type { LanguageModel, Tool } from "../core/llm/index.js";
 
 import type { MemoryPort } from "../ports/memory.port.js";
 import type { LearningPort } from "../ports/learning.port.js";
@@ -241,18 +241,17 @@ export class ExecutionEngine {
 
       const agentOptions: Record<string, unknown> = {
         model: this.toolManager.createRateLimitedModel(),
-        instructions,
+        system: instructions,
         tools,
         stopWhen: stepCountIs(this.config.maxSteps),
+        prompt,
       };
       if (this.config.output) agentOptions.output = this.config.output;
-
-      const agent = new ToolLoopAgent(agentOptions as ConstructorParameters<typeof ToolLoopAgent>[0]);
 
       // Wrap LLM call in telemetry span (safe on exception via withSpan)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: any = await this.withSpan("llm.generate", { "llm.model": String(this.config.model) }, () =>
-        (agent as any).generate({ prompt }),
+        generateText(agentOptions as Parameters<typeof generateText>[0]),
       );
 
       // Track token usage
@@ -490,15 +489,13 @@ export class ExecutionEngine {
       return this.withSpan("stream", { "stream.messages": params.messages.length }, async () => {
         const streamAgentOptions: Record<string, unknown> = {
           model: this.toolManager.createRateLimitedModel(),
-          instructions: this.config.instructions,
+          system: this.config.instructions,
           tools,
           stopWhen: stepCountIs(this.config.maxSteps),
         };
         if (this.config.output) streamAgentOptions.output = this.config.output;
 
-        const agent = new ToolLoopAgent(streamAgentOptions as ConstructorParameters<typeof ToolLoopAgent>[0]);
-
-        const streamResult = agent.stream(params as Parameters<typeof agent.stream>[0]);
+        const streamResult = streamText(streamAgentOptions as Parameters<typeof streamText>[0]);
 
         // Track cost from streaming after completion
         if (this.config.costTracker) {

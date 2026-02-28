@@ -2,7 +2,7 @@
 // CLI Providers — Dynamic provider factory (lazy-loaded peer deps)
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 export const SUPPORTED_PROVIDERS = [
   "openai",

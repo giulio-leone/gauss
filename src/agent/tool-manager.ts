@@ -2,9 +2,9 @@
 // ToolManager — Tool catalog building, wrapping, and preparation
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../core/llm/index.js";
 import { z } from "zod";
-import type { LanguageModel, Tool } from "ai";
+import type { LanguageModel, Tool } from "../core/llm/index.js";
 
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { McpPort } from "../ports/mcp.port.js";

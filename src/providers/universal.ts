@@ -3,7 +3,7 @@
 // Supports any @ai-sdk/* provider package with a single unified API.
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 // =============================================================================
 // Types

@@ -2,7 +2,7 @@
 // Agent — Execution orchestrator (SRP: building logic in agent-builder.ts)
 // =============================================================================
 
-import type { LanguageModel, Tool } from "ai";
+import type { LanguageModel, Tool } from "../core/llm/index.js";
 
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { MemoryPort } from "../ports/memory.port.js";

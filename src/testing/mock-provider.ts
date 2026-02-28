@@ -2,7 +2,7 @@
 // Mock AI SDK Provider — Canned responses for testing
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 export interface MockResponse {
   text: string;

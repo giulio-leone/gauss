@@ -2,7 +2,7 @@
 // ModelRouter — Multi-provider model routing with pluggable policies
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 import type {
   ModelPort,

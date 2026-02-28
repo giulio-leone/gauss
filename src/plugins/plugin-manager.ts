@@ -2,7 +2,7 @@
 // PluginManager — Manages plugin lifecycle, tools, and hook execution order
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 import type {
   AfterRunParams,

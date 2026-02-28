@@ -2,7 +2,7 @@
 // AgentBuilder — Configuration & construction of Agent instances
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 import type { FilesystemPort } from "../ports/filesystem.port.js";
 import type { MemoryPort } from "../ports/memory.port.js";

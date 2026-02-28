@@ -2,7 +2,7 @@
 // Plugin Port — Contract for Agent plugins
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 import type { AgentEventHandler, AgentEventType } from "../types.js";
 import type { FilesystemPort } from "./filesystem.port.js";

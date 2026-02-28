@@ -2,7 +2,7 @@
 // MemoryPlugin — Agent memory & context tools for Gauss
 // =============================================================================
 
-import { tool, type Tool } from "ai";
+import { tool, type Tool } from "../core/llm/index.js";
 import { z } from "zod";
 
 import type { Plugin, PluginHooks, PluginContext, AfterRunParams } from "../ports/plugin.port.js";

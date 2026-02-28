@@ -2,24 +2,23 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Agent } from "../../../agent/agent.js";
 import { CircuitBreakerState } from "../../../adapters/resilience/circuit-breaker.js";
 
-// Mock the AI SDK ToolLoopAgent
 const { generateFn } = vi.hoisted(() => {
   const generateFn = vi.fn().mockResolvedValue({
     text: "Mocked response",
     steps: [],
+    usage: { inputTokens: 10, outputTokens: 20 },
+    finishReason: "stop",
+    toolCalls: [],
+    toolResults: [],
   });
   return { generateFn };
 });
 
-vi.mock("ai", () => {
-  class MockToolLoopAgent {
-    constructor(_settings: Record<string, unknown>) {}
-    generate = generateFn;
-  }
+vi.mock("../../../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../core/llm/index.js")>();
   return {
-    ToolLoopAgent: MockToolLoopAgent,
-    stepCountIs: vi.fn().mockReturnValue(() => true),
-    tool: vi.fn(),
+    ...actual,
+    generateText: generateFn,
   };
 });
 

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { AgentConfigLoader } from "../agent-config-loader.js";
 import { FileWatcherAdapter } from "../../adapters/hot-reload/file-watcher.adapter.js";
 import type { HotReloadAgentConfig as AgentConfig } from "../../ports/hot-reload.port.js";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs");

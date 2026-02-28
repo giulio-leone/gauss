@@ -2,7 +2,7 @@
 // plan:update — Tool per modificare step del piano a runtime
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { FilesystemPort } from "../../ports/filesystem.port.js";

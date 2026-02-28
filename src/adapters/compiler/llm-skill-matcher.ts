@@ -2,8 +2,8 @@
 // LLM Skill Matcher — Uses Agent + Output.object for semantic skill matching
 // =============================================================================
 
-import { Output } from "ai";
-import type { LanguageModel } from "ai";
+import { Output } from "../../core/llm/index.js";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { z } from "zod";
 import type { SkillDeclaration } from "../../domain/compiler.schema.js";
 import type { SkillMatcherPort, SkillMatch } from "../../ports/skill-matcher.port.js";

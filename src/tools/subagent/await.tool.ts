@@ -2,7 +2,7 @@
 // await_subagent tool — Blocking wait for subagent completion
 // =============================================================================
 
-import { tool } from "ai";
+import { tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type { DelegationHooks } from "../../types.js";

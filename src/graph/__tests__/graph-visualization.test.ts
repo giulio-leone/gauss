@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import type { AgentConfig } from "../../types.js";
 import { AgentGraph } from "../agent-graph.js";
 import { AsciiGraphAdapter } from "../../adapters/graph-visualization/ascii-graph.adapter.js";

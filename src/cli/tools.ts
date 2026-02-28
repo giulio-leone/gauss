@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { z } from "zod";
-import { tool } from "ai";
+import { tool } from "../core/llm/index.js";
 import { readFileSync, readdirSync, realpathSync, existsSync } from "node:fs";
 import { execSync, spawnSync } from "node:child_process";
 import { resolve, join, relative } from "node:path";

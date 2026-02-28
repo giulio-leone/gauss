@@ -2,8 +2,8 @@
 // SubagentScheduler — Pool sizing + priority queue + circuit breaker
 // =============================================================================
 
-import { ToolLoopAgent, stepCountIs } from "ai";
-import type { LanguageModel } from "ai";
+import { generateText, streamText, stepCountIs } from "../../core/llm/index.js";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 import type { TelemetryPort } from "../../ports/telemetry.port.js";
 import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
@@ -310,17 +310,14 @@ export class SubagentScheduler {
       });
     }, handle.timeoutMs);
 
-    const agent = new ToolLoopAgent({
-      model: this.model,
-      instructions:
-        handle.instructions ??
-        "You are a specialized subagent. Complete the task and return your findings.",
-      tools: { ...fsTools },
-      stopWhen: stepCountIs(this.limits.maxStepsPerSubagent),
-    });
-
     try {
-      const result = await agent.generate({
+      const result = await generateText({
+        model: this.model,
+        system:
+          handle.instructions ??
+          "You are a specialized subagent. Complete the task and return your findings.",
+        tools: { ...fsTools },
+        stopWhen: stepCountIs(this.limits.maxStepsPerSubagent),
         prompt: handle.prompt,
         abortSignal: handle.abortController.signal,
       });
@@ -330,8 +327,8 @@ export class SubagentScheduler {
 
       const usage = (result as any).usage;
       if (usage) {
-        handle.tokenUsage.input += usage.promptTokens ?? 0;
-        handle.tokenUsage.output += usage.completionTokens ?? 0;
+        handle.tokenUsage.input += usage.inputTokens ?? 0;
+        handle.tokenUsage.output += usage.outputTokens ?? 0;
       }
 
       this.registry.transition(handle.taskId, "completed", {

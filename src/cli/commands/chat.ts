@@ -2,7 +2,7 @@
 // CLI Chat Command — Single-shot agentic prompt execution (streaming)
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { color, createSpinner, formatDuration } from "../format.js";
 import { createCliTools } from "../tools.js";
 import { detectProjectContext, contextToSystemPrompt } from "../project-context.js";

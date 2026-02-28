@@ -4,7 +4,7 @@
 // Enables cross-language consumption (Python, Go, etc.) via Streamable HTTP.
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 export interface McpServerOptions {
   name?: string;

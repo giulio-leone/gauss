@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 import { Agent } from "../index.js";
 import type { LifecycleHooks } from "../agent/lifecycle.js";
 

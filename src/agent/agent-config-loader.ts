@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { readFileSync } from "node:fs";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 import type { HotReloadAgentConfig as AgentConfig, HotReloadPort } from "../ports/hot-reload.port.js";
 import { FileWatcherAdapter } from "../adapters/hot-reload/file-watcher.adapter.js";
 import { Agent } from "./agent.js";

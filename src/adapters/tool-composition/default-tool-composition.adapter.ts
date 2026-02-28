@@ -2,8 +2,8 @@
 // DefaultToolCompositionAdapter — pipe, fallback, and middleware for AI SDK tools
 // =============================================================================
 
-import { tool } from "ai";
-import type { Tool } from "ai";
+import { tool } from "../../core/llm/index.js";
+import type { Tool } from "../../core/llm/index.js";
 import { z } from "zod";
 
 import type {

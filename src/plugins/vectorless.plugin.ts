@@ -2,7 +2,7 @@
 // VectorlessPlugin — RAG/knowledge tools via @giulio-leone/gaussflow-vectorless
 // =============================================================================
 
-import { tool, type Tool } from "ai";
+import { tool, type Tool } from "../core/llm/index.js";
 import { z } from "zod";
 
 import type { PluginHooks } from "../ports/plugin.port.js";

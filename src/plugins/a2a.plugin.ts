@@ -2,7 +2,7 @@
 // A2APlugin — A2A server integration + remote A2A call tool
 // =============================================================================
 
-import { tool, type Tool } from "ai";
+import { tool, type Tool } from "../core/llm/index.js";
 import { z } from "zod";
 
 import type { AgentResult, AgentRunOptions } from "../agent/agent.js";

@@ -13,7 +13,7 @@ import type {
 import { parseBody, sendJson, sendError } from "./router.js";
 import { Agent } from "../agent/agent.js";
 import { AgentGraph } from "../graph/agent-graph.js";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 const VERSION = "0.1.0";
 

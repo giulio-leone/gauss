@@ -2,7 +2,7 @@
 // CLI Demo Command — Showcase plugins and graph
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { color } from "../format.js";
 
 /** Max characters shown for response previews in demo output */

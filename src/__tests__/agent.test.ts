@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 
 import { Agent } from "../agent/agent.js";
 import { VirtualFilesystem } from "../adapters/filesystem/virtual-fs.adapter.js";
@@ -15,22 +15,24 @@ const { generateFn, constructorSpy } = vi.hoisted(() => {
   const generateFn = vi.fn().mockResolvedValue({
     text: "Mock response",
     steps: [{ type: "text" }],
+    usage: { inputTokens: 10, outputTokens: 20 },
+    finishReason: "stop",
+    toolCalls: [],
+    toolResults: [],
   });
   const constructorSpy = vi.fn();
   return { generateFn, constructorSpy };
 });
 
-vi.mock("ai", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("ai")>();
-
-  class MockToolLoopAgent {
-    constructor(settings: Record<string, unknown>) {
-      constructorSpy(settings);
-    }
-    generate = generateFn;
-  }
-
-  return { ...actual, ToolLoopAgent: MockToolLoopAgent };
+vi.mock("../core/llm/index.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../core/llm/index.js")>();
+  return {
+    ...actual,
+    generateText: (opts: Record<string, unknown>) => {
+      constructorSpy(opts);
+      return generateFn(opts);
+    },
+  };
 });
 
 // =============================================================================
@@ -120,8 +122,7 @@ describe("Agent", () => {
 
       expect(constructorSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: mockModel,
-          instructions: "Test",
+          system: "Test",
         }),
       );
     });
@@ -212,7 +213,7 @@ describe("Agent", () => {
   // ===========================================================================
 
   describe("run", () => {
-    it("agent.run calls ToolLoopAgent.generate", async () => {
+    it("agent.run calls generateText", async () => {
       const agent = Agent.create({
         model: mockModel,
         instructions: "Test",
@@ -222,7 +223,7 @@ describe("Agent", () => {
 
       expect(constructorSpy).toHaveBeenCalledTimes(1);
       expect(generateFn).toHaveBeenCalledTimes(1);
-      expect(generateFn).toHaveBeenCalledWith({ prompt: "Hello world" });
+      expect(generateFn).toHaveBeenCalledWith(expect.objectContaining({ prompt: "Hello world" }));
     });
 
     it("agent.run returns text, steps, sessionId", async () => {
@@ -499,7 +500,7 @@ describe("Agent", () => {
           custom: {
             description: "custom test tool",
             parameters: { type: "object", properties: {} },
-          } as unknown as import("ai").Tool,
+          } as unknown as import("../core/llm/index.js").Tool,
         })
         .build();
 
@@ -524,7 +525,7 @@ describe("Agent", () => {
         instructions: "test",
       });
 
-      const result = builder.withTools({ a: {} as unknown as import("ai").Tool });
+      const result = builder.withTools({ a: {} as unknown as import("../core/llm/index.js").Tool });
       expect(result).toBe(builder);
     });
 
@@ -533,8 +534,8 @@ describe("Agent", () => {
         model: mockModel,
         instructions: "test",
       })
-        .withTools({ toolA: {} as unknown as import("ai").Tool })
-        .withTools({ toolB: {} as unknown as import("ai").Tool })
+        .withTools({ toolA: {} as unknown as import("../core/llm/index.js").Tool })
+        .withTools({ toolB: {} as unknown as import("../core/llm/index.js").Tool })
         .build();
 
       await agent.run("Hello");

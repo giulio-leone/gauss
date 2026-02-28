@@ -1,4 +1,4 @@
-import type { Tool } from "ai";
+import type { Tool } from "../../core/llm/index.js";
 import type { DelegationHooks } from "../../types.js";
 import type { SubagentRegistry } from "./subagent-registry.js";
 import { createDispatchTool } from "./dispatch.tool.js";

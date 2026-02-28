@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 import { ToolManager } from "../tool-manager.js";
 import { EventBus } from "../event-bus.js";

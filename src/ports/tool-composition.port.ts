@@ -2,7 +2,7 @@
 // ToolCompositionPort — Compose, pipe, and wrap AI SDK tools
 // =============================================================================
 
-import type { Tool } from "ai";
+import type { Tool } from "../core/llm/index.js";
 
 export interface ToolMiddleware {
   name: string;

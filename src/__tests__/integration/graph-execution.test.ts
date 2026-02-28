@@ -4,7 +4,7 @@ import { SharedContext } from "../../graph/shared-context.js";
 import { MajorityVoteConsensus } from "../../adapters/consensus/majority-vote.adapter.js";
 import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";
 import { Agent } from "../../agent/agent.js";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 
 // Mock language model for testing
 const mockLanguageModel: LanguageModel = {

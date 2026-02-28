@@ -6,7 +6,7 @@
 // Le dipendenze tra step diventano edge.
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import type { Plan, Phase, Step } from "../../domain/plan.schema.js";
 import type { AgentConfig } from "../../types.js";
 import { AgentGraph } from "../../graph/agent-graph.js";

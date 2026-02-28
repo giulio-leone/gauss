@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Tool } from "ai";
+import type { Tool } from "../../core/llm/index.js";
 
 import { InMemoryAdapter } from "../../adapters/memory/in-memory.adapter.js";
 import { VirtualFilesystem } from "../../adapters/filesystem/virtual-fs.adapter.js";

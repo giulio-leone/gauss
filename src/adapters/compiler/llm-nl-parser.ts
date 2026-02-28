@@ -3,8 +3,8 @@
 // Uses Gauss Agent + AI SDK Output.object for structured generation.
 // =============================================================================
 
-import { Output } from "ai";
-import type { LanguageModel } from "ai";
+import { Output } from "../../core/llm/index.js";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { StructuredDeclarationSchema, type StructuredDeclaration } from "../../domain/compiler.schema.js";
 import type { NLParserPort } from "../../ports/compiler.port.js";
 import { Agent } from "../../agent/agent.js";

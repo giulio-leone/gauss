@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createStreamableHttpHandler } from "../streamable-http-handler.js";
 import { McpServer } from "../mcp-server.js";
-import type { Tool } from "ai";
+import type { Tool } from "../../core/llm/index.js";
 
 describe("createStreamableHttpHandler", () => {
   let handler: (request: Request) => Promise<Response>;

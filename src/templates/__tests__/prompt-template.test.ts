@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../../core/llm/index.js";
 import { PromptTemplate } from "../prompt-template.js";
 import type { AgentConfig } from "../../types.js";
 import { Agent } from "../../agent/agent.js";

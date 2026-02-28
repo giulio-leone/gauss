@@ -2,7 +2,7 @@
 // ModelPort — LLM invocation abstraction contract
 // =============================================================================
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from "../core/llm/index.js";
 import type { Message } from "../types.js";
 
 export interface ModelGenerateOptions {
