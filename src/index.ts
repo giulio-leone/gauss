@@ -285,6 +285,8 @@ export type { SupervisorStrategy, ChildPolicy, ChildSpec, RestartIntensity, Supe
 export { SupervisorBuilder } from "./graph/supervisor-builder.js";
 export { DynamicAgentGraph } from "./graph/dynamic-agent-graph.js";
 export type { MutationType, MutationEntry, MutationResult } from "./graph/dynamic-agent-graph.js";
+export { Team, TeamBuilder, team } from "./graph/team-builder.js";
+export type { CoordinationStrategy, TeamMember, TeamConfig, TeamResult, TeamRound } from "./graph/team-builder.js";
 
 // ─── RAG & Knowledge ────────────────────────────────────────────────────────
 

@@ -89,3 +89,10 @@ export function graph(config?: Partial<GraphConfig>) {
 export function rag(config: RAGPipelineConfig): RAGPipeline {
   return new RAGPipeline(config);
 }
+
+// =============================================================================
+// team() — Create a team of coordinated agents
+// =============================================================================
+
+export { team } from "./graph/team-builder.js";
+export type { CoordinationStrategy, TeamResult } from "./graph/team-builder.js";

@@ -28,3 +28,11 @@ export type {
 export { SupervisorBuilder } from "./supervisor-builder.js";
 export { DynamicAgentGraph } from "./dynamic-agent-graph.js";
 export type { MutationType, MutationEntry, MutationResult } from "./dynamic-agent-graph.js";
+export { Team, TeamBuilder, team } from "./team-builder.js";
+export type {
+  CoordinationStrategy,
+  TeamMember,
+  TeamConfig,
+  TeamResult,
+  TeamRound,
+} from "./team-builder.js";
