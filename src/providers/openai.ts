@@ -6,6 +6,7 @@
 
 import { createOpenAI } from "@ai-sdk/openai";
 import type { OpenAIProviderSettings } from "@ai-sdk/openai";
+import { wrapV3Model } from "../core/llm/v3-adapter.js";
 
 export type OpenAIProviderOptions = OpenAIProviderSettings;
 
@@ -27,5 +28,5 @@ export type OpenAIProviderOptions = OpenAIProviderSettings;
  */
 export function openai(modelId: string, options?: OpenAIProviderOptions) {
   const provider = createOpenAI(options);
-  return provider(modelId);
+  return wrapV3Model(provider.chat(modelId as any));
 }

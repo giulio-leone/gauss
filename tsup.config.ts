@@ -62,16 +62,11 @@ export default defineConfig([
     sourcemap: true,
     external: [...SHARED_EXTERNALS, ...AI_SDK_EXTERNALS],
   },
-  // Deno, Edge, Browser, Server (ESM only)
+  // Server & Node runtime (ESM only)
   {
     entry: {
-      "deno/index": "src/deno/index.ts",
-      "edge/index": "src/edge/index.ts",
-      "browser/index": "src/browser/index.ts",
       "server/index": "src/server/index.ts",
       "runtime-node": "src/runtime/node.ts",
-      "runtime-deno": "src/runtime/deno.ts",
-      "runtime-edge": "src/runtime/edge.ts",
     },
     format: ["esm"],
     splitting: true,

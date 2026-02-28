@@ -12,6 +12,7 @@
 // =============================================================================
 
 import type { LanguageModel } from "./core/llm/index.js";
+import { wrapV3Model } from "./core/llm/v3-adapter.js";
 import type { AgentConfig } from "./types.js";
 import type { GraphConfig } from "./domain/graph.schema.js";
 import { AgentBuilder } from "./agent/agent-builder.js";
@@ -31,8 +32,8 @@ interface QuickOptions {
   temperature?: number;
 }
 
-const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defaultModel: string }> = [
-  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-5.2" },
+const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defaultModel: string; useChatApi?: boolean }> = [
+  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-4o-mini", useChatApi: true },
   { env: "ANTHROPIC_API_KEY", pkg: "@ai-sdk/anthropic", factory: "createAnthropic", defaultModel: "claude-sonnet-4-20250514" },
   { env: "GOOGLE_GENERATIVE_AI_API_KEY", pkg: "@ai-sdk/google", factory: "createGoogleGenerativeAI", defaultModel: "gemini-2.5-flash-preview-05-20" },
   { env: "GROQ_API_KEY", pkg: "@ai-sdk/groq", factory: "createGroq", defaultModel: "llama-3.3-70b-versatile" },
@@ -40,13 +41,17 @@ const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defau
 ];
 
 async function detectModel(): Promise<LanguageModel> {
-  for (const { env, pkg, factory, defaultModel } of ENV_PROVIDER_MAP) {
+  for (const { env, pkg, factory, defaultModel, useChatApi } of ENV_PROVIDER_MAP) {
     if (process.env[env]) {
       try {
         const mod = await import(pkg);
         const create = mod[factory] ?? mod.default;
         if (typeof create === "function") {
-          return create()(defaultModel) as LanguageModel;
+          const provider = create();
+          const raw = useChatApi && typeof provider.chat === "function"
+            ? provider.chat(defaultModel)
+            : provider(defaultModel);
+          return wrapV3Model(raw) as LanguageModel;
         }
       } catch {
         // Package not installed, try next

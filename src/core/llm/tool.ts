@@ -8,7 +8,10 @@ import type { Tool, ToolExecuteOptions } from "./types.js";
 
 export interface ToolConfig<PARAMS extends z.ZodTypeAny = z.ZodTypeAny, RESULT = unknown> {
   description?: string;
-  inputSchema: PARAMS;
+  /** Zod schema for tool parameters (preferred, matches AI SDK convention) */
+  parameters?: PARAMS;
+  /** @deprecated Use `parameters` instead */
+  inputSchema?: PARAMS;
   execute?: (args: z.infer<PARAMS>, options?: ToolExecuteOptions) => Promise<RESULT>;
 }
 
@@ -22,7 +25,7 @@ export interface ToolConfig<PARAMS extends z.ZodTypeAny = z.ZodTypeAny, RESULT =
  *
  * const weatherTool = tool({
  *   description: "Get weather for a location",
- *   inputSchema: z.object({ city: z.string() }),
+ *   parameters: z.object({ city: z.string() }),
  *   execute: async ({ city }) => ({ temp: 72, city }),
  * });
  * ```
@@ -30,10 +33,11 @@ export interface ToolConfig<PARAMS extends z.ZodTypeAny = z.ZodTypeAny, RESULT =
 export function tool<PARAMS extends z.ZodTypeAny, RESULT = unknown>(
   config: ToolConfig<PARAMS, RESULT>,
 ): Tool<z.infer<PARAMS>, RESULT> {
+  const schema = config.parameters ?? config.inputSchema;
   return {
     type: "function",
     description: config.description,
-    parameters: config.inputSchema as unknown as ZodType<z.infer<PARAMS>>,
+    parameters: schema as unknown as ZodType<z.infer<PARAMS>>,
     execute: config.execute,
   };
 }

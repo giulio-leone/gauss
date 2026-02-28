@@ -71,6 +71,11 @@ function buildMessages(options: GenerateTextOptions): CoreMessage[] {
   return msgs;
 }
 
+/**
+ * Normalize messages for AI SDK v2/v3 compatibility.
+ * External providers (e.g. @ai-sdk/openai v3) expect content as ContentPart[],
+ * not raw strings. This converts string content → [{type:'text', text}].
+ */
 async function executeTools(
   toolCalls: ToolCall[],
   tools: ToolSet,

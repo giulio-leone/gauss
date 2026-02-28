@@ -1,8 +1,8 @@
 // =============================================================================
-// Backend Detection — NAPI vs WASM auto-detection with env override
+// Backend Detection — NAPI-only for Node.js
 // =============================================================================
 
-export type BackendType = "napi" | "wasm" | "none";
+export type BackendType = "napi" | "none";
 
 export interface BackendInfo {
   type: BackendType;
@@ -17,11 +17,6 @@ const NAPI_PACKAGES = [
   "@giulio-leone/gauss-core-napi",
 ] as const;
 
-const WASM_PACKAGES = [
-  "@gauss-ai/wasm",
-  "@giulio-leone/gauss-core-wasm",
-] as const;
-
 function tryRequire(id: string): unknown | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,10 +27,7 @@ function tryRequire(id: string): unknown | null {
 }
 
 function tryLoadNapi(): BackendInfo | null {
-  const envPath = typeof process !== "undefined"
-    ? process.env["GAUSS_NAPI_PATH"]
-    : undefined;
-
+  const envPath = process.env["GAUSS_NAPI_PATH"];
   const paths = [...NAPI_PACKAGES, envPath].filter(Boolean) as string[];
 
   for (const p of paths) {
@@ -51,38 +43,16 @@ function tryLoadNapi(): BackendInfo | null {
   return null;
 }
 
-function tryLoadWasm(): BackendInfo | null {
-  const envPath = typeof process !== "undefined"
-    ? process.env["GAUSS_WASM_PATH"]
-    : undefined;
-
-  const paths = [...WASM_PACKAGES, envPath].filter(Boolean) as string[];
-
-  for (const p of paths) {
-    const mod = tryRequire(p);
-    if (mod) {
-      const version =
-        typeof (mod as Record<string, unknown>).version === "function"
-          ? (mod as { version(): string }).version()
-          : null;
-      return { type: "wasm", version, module: mod };
-    }
-  }
-  return null;
-}
-
 /**
  * Detect available backend. Priority:
- * 1. GAUSS_BACKEND env var (explicit override: "napi" | "wasm")
- * 2. NAPI (native, fastest)
- * 3. WASM (universal fallback)
- * 4. none (pure TS path)
+ * 1. GAUSS_BACKEND=napi env var (explicit)
+ * 2. NAPI auto-detection
+ * 3. none (pure TS path)
  */
 export function detectBackend(): BackendInfo {
   if (cachedBackend) return cachedBackend;
 
-  const override =
-    typeof process !== "undefined" ? process.env["GAUSS_BACKEND"] : undefined;
+  const override = process.env["GAUSS_BACKEND"];
 
   if (override === "napi") {
     const napi = tryLoadNapi();
@@ -96,41 +66,22 @@ export function detectBackend(): BackendInfo {
     );
   }
 
-  if (override === "wasm") {
-    const wasm = tryLoadWasm();
-    if (wasm) {
-      cachedBackend = wasm;
-      return wasm;
-    }
-    throw new Error(
-      "GAUSS_BACKEND=wasm but WASM module not found. " +
-        "Install @gauss-ai/wasm or set GAUSS_WASM_PATH."
-    );
-  }
-
-  // Auto-detect: NAPI → WASM → none
   const napi = tryLoadNapi();
   if (napi) {
     cachedBackend = napi;
     return napi;
   }
 
-  const wasm = tryLoadWasm();
-  if (wasm) {
-    cachedBackend = wasm;
-    return wasm;
-  }
-
   cachedBackend = { type: "none", version: null, module: null };
   return cachedBackend;
 }
 
-/** Check if a native backend (NAPI or WASM) is available */
+/** Check if the NAPI backend is available */
 export function hasNativeBackend(): boolean {
-  return detectBackend().type !== "none";
+  return detectBackend().type === "napi";
 }
 
-/** Get the loaded backend module (typed) or null */
+/** Get the loaded NAPI module (typed) or null */
 export function getBackendModule<T = unknown>(): T | null {
   const backend = detectBackend();
   return backend.module as T | null;

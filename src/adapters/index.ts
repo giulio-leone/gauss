@@ -65,9 +65,6 @@ export { createDefaultPartialJsonAdapter, DefaultPartialJsonAdapter } from "./pa
 // Runtime
 export { BaseRuntimeAdapter } from "./runtime/base-runtime.adapter.js";
 export { NodeRuntimeAdapter } from "./runtime/node-runtime.adapter.js";
-export { DenoRuntimeAdapter } from "./runtime/deno-runtime.adapter.js";
-export { BunRuntimeAdapter } from "./runtime/bun-runtime.adapter.js";
-export { EdgeRuntimeAdapter } from "./runtime/edge-runtime.adapter.js";
 export { detectRuntimeName, createRuntimeAdapter, createRuntimeAdapterAsync, type RuntimeName } from "./runtime/detect-runtime.js";
 
 // Workflow & Compiler
