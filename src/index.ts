@@ -168,7 +168,7 @@ export type { VideoInput, VideoFrame, VideoAnalysisResult } from "./domain/video
 // ─── Workflow ───────────────────────────────────────────────────────────────
 
 export { workflow, WorkflowDSL } from "./domain/workflow-dsl.js";
-export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js";
+export type { StepDefinition, BranchDefinition, ConvergeDefinition } from "./domain/workflow-dsl.js";
 
 // ─── Runtime Detection ──────────────────────────────────────────────────────
 

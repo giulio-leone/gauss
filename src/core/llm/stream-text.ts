@@ -20,6 +20,7 @@ import type {
 import type { StopCondition } from "./stop-conditions.js";
 import type { OutputSpec } from "./output.js";
 import { isNativeModel, nativeStreamText } from "./native-bridge.js";
+import { zodToJsonSchema } from "../schema/zod-to-json-schema.js";
 
 // ---------------------------------------------------------------------------
 // Options
@@ -46,27 +47,7 @@ export interface StreamTextOptions<TOOLS extends ToolSet = ToolSet> {
 // Helpers (shared with generateText)
 // ---------------------------------------------------------------------------
 
-function zodToJsonSchema(schema: unknown): Record<string, unknown> {
-  if (!schema) return {};
-  const s = schema as { _def?: { typeName?: string }; shape?: unknown };
-  if (s._def?.typeName === "ZodObject" && s.shape) {
-    const shape = typeof s.shape === "function" ? (s.shape as () => Record<string, unknown>)() : s.shape as Record<string, unknown>;
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-    for (const [key, val] of Object.entries(shape)) {
-      const f = val as { _def?: { typeName?: string; description?: string }; isOptional?: () => boolean };
-      properties[key] = { type: "string" };
-      if (f._def?.typeName === "ZodString") properties[key] = { type: "string" };
-      else if (f._def?.typeName === "ZodNumber") properties[key] = { type: "number" };
-      else if (f._def?.typeName === "ZodBoolean") properties[key] = { type: "boolean" };
-      else if (f._def?.typeName === "ZodArray") properties[key] = { type: "array" };
-      if (f._def?.description) (properties[key] as Record<string, unknown>).description = f._def.description;
-      if (typeof f.isOptional !== "function" || !f.isOptional()) required.push(key);
-    }
-    return { type: "object", properties, ...(required.length > 0 ? { required } : {}) };
-  }
-  return { type: "object" };
-}
+// zodToJsonSchema imported from core/schema/zod-to-json-schema
 
 function toolsToLanguageModelTools(tools: ToolSet): LanguageModelTool[] {
   return Object.entries(tools).map(([name, def]) => ({

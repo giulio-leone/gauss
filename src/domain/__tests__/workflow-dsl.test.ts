@@ -88,7 +88,10 @@ describe("WorkflowDSL", () => {
     expect(wf.steps[0].type).toBe("parallel");
 
     const result = await wf.steps[0].execute({});
-    expect(result).toEqual({ a: 1, b: 2, c: 3 });
+    expect(result.a).toBe(1);
+    expect(result.b).toBe(2);
+    expect(result.c).toBe(3);
+    expect((result as Record<string, unknown>)._parallelResults).toBeDefined();
   });
 
   it("validates input schema with Zod", async () => {
@@ -116,7 +119,40 @@ describe("WorkflowDSL", () => {
     await expect(wf.steps[0].execute({})).rejects.toThrow();
   });
 
-  it("complex workflow: then + branch + parallel + then", async () => {
+  it("converge merges parallel results via reducer", async () => {
+    const wf = workflow("converge-test")
+      .parallel(
+        { id: "left", execute: async (ctx) => ({ ...ctx, left: 10 }) },
+        { id: "right", execute: async (ctx) => ({ ...ctx, right: 20 }) }
+      )
+      .converge("merge", (results) => ({
+        sum: results.reduce((acc, r) => acc + ((r.left as number) || 0) + ((r.right as number) || 0), 0),
+      }))
+      .build();
+
+    expect(wf.steps).toHaveLength(2);
+    expect(wf.steps[1].id).toBe("merge");
+
+    // Simulate: run parallel then converge
+    const parResult = await wf.steps[0].execute({});
+    const converged = await wf.steps[1].execute(parResult);
+    expect(converged.sum).toBe(30);
+    // _parallelResults should be cleaned up
+    expect((converged as Record<string, unknown>)._parallelResults).toBeUndefined();
+  });
+
+  it("converge without preceding parallel passes context through", async () => {
+    const wf = workflow("solo-converge")
+      .then({ id: "prep", execute: async (ctx) => ({ ...ctx, val: 42 }) })
+      .converge("gather", (ctxs) => ctxs[0])
+      .build();
+
+    const prep = await wf.steps[0].execute({});
+    const result = await wf.steps[1].execute(prep);
+    expect(result.val).toBe(42);
+  });
+
+  it("complex workflow: then + branch + parallel + converge + then", async () => {
     const wf = workflow("complex")
       .then({
         id: "init",
@@ -130,16 +166,20 @@ describe("WorkflowDSL", () => {
         { id: "fetch-a", execute: async (ctx) => ({ ...ctx, dataA: "a" }) },
         { id: "fetch-b", execute: async (ctx) => ({ ...ctx, dataB: "b" }) }
       )
+      .converge("merge-data", (results) => {
+        return results.reduce((acc, r) => ({ ...acc, ...r }), {});
+      })
       .then({
         id: "finalize",
         execute: async (ctx) => ({ ...ctx, done: true }),
       })
       .build();
 
-    expect(wf.steps).toHaveLength(4);
+    expect(wf.steps).toHaveLength(5);
     expect(wf.steps[0].id).toBe("init");
     expect(wf.steps[1].id).toBe("branch-1");
     expect(wf.steps[2].id).toBe("parallel-2");
-    expect(wf.steps[3].id).toBe("finalize");
+    expect(wf.steps[3].id).toBe("merge-data");
+    expect(wf.steps[4].id).toBe("finalize");
   });
 });

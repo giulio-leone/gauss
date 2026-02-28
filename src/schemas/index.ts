@@ -176,3 +176,6 @@ export type {
   CompilerOutput,
   LLMCompilerOutput,
 } from "../domain/compiler.schema.js";
+
+// Zod ↔ JSON Schema conversion
+export { zodToJsonSchema, validateWithZod } from "../core/schema/zod-to-json-schema.js";

@@ -32,10 +32,17 @@ export interface BranchDefinition {
 }
 
 interface DSLNode {
-  type: "step" | "branch" | "parallel";
+  type: "step" | "branch" | "parallel" | "converge";
   step?: StepDefinition;
   branch?: BranchDefinition;
   parallel?: StepDefinition[];
+  converge?: ConvergeDefinition;
+}
+
+export interface ConvergeDefinition {
+  id: string;
+  name?: string;
+  reducer: (contexts: WorkflowContext[]) => WorkflowContext;
 }
 
 // =============================================================================
@@ -82,6 +89,19 @@ export class WorkflowDSL {
     return this;
   }
 
+  /** Converge parallel results with a custom reducer */
+  converge(
+    id: string,
+    reducer: (contexts: WorkflowContext[]) => WorkflowContext,
+    name?: string
+  ): this {
+    this.nodes.push({
+      type: "converge",
+      converge: { id, reducer, name },
+    });
+    return this;
+  }
+
   /** Compile DSL to WorkflowDefinition for the engine */
   build(): WorkflowDefinition {
     const steps: WorkflowStep[] = [];
@@ -104,6 +124,12 @@ export class WorkflowDSL {
         case "parallel":
           if (node.parallel) {
             steps.push(this.buildParallelStep(node.parallel, idx));
+          }
+          break;
+
+        case "converge":
+          if (node.converge) {
+            steps.push(this.buildConvergeStep(node.converge));
           }
           break;
       }
@@ -183,17 +209,35 @@ export class WorkflowDSL {
         const results = await Promise.all(
           steps.map((s) => this.wrapWithValidation(s)({ ...ctx }))
         );
-        // Merge all results
-        return results.reduce(
+        // Store individual results for downstream converge, and merge into context
+        const merged = results.reduce(
           (acc, r) => ({ ...acc, ...r }),
           ctx
         );
+        (merged as Record<string, unknown>)._parallelResults = results;
+        return merged;
       },
     };
   }
-}
 
-/** Factory function */
+  private buildConvergeStep(def: ConvergeDefinition): WorkflowStep {
+    return {
+      id: def.id,
+      name: def.name ?? `Converge ${def.id}`,
+      execute: async (ctx: WorkflowContext) => {
+        const parallelResults =
+          (ctx as Record<string, unknown>)._parallelResults as
+            | WorkflowContext[]
+            | undefined;
+        const result = def.reducer(parallelResults ?? [ctx]);
+        const out = result as Record<string, unknown>;
+        delete out._parallelResults;
+        return result;
+      },
+    };
+  }
+
+}
 export function workflow(id: string): WorkflowDSL {
   return new WorkflowDSL(id);
 }
