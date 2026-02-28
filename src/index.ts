@@ -10,6 +10,7 @@ export { agent, graph, rag } from "./gauss.js";
 // ─── Agent Primitive (new core API) ──────────────────────────────────────────
 
 export { Agent as AgentPrimitive } from "./core/agent/index.js";
+export { graph as agentGraph } from "./core/agent/index.js";
 export type {
   AgentConfig as AgentPrimitiveConfig,
   AgentInstance,
@@ -24,6 +25,9 @@ export type {
   ToolCallContext,
   OutputSpec,
   CostInfo,
+  GraphConfig,
+  GraphResult,
+  GraphPipeline,
 } from "./core/agent/index.js";
 
 // ─── Decorators ─────────────────────────────────────────────────────────────

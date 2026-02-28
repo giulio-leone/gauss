@@ -6,6 +6,8 @@ export { Agent } from "./agent.js";
 export { agentsToTools } from "./subagent.js";
 export { runAgent } from "./run.js";
 export { streamAgent } from "./stream.js";
+export { graph } from "./graph.js";
+export type { GraphConfig, GraphResult, GraphPipeline } from "./graph.js";
 
 export type {
   AgentConfig,
