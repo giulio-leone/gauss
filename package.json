@@ -6,7 +6,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/giulio-leone/onegenui-deep-agents.git"
+    "url": "https://github.com/giulio-leone/gauss.git"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

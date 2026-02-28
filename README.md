@@ -1,9 +1,9 @@
 # Gauss
 
-[![CI](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml)
+[![CI](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/gauss)](https://www.npmjs.com/package/gauss)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-1640%20passing-brightgreen)](https://github.com/giulio-leone/onegenui-deep-agents)
+[![Tests](https://img.shields.io/badge/tests-1640%20passing-brightgreen)](https://github.com/giulio-leone/gauss)
 
 > **The AI Agent Framework that doesn't get in your way.**
 
