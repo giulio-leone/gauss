@@ -90,6 +90,21 @@ interface NapiModule {
   countTokens(text: string): number;
   countTokensForModel(text: string, model: string): number;
   cosineSimilarity(a: number[], b: number[]): number;
+  agentStreamWithToolExecutor(
+    name: string,
+    providerHandle: number,
+    tools: Array<{ name: string; description: string; parameters: unknown | null }>,
+    messages: Array<{ role: string; content: string }>,
+    options: Record<string, unknown>,
+    streamCallback: (eventJson: string) => void,
+    toolExecutor: (callJson: string) => Promise<string>,
+  ): Promise<{
+    text: string;
+    steps: number;
+    inputTokens: number;
+    outputTokens: number;
+    structuredOutput?: unknown;
+  }>;
 }
 
 let _napi: NapiModule | null = null;
@@ -273,48 +288,95 @@ class GaussLanguageModel implements LanguageModel {
   async doStream(
     options: LanguageModelGenerateOptions,
   ): Promise<LanguageModelStreamResult> {
-    // For now, simulate streaming by generating full text and emitting chunks.
-    // Native streaming (M9) will replace this with true Rust-backed streaming.
-    const result = await this.doGenerate(options);
+    const napi = getNapi();
+    const messages = options.prompt.map((m) => ({
+      role: m.role,
+      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+    }));
 
+    const tools =
+      options.mode.type === "regular" && options.mode.tools
+        ? options.mode.tools.map((t) => ({
+            name: t.name,
+            description: t.description ?? "",
+            parameters: t.parameters ?? null,
+          }))
+        : [];
+
+    let controller: ReadableStreamDefaultController<StreamPart>;
     const stream = new ReadableStream<StreamPart>({
-      start(controller) {
-        if (result.text) {
-          // Emit text in chunks
-          const chunkSize = 50;
-          for (let i = 0; i < result.text.length; i += chunkSize) {
-            controller.enqueue({
-              type: "text-delta",
-              textDelta: result.text.slice(i, i + chunkSize),
-            });
-          }
-        }
-
-        if (result.toolCalls) {
-          for (const tc of result.toolCalls) {
-            controller.enqueue({
-              type: "tool-call",
-              toolCallType: "function",
-              toolCallId: tc.toolCallId,
-              toolName: tc.toolName,
-              args: tc.args,
-            });
-          }
-        }
-
-        controller.enqueue({
-          type: "finish",
-          finishReason: result.finishReason,
-          usage: result.usage,
-        });
-
-        controller.close();
+      start(c) {
+        controller = c;
       },
     });
 
+    // Stream callback receives events from Rust
+    const streamCallback = (eventJson: string): void => {
+      try {
+        const event = JSON.parse(eventJson);
+        switch (event.type) {
+          case "text_delta":
+            controller.enqueue({
+              type: "text-delta",
+              textDelta: event.delta,
+            });
+            break;
+          case "tool_result":
+            // Tool results don't map directly to StreamPart, but we can emit them
+            // as raw events or handle them in the consumer
+            break;
+          case "step_finish":
+            // Multi-step events for agent consumers
+            break;
+          case "done":
+            controller.enqueue({
+              type: "finish",
+              finishReason: mapFinishReason(event.finishReason ?? "Stop"),
+              usage: {
+                inputTokens: event.inputTokens ?? 0,
+                outputTokens: event.outputTokens ?? 0,
+              },
+            });
+            controller.close();
+            break;
+          case "error":
+            controller.error(new Error(event.error));
+            break;
+        }
+      } catch {
+        // Ignore parse errors in stream events
+      }
+    };
+
+    // Tool executor for streaming mode
+    const toolExecutor = async (_callJson: string): Promise<string> => {
+      // In LanguageModel.doStream(), tools aren't executed — just reported.
+      // The tool execution happens at the Agent level.
+      return JSON.stringify({ error: "Tool execution not supported in doStream" });
+    };
+
+    // Fire-and-forget: the streaming happens via callbacks
+    napi
+      .agentStreamWithToolExecutor(
+        "stream",
+        this.handle,
+        tools,
+        messages,
+        {},
+        streamCallback,
+        toolExecutor,
+      )
+      .catch((err: Error) => {
+        try {
+          controller.error(err);
+        } catch {
+          // Controller may already be closed
+        }
+      });
+
     return {
       stream,
-      rawCall: result.rawCall,
+      rawCall: { rawPrompt: messages, rawSettings: {} },
     };
   }
 
@@ -463,6 +525,158 @@ export async function gaussAgentRun(
     },
     structuredOutput: result.structuredOutput,
   };
+}
+
+/** Stream event from native agent execution. */
+export interface NativeStreamEvent {
+  type: "step_start" | "text_delta" | "tool_call_delta" | "tool_result" | "step_finish" | "done" | "error" | "raw_event";
+  step?: number;
+  delta?: string;
+  index?: number;
+  toolName?: string;
+  result?: unknown;
+  isError?: boolean;
+  finishReason?: string;
+  hasToolCalls?: boolean;
+  text?: string;
+  steps?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  error?: string;
+}
+
+/**
+ * Stream an agent execution natively in Rust.
+ * Returns an AsyncIterable of stream events + a promise for the final result.
+ */
+export function gaussAgentStream(
+  name: string,
+  providerHandle: number,
+  tools: Array<{
+    name: string;
+    description: string;
+    parameters?: Record<string, unknown>;
+    execute?: (args: Record<string, unknown>) => Promise<unknown>;
+  }>,
+  messages: Array<{ role: string; content: string }>,
+  options: {
+    instructions?: string;
+    maxSteps?: number;
+    temperature?: number;
+    topP?: number;
+    maxTokens?: number;
+    seed?: number;
+    stopOnTool?: string;
+    outputSchema?: Record<string, unknown>;
+  } = {},
+): {
+  events: AsyncIterable<NativeStreamEvent>;
+  result: Promise<{
+    text: string;
+    steps: number;
+    usage: { inputTokens: number; outputTokens: number };
+    structuredOutput?: unknown;
+  }>;
+} {
+  const napi = getNapi();
+
+  const toolSchemas = tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters ?? null,
+  }));
+
+  const napiMessages = messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  const napiOptions = {
+    instructions: options.instructions ?? null,
+    maxSteps: options.maxSteps ?? null,
+    temperature: options.temperature ?? null,
+    topP: options.topP ?? null,
+    maxTokens: options.maxTokens ?? null,
+    seed: options.seed ?? null,
+    stopOnTool: options.stopOnTool ?? null,
+    outputSchema: options.outputSchema ?? null,
+  };
+
+  // Build tool executor
+  const executorMap = new Map<
+    string,
+    (args: Record<string, unknown>) => Promise<unknown>
+  >();
+  for (const t of tools) {
+    if (t.execute) executorMap.set(t.name, t.execute);
+  }
+  const toolExecutor = async (callJson: string): Promise<string> => {
+    const { tool, args } = JSON.parse(callJson);
+    const fn = executorMap.get(tool);
+    if (!fn) throw new Error(`No execute function for tool: ${tool}`);
+    const result = await fn(args);
+    return JSON.stringify(result);
+  };
+
+  // Event queue for async iteration
+  const eventQueue: NativeStreamEvent[] = [];
+  let resolveNext: ((value: IteratorResult<NativeStreamEvent>) => void) | null = null;
+  let streamDone = false;
+
+  const streamCallback = (eventJson: string): void => {
+    try {
+      const event = JSON.parse(eventJson) as NativeStreamEvent;
+      if (resolveNext) {
+        const resolve = resolveNext;
+        resolveNext = null;
+        resolve({ value: event, done: false });
+      } else {
+        eventQueue.push(event);
+      }
+      if (event.type === "done" || event.type === "error") {
+        streamDone = true;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  };
+
+  const resultPromise = napi
+    .agentStreamWithToolExecutor(
+      name,
+      providerHandle,
+      toolSchemas,
+      napiMessages,
+      napiOptions,
+      streamCallback,
+      toolExecutor,
+    )
+    .then((r) => ({
+      text: r.text,
+      steps: r.steps,
+      usage: { inputTokens: r.inputTokens, outputTokens: r.outputTokens },
+      structuredOutput: r.structuredOutput,
+    }));
+
+  const events: AsyncIterable<NativeStreamEvent> = {
+    [Symbol.asyncIterator]() {
+      return {
+        next(): Promise<IteratorResult<NativeStreamEvent>> {
+          if (eventQueue.length > 0) {
+            return Promise.resolve({ value: eventQueue.shift()!, done: false });
+          }
+          if (streamDone) {
+            return Promise.resolve({ value: undefined as any, done: true });
+          }
+          return new Promise((resolve) => {
+            resolveNext = resolve;
+          });
+        },
+      };
+    },
+  };
+
+  return { events, result: resultPromise };
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import {
   gauss,
   gaussAgentRun,
+  gaussAgentStream,
   countTokens,
   countTokensForModel,
   cosineSimilarity,
@@ -36,6 +37,14 @@ const mockNapi = {
       outputTokens: 10,
       structuredOutput: null,
     };
+  }),
+  agentStreamWithToolExecutor: vi.fn(async (_name: string, _handle: number, _tools: any[], _msgs: any[], _opts: any, streamCallback: (s: string) => void, _toolExecutor: any) => {
+    // Simulate streaming events
+    streamCallback(JSON.stringify({ type: "step_start", step: 0 }));
+    streamCallback(JSON.stringify({ type: "text_delta", step: 0, delta: "Hello " }));
+    streamCallback(JSON.stringify({ type: "text_delta", step: 0, delta: "World!" }));
+    streamCallback(JSON.stringify({ type: "done", text: "Hello World!", steps: 1, inputTokens: 10, outputTokens: 5 }));
+    return { text: "Hello World!", steps: 1, inputTokens: 10, outputTokens: 5, structuredOutput: null };
   }),
   countTokens: vi.fn(() => 5),
   countTokensForModel: vi.fn(() => 6),
@@ -118,7 +127,7 @@ describe("GaussProvider", () => {
   });
 
   describe("doStream()", () => {
-    it("streams text in chunks", async () => {
+    it("streams text via native NAPI callback", async () => {
       const model = gauss("openai", "gpt-4o", { apiKey: "test-key" });
       const { stream } = await model.doStream({
         inputFormat: "messages",
@@ -137,9 +146,13 @@ describe("GaussProvider", () => {
 
       expect(chunks.length).toBeGreaterThan(0);
       const textChunks = chunks.filter((c: any) => c.type === "text-delta");
-      expect(textChunks.length).toBeGreaterThan(0);
-      const finishChunk = chunks.find((c: any) => c.type === "finish");
+      expect(textChunks.length).toBe(2);
+      expect((textChunks[0] as any).textDelta).toBe("Hello ");
+      expect((textChunks[1] as any).textDelta).toBe("World!");
+      const finishChunk = chunks.find((c: any) => c.type === "finish") as any;
       expect(finishChunk).toBeDefined();
+      expect(finishChunk.usage.inputTokens).toBe(10);
+      expect(finishChunk.usage.outputTokens).toBe(5);
     });
   });
 
@@ -190,6 +203,35 @@ describe("GaussProvider", () => {
       );
 
       expect(executeSpy).toHaveBeenCalledWith({ city: "Rome" });
+    });
+  });
+
+  describe("gaussAgentStream()", () => {
+    it("streams events via async iterator", async () => {
+      const { events, result } = gaussAgentStream(
+        "test-agent",
+        42,
+        [],
+        [{ role: "user", content: "Hello" }],
+      );
+
+      const collectedEvents: any[] = [];
+      for await (const event of events) {
+        collectedEvents.push(event);
+        if (event.type === "done") break;
+      }
+
+      expect(collectedEvents.length).toBe(4);
+      expect(collectedEvents[0].type).toBe("step_start");
+      expect(collectedEvents[1].type).toBe("text_delta");
+      expect(collectedEvents[1].delta).toBe("Hello ");
+      expect(collectedEvents[2].type).toBe("text_delta");
+      expect(collectedEvents[2].delta).toBe("World!");
+      expect(collectedEvents[3].type).toBe("done");
+
+      const finalResult = await result;
+      expect(finalResult.text).toBe("Hello World!");
+      expect(finalResult.steps).toBe(1);
     });
   });
 

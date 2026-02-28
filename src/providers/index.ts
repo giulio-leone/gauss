@@ -24,6 +24,7 @@ export type { ProviderConfig, UniversalProviderOptions } from "./universal.js";
 export {
   gauss,
   gaussAgentRun,
+  gaussAgentStream,
   countTokens,
   countTokensForModel,
   cosineSimilarity,
@@ -32,4 +33,5 @@ export {
   setNapi,
   type GaussProviderType,
   type GaussProviderOptions,
+  type NativeStreamEvent,
 } from "./gauss.js";
