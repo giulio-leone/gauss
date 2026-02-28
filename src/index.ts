@@ -682,6 +682,10 @@ export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js"
 export { LLMRecorder, LLMReplayer } from "./tools/llm-recorder.js";
 export type { LLMCallRecord, RecorderOptions, ReplayerOptions } from "./tools/llm-recorder.js";
 
+export { VisualAgentBuilder, ModelRegistry, AgentConfigSchema } from "./tools/visual-agent-builder.js";
+export type { AgentConfigJSON, AgentNode, CompiledAgent, AgentBuilderResult } from "./tools/visual-agent-builder.js";
+export { AgentBuilderAPI } from "./tools/agent-builder-api.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,
