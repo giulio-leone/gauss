@@ -7,6 +7,11 @@ const SHARED_EXTERNALS = [
   "@supabase/supabase-js",
   "tiktoken",
   "@ai-sdk/mcp",
+  "pg",
+  "ioredis",
+  "bullmq",
+  "@aws-sdk/client-s3",
+  "@aws-sdk/s3-request-presigner",
 ] as const;
 
 const AI_SDK_EXTERNALS = [
