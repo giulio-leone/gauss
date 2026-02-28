@@ -32,6 +32,76 @@ export interface PlaygroundAgent {
   getMemory?: () => Promise<PlaygroundMemoryEntry[]>;
   /** Knowledge graph provider (for GraphVisualizer) */
   getGraph?: () => Promise<PlaygroundGraphData>;
+  /** Trace provider (for TraceViewer) */
+  getTraces?: () => Promise<PlaygroundTraceSpan[]>;
+  /** Token usage provider (for TokenDashboard) */
+  getTokenUsage?: () => Promise<PlaygroundTokenUsage[]>;
+  /** Tool call history (for ToolCallInspector) */
+  getToolCalls?: () => Promise<PlaygroundToolCall[]>;
+  /** Reliability metrics (for RetryDashboard) */
+  getReliabilityMetrics?: () => Promise<PlaygroundReliabilityMetrics>;
+}
+
+// ─── Trace Viewer Types ────────────────────────────────────────────────────────
+
+export interface PlaygroundTraceSpan {
+  id: string;
+  name: string;
+  parentId?: string;
+  startTime: number;
+  endTime: number;
+  status: "ok" | "error";
+  attributes: Record<string, unknown>;
+  events: Array<{ name: string; timestamp: number; attributes?: Record<string, unknown> }>;
+}
+
+// ─── Token Dashboard Types ─────────────────────────────────────────────────────
+
+export interface PlaygroundTokenUsage {
+  runId: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  estimatedCost: number;
+  timestamp: number;
+}
+
+// ─── Tool Call Inspector Types ─────────────────────────────────────────────────
+
+export interface PlaygroundToolCall {
+  id: string;
+  runId: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  output: unknown;
+  durationMs: number;
+  status: "success" | "error";
+  error?: string;
+  timestamp: number;
+}
+
+// ─── Reliability Dashboard Types ───────────────────────────────────────────────
+
+export interface PlaygroundReliabilityMetrics {
+  circuitBreaker: {
+    state: "closed" | "open" | "half-open";
+    failureCount: number;
+    successCount: number;
+    lastFailure?: number;
+    lastStateChange: number;
+  };
+  retries: {
+    totalAttempts: number;
+    successfulRetries: number;
+    failedRetries: number;
+    recentRetries: Array<{ toolName: string; attempts: number; success: boolean; timestamp: number }>;
+  };
+  rateLimiter: {
+    remainingTokens: number;
+    maxTokens: number;
+    requestsThisWindow: number;
+  };
 }
 
 export interface PlaygroundConfig {
@@ -175,6 +245,61 @@ export function registerPlaygroundRoutes(config: PlaygroundConfig): void {
     try {
       const graph = await agent.getGraph();
       res.json(graph);
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // GET /api/agents/:name/traces — Get execution traces
+  server.route("GET", "/api/agents/:name/traces", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getTraces) { res.json([]); return; }
+    try {
+      res.json(await agent.getTraces());
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // GET /api/agents/:name/tokens — Get token usage metrics
+  server.route("GET", "/api/agents/:name/tokens", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getTokenUsage) { res.json([]); return; }
+    try {
+      res.json(await agent.getTokenUsage());
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // GET /api/agents/:name/tool-calls — Get tool call history with I/O
+  server.route("GET", "/api/agents/:name/tool-calls", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getToolCalls) { res.json([]); return; }
+    try {
+      res.json(await agent.getToolCalls());
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // GET /api/agents/:name/reliability — Get retry/circuit breaker metrics
+  server.route("GET", "/api/agents/:name/reliability", async (req, res) => {
+    const agent = agentMap.get(req.params.name);
+    if (!agent) { res.status(404).json({ error: `Agent "${req.params.name}" not found` }); return; }
+    if (!agent.getReliabilityMetrics) {
+      res.json({
+        circuitBreaker: { state: "closed", failureCount: 0, successCount: 0, lastStateChange: Date.now() },
+        retries: { totalAttempts: 0, successfulRetries: 0, failedRetries: 0, recentRetries: [] },
+        rateLimiter: { remainingTokens: 0, maxTokens: 0, requestsThisWindow: 0 },
+      });
+      return;
+    }
+    try {
+      res.json(await agent.getReliabilityMetrics());
     } catch (err: unknown) {
       res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
