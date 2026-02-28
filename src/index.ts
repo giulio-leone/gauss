@@ -561,7 +561,8 @@ export type { Trajectory, TrajectoryStep } from "./evals/trajectory.js";
 // ─── Playground ─────────────────────────────────────────────────────────────
 
 export { registerPlaygroundRoutes } from "./server/playground-api.js";
-export type { PlaygroundAgent, PlaygroundConfig } from "./server/playground-api.js";
+export type { PlaygroundAgent, PlaygroundConfig, PlaygroundTraceSpan, PlaygroundTokenUsage, PlaygroundToolCall, PlaygroundReliabilityMetrics } from "./server/playground-api.js";
+export { PlaygroundCollector, type PlaygroundCollectorOptions } from "./server/playground-collector.js";
 export { startPlayground } from "./cli/playground.js";
 export type { PlaygroundOptions } from "./cli/playground.js";
 
