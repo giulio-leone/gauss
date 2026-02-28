@@ -679,6 +679,9 @@ export { WorkflowBuilder, defineWorkflow } from "./domain/workflow.builder.js";
 export { WorkflowDSL, workflow } from "./domain/workflow-dsl.js";
 export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js";
 
+export { LLMRecorder, LLMReplayer } from "./tools/llm-recorder.js";
+export type { LLMCallRecord, RecorderOptions, ReplayerOptions } from "./tools/llm-recorder.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,
