@@ -96,3 +96,10 @@ export function rag(config: RAGPipelineConfig): RAGPipeline {
 
 export { team } from "./graph/team-builder.js";
 export type { CoordinationStrategy, TeamResult } from "./graph/team-builder.js";
+
+// =============================================================================
+// workflow() — Create a workflow via fluent DSL
+// =============================================================================
+
+export { workflow } from "./domain/workflow-dsl.js";
+export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js";

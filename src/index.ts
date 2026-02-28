@@ -676,6 +676,9 @@ export type {
 
 export { WorkflowBuilder, defineWorkflow } from "./domain/workflow.builder.js";
 
+export { WorkflowDSL, workflow } from "./domain/workflow-dsl.js";
+export type { StepDefinition, BranchDefinition } from "./domain/workflow-dsl.js";
+
 export {
   StructuredDeclarationSchema,
   CompilerOutputSchema,
