@@ -58,7 +58,7 @@ describe("TypeBuilder", () => {
 
   it("handles records", () => {
     const schema = z.object({
-      metadata: z.record(z.unknown()),
+      metadata: z.record(z.string(), z.unknown()),
     });
     const result = zodToTypeScript("Entry", schema);
     expect(result).toContain("Record<string, unknown>");

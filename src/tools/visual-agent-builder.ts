@@ -12,7 +12,7 @@ import type { LanguageModel } from "../core/llm/index.js";
 export const ToolConfigSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
-  parameters: z.record(z.unknown()).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const AgentNodeSchema = z.object({
@@ -23,7 +23,7 @@ export const AgentNodeSchema = z.object({
   tools: z.array(ToolConfigSchema).optional(),
   maxSteps: z.number().optional(),
   temperature: z.number().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const EdgeSchema = z.object({
@@ -40,7 +40,7 @@ export const AgentConfigSchema = z.object({
   nodes: z.array(AgentNodeSchema),
   edges: z.array(EdgeSchema).default([]),
   entryNode: z.string(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type AgentConfigJSON = z.infer<typeof AgentConfigSchema>;
@@ -147,7 +147,7 @@ export class VisualAgentBuilder {
     }
     return {
       valid: false,
-      errors: result.error.errors.map(
+      errors: (result.error.issues ?? (result.error as any).errors ?? []).map(
         (e) => `${e.path.join(".")}: ${e.message}`
       ),
     };

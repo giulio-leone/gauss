@@ -93,8 +93,8 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
     return (schema.options as string[]).map((v: string) => `"${v}"`).join(" | ");
   }
 
-  // Native Enum
-  if (schema instanceof z.ZodNativeEnum) {
+  // Native Enum (removed in Zod 4, guard for compat)
+  if ("ZodNativeEnum" in z && schema instanceof (z as any).ZodNativeEnum) {
     return "number | string";
   }
 
@@ -106,13 +106,13 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
 
   // Tuple
   if (schema instanceof z.ZodTuple) {
-    const items = (schema.items as z.ZodTypeAny[]).map((i) => zodTypeToTS(i, indent, includeDesc));
+    const items = ((schema as any).items ?? schema._def.items ?? [] as z.ZodTypeAny[]).map((i: z.ZodTypeAny) => zodTypeToTS(i, indent, includeDesc));
     return `[${items.join(", ")}]`;
   }
 
   // Record
   if (schema instanceof z.ZodRecord) {
-    const valType = zodTypeToTS(schema.valueSchema, indent, includeDesc);
+    const valType = zodTypeToTS(schema._def.valueType ?? (schema as any).valueSchema, indent, includeDesc);
     return `Record<string, ${valType}>`;
   }
 
@@ -165,19 +165,19 @@ function zodTypeToTS(schema: z.ZodTypeAny, indent: string, includeDesc: boolean)
     return zodTypeToTS(schema.schema, indent, includeDesc);
   }
 
-  // Effects (refinements, transforms)
-  if (schema instanceof z.ZodEffects) {
-    return zodTypeToTS(schema.innerType(), indent, includeDesc);
+  // Effects (refinements, transforms — removed in Zod 4)
+  if ("ZodEffects" in z && schema instanceof (z as any).ZodEffects) {
+    return zodTypeToTS((schema as any).innerType(), indent, includeDesc);
   }
 
-  // Branded
-  if (schema instanceof z.ZodBranded) {
-    return zodTypeToTS(schema.unwrap(), indent, includeDesc);
+  // Branded (removed in Zod 4)
+  if ("ZodBranded" in z && schema instanceof (z as any).ZodBranded) {
+    return zodTypeToTS((schema as any).unwrap(), indent, includeDesc);
   }
 
-  // Pipeline
-  if (schema instanceof z.ZodPipeline) {
-    return zodTypeToTS(schema._def.out, indent, includeDesc);
+  // Pipeline (removed in Zod 4)
+  if ("ZodPipeline" in z && schema instanceof (z as any).ZodPipeline) {
+    return zodTypeToTS((schema as any)._def.out, indent, includeDesc);
   }
 
   return "unknown";
