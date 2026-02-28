@@ -6,6 +6,9 @@
 //   import { gauss } from 'gauss/providers'
 //   const model = gauss('openai', 'gpt-4o')
 //
+// Provider registry for discovery and auto-detection:
+//   import { PROVIDER_REGISTRY, findByName, listAll } from 'gauss/providers'
+//
 // Additional provider adapters for local/specialized use:
 //   - ollama('model')      — local Ollama inference
 //   - openrouter('model')  — OpenRouter multi-provider routing
@@ -13,6 +16,18 @@
 //
 // =============================================================================
 
+export {
+  PROVIDER_REGISTRY,
+  findByName,
+  findByEnv,
+  listAll,
+  listByCategory,
+  findAvailableByEnv,
+  toPackageMap,
+  type ProviderSpec,
+  type ProviderCategory,
+  type ModelAccess,
+} from "./registry.js";
 export { ollama, type OllamaProviderOptions } from "./ollama.js";
 export { openrouter, type OpenRouterProviderOptions } from "./openrouter.js";
 export { UniversalProvider, universalProvider } from "./universal.js";

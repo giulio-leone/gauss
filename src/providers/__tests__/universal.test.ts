@@ -1,10 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
 import { UniversalProvider, universalProvider } from "../universal.js";
 
-// Mock the AI SDK packages
+// Mock wrapV3Model to be a passthrough (avoids needing real V3 model structure)
+vi.mock("../../core/llm/v3-adapter.js", () => ({
+  wrapV3Model: vi.fn((model: any) => model),
+}));
+
+// Mock the AI SDK packages — OpenAI needs .chat() per registry spec
 vi.mock("@ai-sdk/openai", () => ({
   createOpenAI: vi.fn((config: any) => {
-    return (modelId: string) => ({ modelId, provider: "openai", ...config });
+    const provider = (modelId: string) => ({ modelId, provider: "openai", ...config });
+    provider.chat = (modelId: string) => ({ modelId, provider: "openai", via: "chat", ...config });
+    return provider;
   }),
 }));
 
@@ -20,7 +27,7 @@ describe("UniversalProvider", () => {
     expect(p).toBeInstanceOf(UniversalProvider);
   });
 
-  it("lists known providers", () => {
+  it("lists known providers from registry", () => {
     const p = new UniversalProvider();
     const list = p.listProviders();
     expect(list).toContain("openai");
@@ -28,14 +35,25 @@ describe("UniversalProvider", () => {
     expect(list).toContain("google");
     expect(list).toContain("groq");
     expect(list).toContain("mistral");
-    expect(list.length).toBeGreaterThan(15);
+    expect(list).toContain("deepseek");
+    expect(list).toContain("xai");
+    expect(list).toContain("perplexity");
+    expect(list.length).toBeGreaterThan(25);
   });
 
-  it("gets model by provider + modelId", async () => {
+  it("gets model by provider + modelId (chat access for OpenAI)", async () => {
     const p = new UniversalProvider();
     const model = await p.model("openai", "gpt-5.2");
     expect((model as any).modelId).toBe("gpt-5.2");
-    expect((model as any).provider).toBe("openai");
+    expect((model as any).via).toBe("chat");
+  });
+
+  it("gets model by provider + modelId (direct access for Anthropic)", async () => {
+    const p = new UniversalProvider();
+    const model = await p.model("anthropic", "claude-sonnet-4-20250514");
+    expect((model as any).modelId).toBe("claude-sonnet-4-20250514");
+    expect((model as any).provider).toBe("anthropic");
+    expect((model as any).via).toBeUndefined();
   });
 
   it("gets model by specifier string", async () => {
@@ -60,16 +78,8 @@ describe("UniversalProvider", () => {
     const p = new UniversalProvider();
     const m1 = await p.model("openai", "gpt-5.2");
     const m2 = await p.model("openai", "gpt-5.2-mini");
-    // Both use the same cached factory
-    expect((m1 as any).provider).toBe("openai");
-    expect((m2 as any).provider).toBe("openai");
-  });
-
-  it("supports anthropic provider", async () => {
-    const p = new UniversalProvider();
-    const model = await p.model("anthropic", "claude-sonnet-4-20250514");
-    expect((model as any).modelId).toBe("claude-sonnet-4-20250514");
-    expect((model as any).provider).toBe("anthropic");
+    expect((m1 as any).via).toBe("chat");
+    expect((m2 as any).via).toBe("chat");
   });
 
   it("supports custom providers", async () => {

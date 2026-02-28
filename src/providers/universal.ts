@@ -1,35 +1,21 @@
 // =============================================================================
 // UniversalProvider — Dynamic AI SDK provider wrapper
 // Supports any @ai-sdk/* provider package with a single unified API.
+// Backed by the centralized ProviderSpec registry.
 // =============================================================================
 
 import type { LanguageModel } from "../core/llm/index.js";
+import { wrapV3Model } from "../core/llm/v3-adapter.js";
+import {
+  PROVIDER_REGISTRY,
+  findByName,
+  toPackageMap,
+  type ProviderSpec,
+} from "./registry.js";
 
 // =============================================================================
 // Types
 // =============================================================================
-
-/** Known AI SDK provider packages and their factory function names */
-const KNOWN_PROVIDERS: Record<string, string> = {
-  openai: "@ai-sdk/openai",
-  anthropic: "@ai-sdk/anthropic",
-  google: "@ai-sdk/google",
-  groq: "@ai-sdk/groq",
-  mistral: "@ai-sdk/mistral",
-  cohere: "@ai-sdk/cohere",
-  amazon: "@ai-sdk/amazon-bedrock",
-  azure: "@ai-sdk/azure",
-  fireworks: "@ai-sdk/fireworks",
-  perplexity: "@ai-sdk/perplexity",
-  togetherai: "@ai-sdk/togetherai",
-  xai: "@ai-sdk/xai",
-  deepinfra: "@ai-sdk/deepinfra",
-  deepseek: "@ai-sdk/deepseek",
-  cerebras: "@ai-sdk/cerebras",
-  luma: "@ai-sdk/luma",
-  fal: "@ai-sdk/fal",
-  "openai-compatible": "@ai-sdk/openai-compatible",
-};
 
 export interface ProviderConfig {
   apiKey?: string;
@@ -38,7 +24,7 @@ export interface ProviderConfig {
 }
 
 export interface UniversalProviderOptions {
-  /** Custom provider packages beyond the known set */
+  /** Custom provider packages beyond the registry */
   customProviders?: Record<string, string>;
   /** Default configuration for all providers */
   defaults?: ProviderConfig;
@@ -55,7 +41,7 @@ export class UniversalProvider {
 
   constructor(options: UniversalProviderOptions = {}) {
     this.providerPackages = {
-      ...KNOWN_PROVIDERS,
+      ...toPackageMap(),
       ...options.customProviders,
     };
     this.defaults = options.defaults ?? {};
@@ -142,13 +128,19 @@ export class UniversalProvider {
       );
     }
 
+    const spec = findByName(providerName);
+
     try {
       const mod = await import(pkg);
-      // AI SDK convention: create<Provider> function or default export
-      // Try multiple naming patterns to handle e.g. createOpenAI vs createOpenai
-      const createFnName = Object.keys(mod).find(
-        (k) => k.toLowerCase() === `create${providerName.toLowerCase()}`
-      );
+
+      // Use registry factoryName if available, otherwise discover dynamically
+      const factoryName = spec?.factoryName;
+      const createFnName = factoryName
+        ? Object.keys(mod).find((k) => k === factoryName)
+        : Object.keys(mod).find(
+            (k) => k.toLowerCase() === `create${providerName.toLowerCase()}`
+          );
+
       const createFn =
         (createFnName ? mod[createFnName] : undefined) ??
         mod.default ??
@@ -161,7 +153,16 @@ export class UniversalProvider {
       }
 
       const providerInstance = createFn(this.defaults);
-      const factory = (modelId: string) => providerInstance(modelId) as LanguageModel;
+      const modelAccess = spec?.modelAccess ?? "direct";
+
+      const factory = (modelId: string): LanguageModel => {
+        const raw =
+          modelAccess === "chat" && typeof providerInstance.chat === "function"
+            ? providerInstance.chat(modelId)
+            : providerInstance(modelId);
+        return wrapV3Model(raw) as LanguageModel;
+      };
+
       this.providerCache.set(providerName, factory);
       return factory;
     } catch (err) {
@@ -173,10 +174,6 @@ export class UniversalProvider {
       throw err;
     }
   }
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /** Factory function */

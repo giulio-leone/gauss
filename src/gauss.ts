@@ -21,6 +21,7 @@ import { RAGPipeline } from "./rag/pipeline.js";
 import type { RAGPipelineConfig } from "./rag/pipeline.js";
 import type { MemoryPluginOptions } from "./plugins/memory.plugin.js";
 import { createMemoryPlugin } from "./plugins/memory.plugin.js";
+import { PROVIDER_REGISTRY, findAvailableByEnv } from "./providers/registry.js";
 
 // =============================================================================
 // Smart model detection from environment
@@ -32,36 +33,34 @@ interface QuickOptions {
   temperature?: number;
 }
 
-const ENV_PROVIDER_MAP: Array<{ env: string; pkg: string; factory: string; defaultModel: string; useChatApi?: boolean }> = [
-  { env: "OPENAI_API_KEY", pkg: "@ai-sdk/openai", factory: "createOpenAI", defaultModel: "gpt-4o-mini", useChatApi: true },
-  { env: "ANTHROPIC_API_KEY", pkg: "@ai-sdk/anthropic", factory: "createAnthropic", defaultModel: "claude-sonnet-4-20250514" },
-  { env: "GOOGLE_GENERATIVE_AI_API_KEY", pkg: "@ai-sdk/google", factory: "createGoogleGenerativeAI", defaultModel: "gemini-2.5-flash-preview-05-20" },
-  { env: "GROQ_API_KEY", pkg: "@ai-sdk/groq", factory: "createGroq", defaultModel: "llama-3.3-70b-versatile" },
-  { env: "MISTRAL_API_KEY", pkg: "@ai-sdk/mistral", factory: "createMistral", defaultModel: "mistral-large-latest" },
-];
-
 async function detectModel(): Promise<LanguageModel> {
-  for (const { env, pkg, factory, defaultModel, useChatApi } of ENV_PROVIDER_MAP) {
-    if (process.env[env]) {
-      try {
-        const mod = await import(pkg);
-        const create = mod[factory] ?? mod.default;
-        if (typeof create === "function") {
-          const provider = create();
-          const raw = useChatApi && typeof provider.chat === "function"
-            ? provider.chat(defaultModel)
-            : provider(defaultModel);
-          return wrapV3Model(raw) as LanguageModel;
-        }
-      } catch {
-        // Package not installed, try next
+  const available = findAvailableByEnv();
+
+  for (const spec of available) {
+    try {
+      const mod = await import(spec.package);
+      const create = mod[spec.factoryName] ?? mod.default;
+      if (typeof create === "function") {
+        const provider = create();
+        const raw =
+          spec.modelAccess === "chat" && typeof provider.chat === "function"
+            ? provider.chat(spec.defaultModel)
+            : provider(spec.defaultModel);
+        return wrapV3Model(raw) as LanguageModel;
       }
+    } catch {
+      // Package not installed, try next
     }
   }
+
+  const envVars = PROVIDER_REGISTRY
+    .filter((p) => p.envKey !== undefined)
+    .map((p) => p.envKey)
+    .join(", ");
+
   throw new GaussError(
     "No AI provider detected",
-    "Set one of these environment variables: " +
-      ENV_PROVIDER_MAP.map((p) => p.env).join(", ") +
+    `Set one of these environment variables: ${envVars}` +
       "\n\nOr provide a model explicitly:\n" +
       "  import { openai } from 'gauss/providers'\n" +
       "  const answer = await gauss('Hello', { model: openai('gpt-5.2') })"
