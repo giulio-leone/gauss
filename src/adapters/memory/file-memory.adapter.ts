@@ -17,7 +17,7 @@ import { calculateMemoryStats } from "./memory-utils.js";
 const SUMMARY_MAX_LENGTH = 500;
 
 export interface FileMemoryAdapterOptions {
-  directory?: string; // default: .gaussflow/memory/
+  directory?: string; // default: .gauss/memory/
 }
 
 export class FileMemoryAdapter implements AgentMemoryPort {
@@ -26,7 +26,7 @@ export class FileMemoryAdapter implements AgentMemoryPort {
   private dirReady = false;
 
   constructor(options: FileMemoryAdapterOptions = {}) {
-    this.directory = options.directory ?? ".gaussflow/memory";
+    this.directory = options.directory ?? ".gauss/memory";
   }
 
   private getFilePath(sessionId?: string): string {

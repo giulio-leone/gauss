@@ -1,5 +1,5 @@
 // =============================================================================
-// ObservabilityPlugin — Tracing, metrics, and cost estimation for DeepAgents
+// ObservabilityPlugin — Tracing, metrics, and cost estimation for Gauss
 // =============================================================================
 
 import { BasePlugin } from "./base.plugin.js";

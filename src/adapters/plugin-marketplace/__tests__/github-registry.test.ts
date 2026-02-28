@@ -10,7 +10,7 @@ vi.mock("../local-cache.js", () => ({
   saveManifest: vi.fn(),
   readInstalledManifests: vi.fn(() => []),
   removePluginDir: vi.fn(),
-  getPluginDir: vi.fn((name: string) => `/home/user/.gaussflow/plugins/${name}`),
+  getPluginDir: vi.fn((name: string) => `/home/user/.gauss/plugins/${name}`),
 }));
 
 // ─── Mock fetch ──────────────────────────────────────────────────────────────

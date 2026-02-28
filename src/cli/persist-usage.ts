@@ -1,5 +1,5 @@
 // =============================================================================
-// persistUsage — Append session cost data to ~/.gaussflow/usage.json
+// persistUsage — Append session cost data to ~/.gauss/usage.json
 // =============================================================================
 
 import type { CostTrackerPort } from "../ports/cost-tracker.port.js";
@@ -9,7 +9,7 @@ export async function persistUsage(tracker: CostTrackerPort): Promise<void> {
   const { homedir } = await import("node:os");
   const { join } = await import("node:path");
 
-  const dir = join(homedir(), ".gaussflow");
+  const dir = join(homedir(), ".gauss");
   const usagePath = join(dir, "usage.ndjson");
 
   const records: unknown[] = JSON.parse(tracker.exportUsage());

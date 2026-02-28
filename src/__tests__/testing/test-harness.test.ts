@@ -21,7 +21,7 @@ import { createSnapshot, compareSnapshots } from "../../testing/snapshot.js";
 import { Agent } from "../../agent/agent.js";
 
 // =============================================================================
-// Mock AI SDK — ToolLoopAgent (same pattern as deep-agent.test.ts)
+// Mock AI SDK — ToolLoopAgent (same pattern as agent.test.ts)
 // =============================================================================
 
 const { generateFn, constructorSpy } = vi.hoisted(() => {

@@ -30,28 +30,28 @@ const fixtures: Record<string, Array<{ title: string; url: string; snippet: stri
   memory: [
     {
       title: "Memory tiering",
-      url: "https://gaussflow.dev/docs/memory-tiering",
+      url: "https://gauss.dev/docs/memory-tiering",
       snippet: "memory",
     },
   ],
   policy: [
     {
       title: "Policy engine",
-      url: "https://gaussflow.dev/docs/mcp-policy-engine",
+      url: "https://gauss.dev/docs/mcp-policy-engine",
       snippet: "policy",
     },
   ],
   transient: [
     {
       title: "Transient recovery",
-      url: "https://gaussflow.dev/docs/resilience",
+      url: "https://gauss.dev/docs/resilience",
       snippet: "resilience",
     },
   ],
   search: [
     {
       title: "Semantic search",
-      url: "https://gaussflow.dev/docs/semantic-web-search",
+      url: "https://gauss.dev/docs/semantic-web-search",
       snippet: "search",
     },
   ],

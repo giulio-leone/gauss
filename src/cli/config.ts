@@ -1,5 +1,5 @@
 // =============================================================================
-// CLI Config — .gaussflowrc file management
+// CLI Config — .gaussrc file management
 // =============================================================================
 
 import { readFileSync, writeFileSync, existsSync, unlinkSync, chmodSync, appendFileSync } from "node:fs";
@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { McpServerConfig } from "../ports/mcp.port.js";
 
-const CONFIG_FILE = ".gaussflowrc";
+const CONFIG_FILE = ".gaussrc";
 
 /** Maximum number of history lines to retain on disk */
 const MAX_HISTORY_LINES = 1000;
@@ -36,7 +36,7 @@ export function loadConfig(): GaussConfig {
       mcpServers: parsed.mcpServers,
     };
   } catch {
-    console.error("Warning: ~/.gaussflowrc is corrupted or unreadable. Using empty config.");
+    console.error("Warning: ~/.gaussrc is corrupted or unreadable. Using empty config.");
     return { keys: {} };
   }
 }
@@ -135,7 +135,7 @@ export function removeMcpServer(serverId: string): boolean {
 // Persistent REPL History
 // =============================================================================
 
-const HISTORY_FILE = ".gaussflow_history";
+const HISTORY_FILE = ".gauss_history";
 
 function historyPath(): string {
   return join(homedir(), HISTORY_FILE);

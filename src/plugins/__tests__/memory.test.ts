@@ -218,7 +218,7 @@ describe("FileMemoryAdapter", () => {
   let adapter: FileMemoryAdapter;
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "gaussflow-memory-test-"));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "gauss-memory-test-"));
     adapter = new FileMemoryAdapter({ directory: tmpDir });
   });
 

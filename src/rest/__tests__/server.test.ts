@@ -30,22 +30,22 @@ vi.mock("../../agent/agent.js", () => {
     }),
   });
 
-  class MockDeepAgent {
+  class MockAgent {
     sessionId = "mock-session-id";
     run = runFn;
     stream = streamFn;
     dispose = disposeFn;
 
     static auto() {
-      return new MockDeepAgent();
+      return new MockAgent();
     }
     static create() {
-      return { withPlanning: () => ({ build: () => new MockDeepAgent() }) };
+      return { withPlanning: () => ({ build: () => new MockAgent() }) };
     }
   }
 
   return {
-    Agent: MockDeepAgent,
+    Agent: MockAgent,
     AgentBuilder: class {},
     __mockRunFn: runFn,
     __mockDisposeFn: disposeFn,

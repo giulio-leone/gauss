@@ -1,5 +1,5 @@
 // =============================================================================
-// MemoryPlugin — Agent memory & context tools for DeepAgents
+// MemoryPlugin — Agent memory & context tools for Gauss
 // =============================================================================
 
 import { tool, type Tool } from "ai";

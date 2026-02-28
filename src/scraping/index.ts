@@ -1,6 +1,6 @@
 /**
  * Standalone scraping sub-path export.
- * Import as: `onegenui-deep-agents/scraping`
+ * Import as: `gauss/scraping`
  * No Node.js or AI SDK dependencies — safe for browser/extension contexts.
  */
 export {

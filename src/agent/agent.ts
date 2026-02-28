@@ -1,5 +1,5 @@
 // =============================================================================
-// Agent — Execution orchestrator (SRP: building logic in deep-agent-builder.ts)
+// Agent — Execution orchestrator (SRP: building logic in agent-builder.ts)
 // =============================================================================
 
 import type { LanguageModel, Tool } from "ai";
@@ -66,7 +66,7 @@ export { AgentBuilder } from "./agent-builder.js";
 // Agent
 // =============================================================================
 
-interface DeepAgentInternalConfig {
+interface AgentInternalConfig {
   model: LanguageModel;
   instructions: string;
   id?: string;
@@ -104,7 +104,7 @@ export class Agent {
   readonly sessionId: string;
   readonly eventBus: EventBus;
 
-  private readonly config: DeepAgentInternalConfig;
+  private readonly config: AgentInternalConfig;
   private _runtime: RuntimePort | null;
   private _runtimePromise: Promise<RuntimePort> | null = null;
   private readonly tokenTracker: TokenTracker;
@@ -122,7 +122,7 @@ export class Agent {
   // Telemetry
   private readonly telemetry?: TelemetryPort;
 
-  constructor(config: DeepAgentInternalConfig) {
+  constructor(config: AgentInternalConfig) {
     this._runtime = config.runtime ?? null;
     this.sessionId = config.id ?? (this._runtime ? this._runtime.randomUUID() : crypto.randomUUID());
     this.eventBus = new EventBus(this.sessionId);

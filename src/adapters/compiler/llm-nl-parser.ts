@@ -1,6 +1,6 @@
 // =============================================================================
 // LLM NL Parser — Parses natural language into StructuredDeclaration via LLM
-// Uses gaussflow Agent + AI SDK Output.object for structured generation.
+// Uses Gauss Agent + AI SDK Output.object for structured generation.
 // =============================================================================
 
 import { Output } from "ai";

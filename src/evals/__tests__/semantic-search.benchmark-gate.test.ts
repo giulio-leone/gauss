@@ -37,7 +37,7 @@ const crawlerFixtures: Record<
   "gauss flow memory tiering": [
     {
       title: "Gauss Memory Tiering",
-      url: "https://gaussflow.dev/docs/memory-tiering",
+      url: "https://gauss.dev/docs/memory-tiering",
       snippet: "Memory tiering in Gauss",
     },
     {
@@ -49,7 +49,7 @@ const crawlerFixtures: Record<
   "mcp policy engine allow deny": [
     {
       title: "Gauss MCP Policy Engine",
-      url: "https://gaussflow.dev/docs/mcp-policy-engine",
+      url: "https://gauss.dev/docs/mcp-policy-engine",
       snippet: "Allow deny governance",
     },
     {
@@ -61,7 +61,7 @@ const crawlerFixtures: Record<
   "semantic web search citation": [
     {
       title: "Gauss Semantic Web Search",
-      url: "https://gaussflow.dev/docs/semantic-web-search",
+      url: "https://gauss.dev/docs/semantic-web-search",
       snippet: "Search rerank citation",
     },
     {
@@ -88,17 +88,17 @@ describe("semantic benchmark gate", () => {
       {
         id: "memory-tiering",
         query: "gauss flow memory tiering",
-        expectedUrls: ["https://gaussflow.dev/docs/memory-tiering"],
+        expectedUrls: ["https://gauss.dev/docs/memory-tiering"],
       },
       {
         id: "mcp-policy",
         query: "mcp policy engine allow deny",
-        expectedUrls: ["https://gaussflow.dev/docs/mcp-policy-engine"],
+        expectedUrls: ["https://gauss.dev/docs/mcp-policy-engine"],
       },
       {
         id: "semantic-search",
         query: "semantic web search citation",
-        expectedUrls: ["https://gaussflow.dev/docs/semantic-web-search"],
+        expectedUrls: ["https://gauss.dev/docs/semantic-web-search"],
       },
     ];
 

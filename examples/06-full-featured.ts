@@ -13,7 +13,7 @@ import type { AgentEvent, ApprovalRequest } from "gauss";
 const model = {} as import("ai").LanguageModel;
 
 async function main(): Promise<void> {
-  const fs = new LocalFilesystem("/tmp/deep-agent-workspace");
+  const fs = new LocalFilesystem("/tmp/gauss-workspace");
 
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(

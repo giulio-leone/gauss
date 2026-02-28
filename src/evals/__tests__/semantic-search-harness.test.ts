@@ -12,12 +12,12 @@ describe("semantic-search-harness", () => {
       {
         id: "case-1",
         query: "gauss memory tiers",
-        expectedUrls: ["https://gaussflow.dev/docs/memory-tiering"],
+        expectedUrls: ["https://gauss.dev/docs/memory-tiering"],
       },
       {
         id: "case-2",
         query: "policy tools",
-        expectedUrls: ["https://gaussflow.dev/docs/policy-tools"],
+        expectedUrls: ["https://gauss.dev/docs/policy-tools"],
       },
     ];
 
@@ -28,8 +28,8 @@ describe("semantic-search-harness", () => {
           {
             url:
               query.includes("memory")
-                ? "https://gaussflow.dev/docs/memory-tiering"
-                : "https://gaussflow.dev/docs/policy-tools",
+                ? "https://gauss.dev/docs/memory-tiering"
+                : "https://gauss.dev/docs/policy-tools",
             score: 0.98,
           },
         ],
@@ -60,14 +60,14 @@ describe("semantic-search-harness", () => {
       {
         id: "failing-case",
         query: "missing",
-        expectedUrls: ["https://gaussflow.dev/docs/expected"],
+        expectedUrls: ["https://gauss.dev/docs/expected"],
       },
     ];
 
     const summary = await evaluateSemanticSearchSuite(
       suite,
       async () => ({
-        results: [{ url: "https://gaussflow.dev/docs/other", score: 0.1 }],
+        results: [{ url: "https://gauss.dev/docs/other", score: 0.1 }],
         citations: [],
         quality: { durationMs: 100 },
       }),

@@ -44,7 +44,7 @@ describe("SemanticWebSearchPlugin", () => {
       search: vi.fn().mockResolvedValue([
         {
           title: "Gauss docs",
-          url: "https://gaussflow.dev/docs",
+          url: "https://gauss.dev/docs",
           snippet: "Official docs",
         },
         {
@@ -63,7 +63,7 @@ describe("SemanticWebSearchPlugin", () => {
     });
 
     const result = await (plugin.tools.semantic_web_search as any).execute({
-      query: "gaussflow",
+      query: "gauss",
       limit: 2,
       scrapeTopK: 1,
       strategy: "bm25",
@@ -71,7 +71,7 @@ describe("SemanticWebSearchPlugin", () => {
 
     expect(result.results).toHaveLength(2);
     expect(result.citations).toHaveLength(2);
-    expect(result.results[0]?.url).toBe("https://gaussflow.dev/docs");
+    expect(result.results[0]?.url).toBe("https://gauss.dev/docs");
     expect(result.quality.strategyUsed).toBe("bm25");
     expect(result.quality.searchAttempts).toBe(1);
     expect(result.quality.fallbackUsed).toBe(false);

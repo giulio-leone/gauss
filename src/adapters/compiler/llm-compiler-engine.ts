@@ -1,6 +1,6 @@
 // =============================================================================
 // LLM Compiler Engine — Compiles StructuredDeclaration into executable artifacts
-// Uses gaussflow Agent + AI SDK Output.object for LLM-assisted compilation
+// Uses Gauss Agent + AI SDK Output.object for LLM-assisted compilation
 // with Zod schema enforcement for deterministic structure.
 // =============================================================================
 

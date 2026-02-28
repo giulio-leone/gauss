@@ -1,5 +1,5 @@
 // =============================================================================
-// Tests — CLI Config (.gaussflowrc management)
+// Tests — CLI Config (.gaussrc management)
 // =============================================================================
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -20,14 +20,14 @@ vi.mock("node:os", async () => {
 
 describe("CLI Config", () => {
   beforeEach(async () => {
-    tempDir = join(tmpdir(), `gaussflow-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    tempDir = join(tmpdir(), `gauss-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     mkdirSync(tempDir, { recursive: true });
     // Re-import to pick up new tempDir via the mock
     vi.resetModules();
   });
 
   afterEach(() => {
-    try { unlinkSync(join(tempDir, ".gaussflowrc")); } catch {}
+    try { unlinkSync(join(tempDir, ".gaussrc")); } catch {}
     try { rmdirSync(tempDir); } catch {}
   });
 
@@ -69,7 +69,7 @@ describe("CLI Config", () => {
   it("saveConfig writes valid JSON to disk", async () => {
     const { saveConfig } = await import("../config.js");
     saveConfig({ keys: { openai: "sk-test" } });
-    const raw = readFileSync(join(tempDir, ".gaussflowrc"), "utf-8");
+    const raw = readFileSync(join(tempDir, ".gaussrc"), "utf-8");
     const parsed = JSON.parse(raw);
     expect(parsed.keys.openai).toBe("sk-test");
   });
@@ -98,7 +98,7 @@ describe("CLI Config", () => {
 
   it("loadConfig handles malformed JSON gracefully", async () => {
     const { loadConfig } = await import("../config.js");
-    writeFileSync(join(tempDir, ".gaussflowrc"), "not json", "utf-8");
+    writeFileSync(join(tempDir, ".gaussrc"), "not json", "utf-8");
     const config = loadConfig();
     expect(config).toEqual({ keys: {} });
   });

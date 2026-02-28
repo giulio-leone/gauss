@@ -1,5 +1,5 @@
 // =============================================================================
-// .gaussflowignore — Load and apply ignore patterns
+// .gaussignore — Load and apply ignore patterns
 // =============================================================================
 
 import { existsSync, readFileSync } from "node:fs";
@@ -21,7 +21,7 @@ const DEFAULT_PATTERNS = [
 
 export function loadIgnorePatterns(cwd?: string): string[] {
   const dir = cwd || process.cwd();
-  const ignorePath = join(dir, ".gaussflowignore");
+  const ignorePath = join(dir, ".gaussignore");
 
   if (!existsSync(ignorePath)) {
     return [...DEFAULT_PATTERNS];

@@ -13,7 +13,7 @@ import {
 } from "./local-cache.js";
 
 const DEFAULT_REGISTRY_URL =
-  "https://raw.githubusercontent.com/giulio-leone/gaussflow-plugins/main/registry.json";
+  "https://raw.githubusercontent.com/giulio-leone/gauss-plugins/main/registry.json";
 
 export interface GitHubRegistryOptions {
   registryUrl?: string;

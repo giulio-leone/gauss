@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync, readFileSync, readdirSync, rmSync, existsSync
 
 import type { MarketplacePluginManifest } from "../../ports/plugin-manifest.port.js";
 
-const PLUGINS_ROOT = join(homedir(), ".gaussflow", "plugins");
+const PLUGINS_ROOT = join(homedir(), ".gauss", "plugins");
 
 /** Validates plugin name to prevent path traversal */
 function assertSafeName(name: string): void {

@@ -11,11 +11,11 @@ import { saveManifest, readInstalledManifests, removePluginDir } from "./local-c
 const NPM_REGISTRY_URL = "https://registry.npmjs.org";
 
 export interface NpmRegistryOptions {
-  /** npm scope to search within (e.g. "@gaussflow") */
+  /** npm scope to search within (e.g. "@gauss") */
   scope?: string;
   /** npm registry URL override */
   registryUrl?: string;
-  /** Search keyword prefix (default: "gaussflow-plugin") */
+  /** Search keyword prefix (default: "gauss-plugin") */
   keyword?: string;
 }
 
@@ -40,7 +40,7 @@ interface NpmPackageVersion {
   keywords?: string[];
   main?: string;
   module?: string;
-  gaussflow?: {
+  gauss?: {
     entry?: string;
     tags?: string[];
   };
@@ -54,7 +54,7 @@ export class NpmRegistryAdapter implements MarketplacePort {
   constructor(options?: NpmRegistryOptions) {
     this.registryUrl = options?.registryUrl ?? NPM_REGISTRY_URL;
     this.scope = options?.scope;
-    this.keyword = options?.keyword ?? "gaussflow-plugin";
+    this.keyword = options?.keyword ?? "gauss-plugin";
   }
 
   async search(query: string): Promise<MarketplacePluginManifest[]> {
@@ -134,7 +134,7 @@ export class NpmRegistryAdapter implements MarketplacePort {
         ? pkg.author
         : pkg.author?.name ?? "unknown";
 
-    const gf = "gaussflow" in pkg ? (pkg as NpmPackageVersion).gaussflow : undefined;
+    const gf = "gauss" in pkg ? (pkg as NpmPackageVersion).gauss : undefined;
 
     return {
       name: pkg.name,

@@ -127,7 +127,7 @@ export async function startRepl(
 
   function promptText(): string {
     const yoloTag = yoloMode ? color("red", "[YOLO]") : "";
-    return color("green", `gaussflow:${currentProvider}${yoloTag}> `);
+    return color("green", `gauss:${currentProvider}${yoloTag}> `);
   }
 
   try {
@@ -411,7 +411,7 @@ export async function startRepl(
         }
         const key = resolveApiKey(newProvider);
         if (!key) {
-          console.log(color("red", `  ✗ No API key for ${newProvider}. Use: gaussflow config set ${newProvider} <key>\n`));
+          console.log(color("red", `  ✗ No API key for ${newProvider}. Use: gauss config set ${newProvider} <key>\n`));
           break;
         }
         try {

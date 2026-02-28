@@ -12,10 +12,10 @@ const config: Config = {
   },
 
   url: 'https://g97iulio1609.github.io',
-  baseUrl: '/onegenui-deep-agents/',
+  baseUrl: '/gauss/',
 
   organizationName: 'g97iulio1609',
-  projectName: 'onegenui-deep-agents',
+  projectName: 'gauss',
 
   onBrokenLinks: 'throw',
 
@@ -31,7 +31,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/giulio-leone/onegenui-deep-agents/tree/main/docs/',
+            'https://github.com/giulio-leone/gauss/tree/main/docs/',
         },
         blog: false,
         theme: {
@@ -60,7 +60,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/giulio-leone/onegenui-deep-agents',
+          href: 'https://github.com/giulio-leone/gauss',
           label: 'GitHub',
           position: 'right',
         },
@@ -87,7 +87,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/giulio-leone/onegenui-deep-agents',
+              href: 'https://github.com/giulio-leone/gauss',
             },
             {
               label: 'npm',

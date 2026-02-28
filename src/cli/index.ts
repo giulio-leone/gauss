@@ -16,26 +16,26 @@ const HELP = `
 ${bold("Gauss CLI")} — AI Agent Framework
 
 ${bold("Usage:")}
-  gaussflow "<prompt>"                         Direct prompt with streaming
-  gaussflow chat [--provider <name>] [...]     Interactive REPL
-  gaussflow run "<prompt>" [--provider <name>] Single-shot execution
-  gaussflow config set <provider> <api-key>    Save API key
-  gaussflow config set-provider <name>         Set default provider
-  gaussflow config set-model <name>            Set default model
-  gaussflow config list                        List API keys
-  gaussflow config show                        Show full config
-  gaussflow config delete <provider>           Delete API key
-  gaussflow usage                              Show token usage and cost estimate
-  gaussflow demo <type> [--provider <name>]    Feature demos
-  gaussflow graph <config.json> [--format]     Visualize agent graph
-  gaussflow dev <config.json> [--provider]     Hot-reload dev mode
-  gaussflow plugin <subcommand>                Plugin management
-  gaussflow init --template <name> [dir]       Scaffold a new Gauss project
+  gauss "<prompt>"                         Direct prompt with streaming
+  gauss chat [--provider <name>] [...]     Interactive REPL
+  gauss run "<prompt>" [--provider <name>] Single-shot execution
+  gauss config set <provider> <api-key>    Save API key
+  gauss config set-provider <name>         Set default provider
+  gauss config set-model <name>            Set default model
+  gauss config list                        List API keys
+  gauss config show                        Show full config
+  gauss config delete <provider>           Delete API key
+  gauss usage                              Show token usage and cost estimate
+  gauss demo <type> [--provider <name>]    Feature demos
+  gauss graph <config.json> [--format]     Visualize agent graph
+  gauss dev <config.json> [--provider]     Hot-reload dev mode
+  gauss plugin <subcommand>                Plugin management
+  gauss init --template <name> [dir]       Scaffold a new Gauss project
 
 ${bold("Commands:")}
   chat        Start interactive REPL chat session
   run         Single-shot prompt execution
-  config      Manage API keys and defaults in ~/.gaussflowrc
+  config      Manage API keys and defaults in ~/.gaussrc
   usage       Show token usage and estimated cost
   demo        Run feature demos (guardrails, workflow, graph, observability)
   graph       Visualize an agent graph from a JSON config file
@@ -56,15 +56,15 @@ ${bold("Environment Variables:")}
   GROQ_API_KEY, MISTRAL_API_KEY, OPENROUTER_API_KEY
 
 ${bold("Examples:")}
-  gaussflow "What is the capital of France?"
-  gaussflow chat --provider openai --api-key sk-...
-  gaussflow run "What is the capital of France?" --provider anthropic
-  gaussflow config set openai sk-...
-  gaussflow demo guardrails --provider openai
-  gaussflow graph agent-graph.json --format mermaid
-  gaussflow dev agent-config.json --provider openai
-  gaussflow plugin search "code review"
-  gaussflow plugin install my-plugin
+  gauss "What is the capital of France?"
+  gauss chat --provider openai --api-key sk-...
+  gauss run "What is the capital of France?" --provider anthropic
+  gauss config set openai sk-...
+  gauss demo guardrails --provider openai
+  gauss graph agent-graph.json --format mermaid
+  gauss dev agent-config.json --provider openai
+  gauss plugin search "code review"
+  gauss plugin install my-plugin
 `;
 
 async function main(): Promise<void> {
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   }
 
   if (values.version) {
-    console.log(`gaussflow v${VERSION}`);
+    console.log(`gauss v${VERSION}`);
     return;
   }
 
@@ -160,7 +160,7 @@ function handleConfig(args: string[]): void {
       const provider = args[1];
       const apiKey = args[2];
       if (!provider || !apiKey) {
-        console.error(color("red", "Usage: gaussflow config set <provider> <api-key>"));
+        console.error(color("red", "Usage: gauss config set <provider> <api-key>"));
         process.exitCode = 1;
         return;
       }
@@ -179,7 +179,7 @@ function handleConfig(args: string[]): void {
       const keys = listKeys();
       const entries = Object.entries(keys);
       if (entries.length === 0) {
-        console.log(color("dim", "No API keys configured. Use: gaussflow config set <provider> <key>"));
+        console.log(color("dim", "No API keys configured. Use: gauss config set <provider> <key>"));
         return;
       }
       console.log(bold("\nConfigured API keys:"));
@@ -193,7 +193,7 @@ function handleConfig(args: string[]): void {
     case "delete": {
       const provider = args[1];
       if (!provider) {
-        console.error(color("red", "Usage: gaussflow config delete <provider>"));
+        console.error(color("red", "Usage: gauss config delete <provider>"));
         process.exitCode = 1;
         return;
       }
@@ -208,7 +208,7 @@ function handleConfig(args: string[]): void {
     case "set-provider": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: gaussflow config set-provider <name>"));
+        console.error(color("red", "Usage: gauss config set-provider <name>"));
         process.exitCode = 1;
         return;
       }
@@ -226,7 +226,7 @@ function handleConfig(args: string[]): void {
     case "set-model": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: gaussflow config set-model <name>"));
+        console.error(color("red", "Usage: gauss config set-model <name>"));
         process.exitCode = 1;
         return;
       }
@@ -238,7 +238,7 @@ function handleConfig(args: string[]): void {
     case "show": {
       const config = loadConfig();
       const entries = Object.entries(config.keys);
-      console.log(bold("\nConfiguration (~/.gaussflowrc):"));
+      console.log(bold("\nConfiguration (~/.gaussrc):"));
       if (entries.length === 0) {
         console.log(color("dim", "  No API keys configured."));
       } else {
@@ -254,7 +254,7 @@ function handleConfig(args: string[]): void {
     }
 
     default:
-      console.error(color("red", "Usage: gaussflow config [set|set-provider|set-model|list|show|delete]"));
+      console.error(color("red", "Usage: gauss config [set|set-provider|set-model|list|show|delete]"));
       process.exitCode = 1;
   }
 }
@@ -268,7 +268,7 @@ async function handleUsage(): Promise<void> {
   const { homedir } = await import("node:os");
   const { join } = await import("node:path");
 
-  const usagePath = join(homedir(), ".gaussflow", "usage.ndjson");
+  const usagePath = join(homedir(), ".gauss", "usage.ndjson");
 
   if (!existsSync(usagePath)) {
     console.log(color("dim", "No usage data found. Usage is recorded after each CLI session."));
@@ -345,7 +345,7 @@ async function handleRun(
   opts: Record<string, string | boolean | undefined>,
 ): Promise<void> {
   if (!prompt.trim()) {
-    console.error(color("red", 'Usage: gaussflow run "<prompt>" --provider <name>'));
+    console.error(color("red", 'Usage: gauss run "<prompt>" --provider <name>'));
     process.exitCode = 1;
     return;
   }
@@ -366,7 +366,7 @@ async function handleDemo(
   opts: Record<string, string | undefined>,
 ): Promise<void> {
   if (!demoType || !(DEMO_TYPES as readonly string[]).includes(demoType)) {
-    console.error(color("red", `Usage: gaussflow demo <${DEMO_TYPES.join("|")}> --provider <name>`));
+    console.error(color("red", `Usage: gauss demo <${DEMO_TYPES.join("|")}> --provider <name>`));
     process.exitCode = 1;
     return;
   }
@@ -395,7 +395,7 @@ async function handleGraph(
   opts: Record<string, string | boolean | undefined>,
 ): Promise<void> {
   if (!configPath) {
-    console.error(color("red", "Usage: gaussflow graph <config.json> [--format ascii|mermaid]"));
+    console.error(color("red", "Usage: gauss graph <config.json> [--format ascii|mermaid]"));
     process.exitCode = 1;
     return;
   }
@@ -413,7 +413,7 @@ async function handleDev(
   opts: Record<string, string | boolean | undefined>,
 ): Promise<void> {
   if (!configPath) {
-    console.error(color("red", "Usage: gaussflow dev <config.json> [--provider <name>]"));
+    console.error(color("red", "Usage: gauss dev <config.json> [--provider <name>]"));
     process.exitCode = 1;
     return;
   }
@@ -434,7 +434,7 @@ async function handlePlugin(args: string[]): Promise<void> {
     case "search": {
       const query = args.slice(1).join(" ");
       if (!query) {
-        console.error(color("red", "Usage: gaussflow plugin search <query>"));
+        console.error(color("red", "Usage: gauss plugin search <query>"));
         process.exitCode = 1;
         return;
       }
@@ -443,7 +443,7 @@ async function handlePlugin(args: string[]): Promise<void> {
     case "install": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: gaussflow plugin install <name>"));
+        console.error(color("red", "Usage: gauss plugin install <name>"));
         process.exitCode = 1;
         return;
       }
@@ -452,7 +452,7 @@ async function handlePlugin(args: string[]): Promise<void> {
     case "uninstall": {
       const name = args[1];
       if (!name) {
-        console.error(color("red", "Usage: gaussflow plugin uninstall <name>"));
+        console.error(color("red", "Usage: gauss plugin uninstall <name>"));
         process.exitCode = 1;
         return;
       }
@@ -461,7 +461,7 @@ async function handlePlugin(args: string[]): Promise<void> {
     case "list":
       return pluginList();
     default:
-      console.error(color("red", "Usage: gaussflow plugin <search|install|uninstall|list>"));
+      console.error(color("red", "Usage: gauss plugin <search|install|uninstall|list>"));
       process.exitCode = 1;
   }
 }
@@ -485,7 +485,7 @@ async function resolveProviderAndModel(
   if (!apiKey) {
     console.error(color("red", `No API key for provider "${providerName}".`));
     console.log(color("dim", "Set one with:"));
-    console.log(color("dim", `  gaussflow config set ${providerName} <your-api-key>`));
+    console.log(color("dim", `  gauss config set ${providerName} <your-api-key>`));
     console.log(color("dim", `  --api-key <your-api-key>`));
     console.log(color("dim", `  Or set ${envVarName(providerName)} environment variable`));
     process.exit(1);

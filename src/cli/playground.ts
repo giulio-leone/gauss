@@ -18,7 +18,7 @@ export interface PlaygroundOptions {
  *
  * Usage:
  * ```ts
- * import { startPlayground } from "gaussflow";
+ * import { startPlayground } from "gauss";
  *
  * await startPlayground({
  *   port: 4000,

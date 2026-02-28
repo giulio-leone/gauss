@@ -9,7 +9,7 @@ vi.mock("../local-cache.js", () => ({
   saveManifest: vi.fn(),
   readInstalledManifests: vi.fn(() => []),
   removePluginDir: vi.fn(),
-  getPluginDir: vi.fn((name: string) => `/home/user/.gaussflow/plugins/${name}`),
+  getPluginDir: vi.fn((name: string) => `/home/user/.gauss/plugins/${name}`),
 }));
 
 // ─── Mock fetch ──────────────────────────────────────────────────────────────
@@ -23,33 +23,33 @@ const NPM_SEARCH_RESPONSE = {
   objects: [
     {
       package: {
-        name: "@gaussflow/plugin-web-search",
+        name: "@gauss/plugin-web-search",
         version: "1.2.0",
         description: "Web search plugin for Gauss",
         author: { name: "alice" },
-        keywords: ["gaussflow-plugin", "search"],
+        keywords: ["gauss-plugin", "search"],
       },
     },
     {
       package: {
-        name: "gaussflow-plugin-calc",
+        name: "gauss-plugin-calc",
         version: "0.5.0",
         description: "Calculator plugin",
         author: "bob",
-        keywords: ["gaussflow-plugin", "math"],
+        keywords: ["gauss-plugin", "math"],
       },
     },
   ],
 };
 
 const NPM_PACKAGE_RESPONSE = {
-  name: "@gaussflow/plugin-web-search",
+  name: "@gauss/plugin-web-search",
   version: "1.2.0",
   description: "Web search plugin for Gauss",
   author: { name: "alice" },
-  keywords: ["gaussflow-plugin", "search"],
+  keywords: ["gauss-plugin", "search"],
   main: "./dist/index.js",
-  gaussflow: {
+  gauss: {
     entry: "./dist/plugin.js",
     tags: ["search", "web"],
   },
@@ -71,7 +71,7 @@ describe("NpmRegistryAdapter", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    adapter = new NpmRegistryAdapter({ keyword: "gaussflow-plugin" });
+    adapter = new NpmRegistryAdapter({ keyword: "gauss-plugin" });
   });
 
   describe("search()", () => {
@@ -80,7 +80,7 @@ describe("NpmRegistryAdapter", () => {
 
       const results = await adapter.search("search");
       expect(results).toHaveLength(2);
-      expect(results[0].name).toBe("@gaussflow/plugin-web-search");
+      expect(results[0].name).toBe("@gauss/plugin-web-search");
       expect(results[0].author).toBe("alice");
       expect(results[0].source).toBe("npm");
       expect(results[1].author).toBe("bob");
@@ -90,16 +90,16 @@ describe("NpmRegistryAdapter", () => {
       mockFetch.mockResolvedValue(mockJsonResponse({ objects: [] }));
       await adapter.search("test");
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("keywords%3Agaussflow-plugin"),
+        expect.stringContaining("keywords%3Agauss-plugin"),
       );
     });
 
     it("builds search URL with scope when configured", async () => {
-      adapter = new NpmRegistryAdapter({ scope: "@gaussflow" });
+      adapter = new NpmRegistryAdapter({ scope: "@gauss" });
       mockFetch.mockResolvedValue(mockJsonResponse({ objects: [] }));
       await adapter.search("test");
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining("scope%3A%40gaussflow"),
+        expect.stringContaining("scope%3A%40gauss"),
       );
     });
 
@@ -118,9 +118,9 @@ describe("NpmRegistryAdapter", () => {
     it("returns manifest for existing package", async () => {
       mockFetch.mockResolvedValue(mockJsonResponse(NPM_PACKAGE_RESPONSE));
 
-      const manifest = await adapter.getManifest("@gaussflow/plugin-web-search");
+      const manifest = await adapter.getManifest("@gauss/plugin-web-search");
       expect(manifest).not.toBeNull();
-      expect(manifest!.name).toBe("@gaussflow/plugin-web-search");
+      expect(manifest!.name).toBe("@gauss/plugin-web-search");
       expect(manifest!.entry).toBe("./dist/plugin.js"); // from gaussflow config
       expect(manifest!.tags).toEqual(["search", "web"]);
     });
@@ -131,8 +131,8 @@ describe("NpmRegistryAdapter", () => {
       expect(manifest).toBeNull();
     });
 
-    it("uses main field as entry fallback when no gaussflow config", async () => {
-      const pkg = { ...NPM_PACKAGE_RESPONSE, gaussflow: undefined, main: "./lib/main.js" };
+    it("uses main field as entry fallback when no gauss config", async () => {
+      const pkg = { ...NPM_PACKAGE_RESPONSE, gauss: undefined, main: "./lib/main.js" };
       mockFetch.mockResolvedValue(mockJsonResponse(pkg));
 
       const manifest = await adapter.getManifest("pkg");
@@ -143,7 +143,7 @@ describe("NpmRegistryAdapter", () => {
   describe("install()", () => {
     it("saves manifest locally", async () => {
       mockFetch.mockResolvedValue(mockJsonResponse(NPM_PACKAGE_RESPONSE));
-      await adapter.install("@gaussflow/plugin-web-search");
+      await adapter.install("@gauss/plugin-web-search");
       expect(localCache.saveManifest).toHaveBeenCalled();
     });
 

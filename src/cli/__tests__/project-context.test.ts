@@ -205,7 +205,7 @@ describe("contextToSystemPrompt", () => {
 // =============================================================================
 
 describe("loadIgnorePatterns", () => {
-  it("returns default patterns when no .gaussflowignore exists", () => {
+  it("returns default patterns when no .gaussignore exists", () => {
     mockExistsSync.mockReturnValue(false);
 
     const patterns = loadIgnorePatterns("/fake/dir");
@@ -214,7 +214,7 @@ describe("loadIgnorePatterns", () => {
     expect(patterns).toContain("dist");
   });
 
-  it("loads patterns from .gaussflowignore file", () => {
+  it("loads patterns from .gaussignore file", () => {
     mockExistsSync.mockReturnValue(true);
     mockReadFileSync.mockReturnValue("vendor\ntmp\n# comment\n\nsecrets\n");
 
@@ -223,7 +223,7 @@ describe("loadIgnorePatterns", () => {
     expect(patterns).not.toContain("# comment");
   });
 
-  it("returns defaults for empty .gaussflowignore", () => {
+  it("returns defaults for empty .gaussignore", () => {
     mockExistsSync.mockReturnValue(true);
     mockReadFileSync.mockReturnValue("\n\n");
 
