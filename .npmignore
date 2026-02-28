@@ -1,0 +1,17 @@
+src/
+playground/
+docs/
+examples/
+logs/
+packages/
+scripts/
+*.test.ts
+*.bench.ts
+__tests__/
+__benchmarks__/
+tsconfig.json
+tsup.config.ts
+.github/
+.npmrc
+AGENTS.md
+rename.md

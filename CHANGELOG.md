@@ -5,6 +5,81 @@ All notable changes to **Gauss** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2025-07-19
+
+### 🚀 npm Publication & Package Rename
+
+- **Package renamed** from `@giulio-leone/gauss` to `@gauss/flow`
+- **Public npm registry** — switched from GitHub Packages to npmjs.com (`"access": "public"`)
+- Added comprehensive `keywords` for discoverability
+- Added `engines` field (`node >= 18`)
+- Added `sideEffects: false` for tree-shaking
+- Added `./plugins` export path
+- Expanded `files` to include `CHANGELOG.md`
+- Added `homepage`, `bugs`, `author` metadata
+- Created MIT LICENSE file
+- Created `.npmignore` for clean publishes
+- Updated README with npm badges and `@gauss/flow` import paths
+
+### 📦 Barrel Export Enhancements
+
+- Exported `ServerAdapterPort` from `server.port`
+- Exported `SaveQueuePort`, `BundlerPort`, `ContainerPort` (DI) ports
+- Exported `createTripWireMiddleware`, `createPromptCachingMiddleware`, `createToolCallPatchingMiddleware`
+- Exported `DocGenerator` from `docs/doc-generator`
+
+## [3.4.0] - 2025-07-19
+
+### 🛡️ Trip-Wire & Prompt Caching Middleware
+
+- **Trip-wire middleware** — safety guardrails with violation detection
+- **Prompt caching middleware** — reduce redundant LLM calls
+- **Tool call patching middleware** — runtime tool call transformation
+
+## [3.3.0] - 2025-07-18
+
+### 🔌 DI Container & Bundler Ports
+
+- **ContainerPort** — dependency injection with lifetime management (singleton/transient/scoped)
+- **BundlerPort** — agent bundle compilation and analysis
+- **SaveQueuePort** — batched persistence with flush semantics
+- **ServerAdapterPort** — wrap agents as HTTP endpoints
+
+## [3.2.0] - 2025-07-18
+
+### 📝 Doc Generator & Compiler Enhancements
+
+- **DocGenerator** — auto-generate API documentation from source
+- **LLMCompilerEngine** — natural language to workflow compilation
+- **DualWorkflowStorage** — JSON + Markdown dual-format persistence
+- Enhanced compiler schema with triggers, channels, and policies
+
+## [3.1.0] - 2025-07-18
+
+### 🏗️ Architecture Refinements
+
+- Hexagonal architecture ports expanded to 50+ contracts
+- Plugin marketplace with GitHub + npm registry adapters
+- Composite marketplace adapter for multi-source discovery
+- Plugin loader with sandboxed execution
+
+## [3.0.0] - 2025-07-18
+
+### 🎉 Major Release — Complete Framework Overhaul
+
+#### Breaking Changes
+- Package name changed to `@gauss/flow`
+- Minimum Node.js version raised to 18
+- Published to public npm registry (was GitHub Packages)
+
+#### Added
+- **Evaluation harness** — semantic search quality gates, benchmarks, stress tests
+- **Scorer pipeline** — composable evaluation with exact match, contains, LLM judge
+- **Trajectory recording** — step-by-step agent execution capture and replay
+- **Advanced middleware** — trip-wire, prompt caching, tool call patching, observational memory, result eviction, summarization
+- **Sandbox adapters** — E2B cloud sandbox + local shell execution
+- **Plugin marketplace** — GitHub/npm registry discovery, composite adapter, plugin loader
+
 ## [2.4.0] - 2025-07-18
 
 ### 🔧 SDK Fork (gauss-sdk)
@@ -394,6 +469,12 @@ playground inspector tools, and comprehensive documentation.
 
 - Correct `@ai-sdk/mcp` peer dependency version to ^1.0.0
 
+[3.5.0]: https://github.com/giulio-leone/gauss/compare/v3.4.0...v3.5.0
+[3.4.0]: https://github.com/giulio-leone/gauss/compare/v3.3.0...v3.4.0
+[3.3.0]: https://github.com/giulio-leone/gauss/compare/v3.2.0...v3.3.0
+[3.2.0]: https://github.com/giulio-leone/gauss/compare/v3.1.0...v3.2.0
+[3.1.0]: https://github.com/giulio-leone/gauss/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/giulio-leone/gauss/compare/v2.4.0...v3.0.0
 [1.0.0]: https://github.com/giulio-leone/gauss/compare/v0.9.0...v1.0.0
 [0.9.0]: https://github.com/giulio-leone/gauss/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/giulio-leone/gauss/compare/v0.8.0...v0.8.1

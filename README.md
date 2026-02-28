@@ -1,24 +1,24 @@
 # Gauss
 
+[![npm version](https://img.shields.io/npm/v/@gauss/flow)](https://www.npmjs.com/package/@gauss/flow)
 [![CI](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/badge/npm-v2.3.0-blue)](https://github.com/giulio-leone/gauss/packages)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-1739%20passing-brightgreen)](https://github.com/giulio-leone/gauss)
 [![Docs](https://img.shields.io/badge/docs-giulio--leone.github.io%2Fgauss-purple)](https://giulio-leone.github.io/gauss/)
 
 > **The most complete AI agent framework for TypeScript.**
-> 57 features · Hexagonal architecture · Zero config to start.
+> 57+ features · Hexagonal architecture · Zero config to start.
 
 ## Install
 
 ```bash
-npm install @giulio-leone/gauss
+npm install @gauss/flow
 ```
 
 ## Zero Config — One Line
 
 ```ts
-import gauss from 'gauss'
+import gauss from '@gauss/flow'
 
 const answer = await gauss('Explain quantum computing in 3 sentences')
 ```
@@ -26,8 +26,8 @@ const answer = await gauss('Explain quantum computing in 3 sentences')
 ## Full Control — Agent Builder
 
 ```ts
-import { agent, tool } from 'gauss'
-import { openai } from 'gauss/providers'
+import { agent, tool } from '@gauss/flow'
+import { openai } from '@gauss/flow/providers'
 
 const myAgent = agent({
   model: openai('gpt-5.2'),
@@ -49,7 +49,7 @@ console.log(result.text)
 ## Multi-Agent Teams
 
 ```ts
-import { team } from 'gauss'
+import { team } from '@gauss/flow'
 
 const devTeam = team()
   .id('dev-team')
@@ -65,7 +65,7 @@ const result = await devTeam.run('Build a REST API for user management')
 ## Workflow DSL
 
 ```ts
-import { workflow } from 'gauss'
+import { workflow } from '@gauss/flow'
 
 const pipeline = workflow('etl')
   .then({ id: 'fetch', execute: async (ctx) => ({ ...ctx, data: await fetch(ctx.url) }) })
@@ -84,7 +84,7 @@ const pipeline = workflow('etl')
 ## Voice (STT/TTS)
 
 ```ts
-import { OpenAIVoiceAdapter, VoicePipeline } from 'gauss'
+import { OpenAIVoiceAdapter, VoicePipeline } from '@gauss/flow'
 
 const voice = new OpenAIVoiceAdapter({ apiKey: process.env.OPENAI_API_KEY! })
 const pipeline = new VoicePipeline({ voice, agent: myAgent })
@@ -94,8 +94,8 @@ const { audio } = await pipeline.process(userAudioBuffer)
 ## Multimodal (Images & Video)
 
 ```ts
-import { multimodal, videoProcessor } from 'gauss'
-import { openai } from 'gauss/providers'
+import { multimodal, videoProcessor } from '@gauss/flow'
+import { openai } from '@gauss/flow/providers'
 
 const vision = multimodal({ model: openai('gpt-5.2') })
 const desc = await vision.describeImage({ source: { type: 'url', url: '...' } })
@@ -108,7 +108,7 @@ const analysis = await video.describeVideo({ source: { type: 'url', url: '...' }
 ## 40+ AI Providers
 
 ```ts
-import { universalProvider } from 'gauss/providers'
+import { universalProvider } from '@gauss/flow/providers'
 
 const provider = universalProvider()
 const gpt = await provider.get('openai:gpt-5.2')

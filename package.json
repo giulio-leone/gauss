@@ -1,16 +1,44 @@
 {
-  "name": "@giulio-leone/gauss",
-  "version": "2.4.0",
-  "description": "Gauss \u2014 AI Agent Framework built on Gauss SDK (AI SDK fork) with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
+  "name": "@gauss/flow",
+  "version": "3.5.0",
+  "description": "Gauss — The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
   "license": "MIT",
   "type": "module",
+  "keywords": [
+    "ai",
+    "agent",
+    "agentic",
+    "framework",
+    "llm",
+    "rag",
+    "workflow",
+    "middleware",
+    "mcp",
+    "tools",
+    "multi-agent",
+    "typescript",
+    "hexagonal-architecture",
+    "voice",
+    "multimodal",
+    "a2a"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/giulio-leone/gauss.git"
+    "url": "https://github.com/giulio-leone/gauss.git",
+    "directory": "gauss-flow"
   },
+  "homepage": "https://giulio-leone.github.io/gauss/",
+  "bugs": {
+    "url": "https://github.com/giulio-leone/gauss/issues"
+  },
+  "author": "Giulio Leone <https://github.com/giulio-leone>",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -66,6 +94,11 @@
       "import": "./dist/testing/index.js",
       "require": "./dist/testing/index.cjs"
     },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "import": "./dist/plugins/index.js",
+      "require": "./dist/plugins/index.cjs"
+    },
     "./runtime/node": {
       "types": "./dist/runtime-node.d.ts",
       "import": "./dist/runtime-node.js"
@@ -87,7 +120,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "bin": {
     "gauss": "./dist/cli/index.js"

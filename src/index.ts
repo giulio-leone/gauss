@@ -147,6 +147,11 @@ export type { MiddlewarePort, MiddlewareContext, MiddlewarePriority, MiddlewareC
 export type { NLParserPort, WorkflowCompilerPort, CompileFromNLPort, SkillRegistryPort, WorkflowStoragePort, StoredWorkflow, StorageStrategy } from "./ports/compiler.port.js";
 export type { SkillMatcherPort, SkillMatch } from "./ports/skill-matcher.port.js";
 export type { SerializerPort, SerializerFormat } from "./ports/serializer.port.js";
+export type { ServerAdapterPort } from "./ports/server.port.js";
+export type { SaveQueuePort, SaveEntry, FlushResult } from "./ports/save-queue.port.js";
+export type { BundlerPort, BundleEntry, BundleOptions, BundleResult } from "./ports/bundler.port.js";
+export { Lifetime } from "./ports/di.port.js";
+export type { ContainerPort, Token, Factory, Registration } from "./ports/di.port.js";
 
 // ─── Plugins ────────────────────────────────────────────────────────────────
 
@@ -261,6 +266,12 @@ export type { ObservationalMemoryOptions, ObservationMetadata } from "./middlewa
 export { createResultEvictionMiddleware } from "./middleware/result-eviction.js";
 export type { ResultEvictionOptions } from "./middleware/result-eviction.js";
 export { SummarizationMiddleware } from "./middleware/summarization.js";
+export { createTripWireMiddleware } from "./middleware/trip-wire.js";
+export type { TripWireOptions, TripWireViolation } from "./middleware/trip-wire.js";
+export { createPromptCachingMiddleware } from "./middleware/prompt-caching.js";
+export type { PromptCachingOptions } from "./middleware/prompt-caching.js";
+export { createToolCallPatchingMiddleware } from "./middleware/tool-call-patching.js";
+export type { ToolCallPatchingOptions } from "./middleware/tool-call-patching.js";
 
 // ─── Graph — Multi-Agent Collaboration ──────────────────────────────────────
 
@@ -749,3 +760,8 @@ export type {
 // ─── Utils ──────────────────────────────────────────────────────────────────
 
 export { AbstractBuilder } from "./utils/abstract-builder.js";
+
+// ─── Doc Generator ──────────────────────────────────────────────────────────
+
+export { DocGenerator } from "./docs/doc-generator.js";
+export type { DocGeneratorOptions, DocPage } from "./docs/doc-generator.js";
