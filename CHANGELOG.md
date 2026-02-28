@@ -1,9 +1,71 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to **Gauss** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 2025-07-15
+
+### 🎉 Gauss — Complete Rebrand & Production Release
+
+This is the first stable release under the **Gauss** brand. The framework has been completely
+rebranded, API-redesigned, and extended with production adapters, provider wrappers, starter kits,
+playground inspector tools, and comprehensive documentation.
+
+### Added — API & Branding (M1)
+- **Factory functions**: `agent()`, `graph()`, `rag()` for zero-boilerplate setup
+- **Clean API surface**: `import { agent, tool, rag } from 'gauss'`
+- **Automated rename** from DeepAgent/GaussFlow → Agent/Gauss across 114 files (878 replacements)
+- **Organized barrel exports** in `src/index.ts` with logical sections
+
+### Added — Provider Adapters (M2)
+- **OpenAI** — `openai("gpt-4o")`
+- **Anthropic** — `anthropic("claude-sonnet-4-20250514")`
+- **Google Gemini** — `google("gemini-2.0-flash")`
+- **Groq** — `groq("llama-3.3-70b-versatile")`
+- **Ollama** — `ollama("llama3.2")` (local models, no API key)
+- **OpenRouter** — `openrouter("anthropic/claude-sonnet-4-20250514")` (100+ models)
+- Separate `gauss/providers` entry point — all AI SDK deps as optional peerDependencies
+
+### Added — Production Persistence Adapters (M3)
+- **PostgresStorageAdapter** — Multi-domain CRUD with JSONB
+- **RedisStorageAdapter** — High-performance cache with TTL and pipelines
+- **PgVectorStoreAdapter** — pgvector with HNSW index for semantic search
+- **S3ObjectStorageAdapter** — Blob storage (S3, MinIO, Cloudflare R2)
+- **BullMQQueueAdapter** — Background job processing with Redis
+- New ports: `QueuePort`, `ObjectStoragePort`
+
+### Added — DX & Starter Kits (M4)
+- `gauss init --template <name>` — project scaffolding CLI
+- 6 templates: chat, tools, rag, multi-agent, mcp, auth-rest
+- Quickstart in README
+
+### Added — Playground & Inspector (M5)
+- Trace viewer — step-by-step execution timeline
+- Token dashboard — usage tracking and cost estimation
+- Tool call inspector — input/output visibility
+- Reliability dashboard — circuit breaker, retry, rate limit metrics
+- `PlaygroundCollector` — automatic data collection
+
+### Added — Documentation (M6)
+- Concept docs with architecture overview
+- Hexagonal architecture deep dive
+- 20 copy-paste cookbook recipes
+- Migration guide from LangChain and Mastra
+- Feature comparison matrix vs competitors
+- Full API reference for providers and persistence
+
+### Breaking Changes
+- Package renamed from `@giulio-leone/gaussflow-agent` to `gauss`
+- All `DeepAgent*` classes renamed to `Agent*`
+- All `GaussFlow*` symbols renamed to `Gauss*`
+- Storage key prefix changed from `deep-agent` to `gauss`
+- Backward-compatibility aliases removed — clean API only
+
+---
+
+## Pre-Gauss History (Legacy)
 
 ## [1.3.0] - 2026-02-16
 

@@ -135,6 +135,6 @@ describe("Agent + Plugins integration", () => {
 
     const result = await agent.run("trigger");
 
-    expect(result).toEqual({ text: "", steps: [], sessionId: agent.sessionId });
+    expect(result).toEqual({ text: "", steps: [], toolCalls: [], sessionId: agent.sessionId });
   });
 });

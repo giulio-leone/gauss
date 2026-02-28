@@ -1,6 +1,6 @@
 {
   "name": "gauss",
-  "version": "1.5.1",
+  "version": "2.0.0",
   "description": "Gauss — AI Agent Framework built on Vercel AI SDK v6 with hexagonal architecture, multi-runtime support, plugin system, and multi-agent collaboration",
   "license": "MIT",
   "type": "module",

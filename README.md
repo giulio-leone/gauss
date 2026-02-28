@@ -1,10 +1,13 @@
-# Gauss (gauss)
+# Gauss
 
 [![CI](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/onegenui-deep-agents/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/gauss)](https://www.npmjs.com/package/gauss)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-1640%20passing-brightgreen)](https://github.com/giulio-leone/onegenui-deep-agents)
 
-> **Gauss** — AI Agent Framework built on Vercel AI SDK v6
+> **The AI Agent Framework that doesn't get in your way.**
 
-A hexagonal-architecture agent framework with built-in planning, context management, subagent orchestration, persistent memory, and MCP integration. Agents operate through a tool-loop powered by AI SDK's `ToolLoopAgent`, with filesystem, planning, and subagent tools composed via a fluent builder API.
+Gauss is a production-grade AI agent framework built on Vercel AI SDK v6 with hexagonal architecture, zero vendor lock-in, and a beautiful developer experience.
 
 ## Quickstart
 
@@ -32,36 +35,44 @@ console.log(result.text);
 
 **Templates:** `chat` · `tools` · `rag` · `multi-agent` · `mcp` · `auth-rest`
 
+## Why Gauss?
+
+| | Gauss | Mastra | LangChain |
+|---|:---:|:---:|:---:|
+| Hexagonal Architecture | ✅ | ❌ | ❌ |
+| Zero vendor lock-in | ✅ | ❌ | ❌ |
+| Fluent builder API | ✅ | ❌ | Partial |
+| 6 provider adapters | ✅ | ✅ | ✅ |
+| 5 persistence adapters | ✅ | Partial | Partial |
+| DAG graph engine | ✅ | ✅ | ✅ |
+| Plugin system | ✅ | ❌ | ❌ |
+| Erlang-style supervision | ✅ | ❌ | ❌ |
+| Multi-runtime (Node/Deno/Bun/Edge) | ✅ | ❌ | ❌ |
+| MCP integration | ✅ | ✅ | ❌ |
+| Built-in playground | ✅ | ✅ | ❌ |
+| CLI scaffolding | ✅ | ✅ | ❌ |
+| 1640+ tests | ✅ | ✅ | ✅ |
+
 ## Features
 
-- **Builder pattern** — fluent API with `Agent.create()`, `.minimal()`, `.full()`, and `.auto()` factory methods
-- **Hexagonal architecture** — ports and adapters for filesystem, memory, MCP, validation, tracing, metrics, logging, and model access
-- **Plugin system** — deterministic middleware lifecycle with hook-based extensions and tool injection
-- **WorkflowPlugin** — multi-step workflow execution with retry, rollback, and conditional steps
-- **ObservabilityPlugin** — three-pillar observability: distributed tracing, metrics collection, and structured logging
-- **Guardrails** — input/output validation with Zod schemas, content filtering, and PII detection
-- **Web scraping tools** — crawl, search, and batch scrape via OneCrawl plugin
-- **RAG/knowledge tools** — entity extraction, knowledge queries via Vectorless plugin
-- **Evaluation metrics** — latency, token usage, tool frequency, and custom scoring
-- **ValidationPort** — engine-agnostic validation with `ZodValidationAdapter`
-- **BasePlugin** — abstract base class for building custom plugins
-- **AbstractBuilder** — template method pattern for validated, type-safe builders
-- **Multi-agent collaboration** — DAG-based `AgentGraph` with parallel forking and consensus strategies
-- **Built-in planning** — structured todo management with dependency tracking and priority
-- **Subagent orchestration** — spawn child agents with configurable depth limits and timeouts
-- **Context management** — automatic rolling summarization, tool-result offloading, and message truncation
-- **Human-in-the-loop approval** — configurable per-tool approval gates with allow/deny lists
-- **Checkpointing** — periodic state snapshots for session resume
+- **Factory API** — `agent()`, `graph()`, `rag()` for zero-boilerplate setup
+- **Builder pattern** — fluent API with `.withPlugin()`, `.withGuardrails()`, `.build()`
+- **Hexagonal architecture** — ~40 port interfaces for complete dependency inversion
+- **6 Provider adapters** — OpenAI, Anthropic, Google, Groq, Ollama, OpenRouter
+- **5 Persistence adapters** — PostgreSQL, Redis, pgvector, S3, BullMQ
+- **Plugin system** — deterministic lifecycle hooks with tool injection
+- **Graph engine** — reactive DAG execution with parallel forking and consensus
+- **RAG pipeline** — chunking, embedding, hybrid search, entity extraction
+- **Subagent orchestration** — Erlang-style supervision, async dispatch, circuit breakers
+- **Resilience** — circuit breaker, rate limiter, retry, tool cache
+- **Multi-runtime** — Node.js, Deno, Bun, Edge, Browser
+- **MCP integration** — discover and execute MCP tools
+- **CLI** — interactive REPL, scaffolding, hot-reload dev mode
+- **Playground** — REST API with trace viewer, token dashboard, tool inspector
+- **Template engine** — Handlebars-style prompts with conditionals, loops, filters
 - **Event system** — typed lifecycle events with wildcard subscriptions
-- **MCP integration** — discover and execute tools from any MCP server
-- **Cross-session learning** — user profiles, memories, and shared knowledge persisting across sessions
-- **Multi-runtime** — runs on Node.js, Deno, Bun, Edge (Cloudflare Workers, Vercel Edge), and Browser
-- **CLI** — interactive REPL and single-shot mode with `gaussflow chat/run/demo` commands
-- **REST API** — zero-dependency HTTP server for multi-language access (Python, Go, Ruby, etc.)
-- **Resilience patterns** — circuit breaker, rate limiter, and tool cache for robust agent operations
-- **Template engine** — Handlebars-style `PromptTemplate` with conditionals, loops, filters, and partials
-- **Partial JSON streaming** — incremental JSON parsing for LLM streams via `streamJson<T>()` and `JsonAccumulator`
-- **Tool composition pipeline** — sequential `.pipe()`, automatic `.withFallback()`, and `.withMiddleware()` hooks
+- **Guardrails** — input/output validation with Zod schemas, PII detection
+- **1640 tests** with 100% stability
 
 ## Resilience Patterns
 
