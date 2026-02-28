@@ -228,8 +228,10 @@ describe("PatternEntityExtractorAdapter", () => {
 // GraphRAG Pipeline Tests
 // =============================================================================
 
-function randomVector(dim: number): number[] {
-  return Array.from({ length: dim }, () => Math.random() * 2 - 1);
+// Deterministic "embedding" — all vectors point in the same direction so
+// cosine similarity is always 1.0, eliminating flakiness from Math.random().
+function deterministicVector(dim: number): number[] {
+  return Array.from({ length: dim }, (_, i) => Math.sin(i + 1));
 }
 
 function mockDocumentPort(): DocumentPort {
@@ -253,10 +255,10 @@ function mockEmbeddingPort(): EmbeddingPort {
     dimensions: DIM,
     modelId: "mock",
     async embed(_text: string): Promise<EmbeddingResult> {
-      return { embedding: randomVector(DIM), tokenCount: 4 };
+      return { embedding: deterministicVector(DIM), tokenCount: 4 };
     },
     async embedBatch(texts: string[]): Promise<EmbeddingResult[]> {
-      return texts.map(() => ({ embedding: randomVector(DIM), tokenCount: 4 }));
+      return texts.map(() => ({ embedding: deterministicVector(DIM), tokenCount: 4 }));
     },
   };
 }
