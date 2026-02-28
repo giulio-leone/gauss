@@ -7,9 +7,47 @@
 
 export { agent, graph, rag } from "./gauss.js";
 
-// ─── AI SDK Re-exports ──────────────────────────────────────────────────────
+// ─── Agent Primitive (new core API) ──────────────────────────────────────────
 
-export { Output } from "core/llm/index.js";
+export { Agent as AgentPrimitive } from "./core/agent/index.js";
+export { graph as agentGraph } from "./core/agent/index.js";
+export type {
+  AgentConfig as AgentPrimitiveConfig,
+  AgentInstance,
+  AgentResult as AgentPrimitiveResult,
+  AgentStream,
+  Decorator,
+  RunContext,
+  RunOptions,
+  StepContext,
+  StopCondition,
+  StreamChunk,
+  ToolCallContext,
+  OutputSpec,
+  CostInfo,
+  GraphConfig,
+  GraphResult,
+  GraphPipeline,
+} from "./core/agent/index.js";
+
+// ─── Decorators ─────────────────────────────────────────────────────────────
+
+export {
+  memory as memoryDecorator,
+  telemetry as telemetryDecorator,
+  resilience as resilienceDecorator,
+  costLimit as costLimitDecorator,
+  planning as planningDecorator,
+  approval as approvalDecorator,
+  learning as learningDecorator,
+  checkpoint as checkpointDecorator,
+} from "./decorators/index.js";
+
+// ─── LLM Core ───────────────────────────────────────────────────────────────
+
+export { Output } from "./core/llm/index.js";
+export { generateText, streamText, tool, stepCountIs, hasToolCall } from "./core/llm/index.js";
+export type { LanguageModel, ToolSet, TokenUsage as LLMTokenUsage, CoreMessage } from "./core/llm/index.js";
 
 // ─── Errors ─────────────────────────────────────────────────────────────────
 
