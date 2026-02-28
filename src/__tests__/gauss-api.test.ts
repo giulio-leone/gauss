@@ -42,11 +42,12 @@ describe("gauss() one-liner", () => {
     }
   });
 
-  it("exports agent, graph, rag as properties", async () => {
+  it("exports agent, graph, rag, memory as properties", async () => {
     const { default: gauss } = await import("../gauss.js");
     expect(typeof gauss.agent).toBe("function");
     expect(typeof gauss.graph).toBe("function");
     expect(typeof gauss.rag).toBe("function");
+    expect(typeof gauss.memory).toBe("function");
   });
 
   it("gauss.agent returns AgentBuilder", async () => {
@@ -59,13 +60,32 @@ describe("gauss() one-liner", () => {
 });
 
 describe("named exports", () => {
-  it("exports agent, graph, rag, team, workflow, multimodal, videoProcessor", async () => {
+  it("exports agent, graph, rag, memory, team, workflow, multimodal, videoProcessor", async () => {
     const mod = await import("../gauss.js");
     expect(typeof mod.agent).toBe("function");
     expect(typeof mod.graph).toBe("function");
     expect(typeof mod.rag).toBe("function");
+    expect(typeof mod.memory).toBe("function");
     expect(typeof mod.workflow).toBe("function");
     expect(typeof mod.multimodal).toBe("function");
     expect(typeof mod.videoProcessor).toBe("function");
+  });
+});
+
+describe("memory() factory", () => {
+  it("returns a MemoryPlugin instance with default adapter", async () => {
+    const { memory } = await import("../gauss.js");
+    const plugin = memory();
+    expect(plugin).toBeDefined();
+    expect(plugin.name).toBe("memory");
+    expect(plugin.version).toBe("1.0.0");
+    expect(plugin.tools).toBeDefined();
+  });
+
+  it("returns a MemoryPlugin with autoStore option", async () => {
+    const { memory } = await import("../gauss.js");
+    const plugin = memory({ autoStore: true });
+    expect(plugin).toBeDefined();
+    expect(plugin.hooks).toBeDefined();
   });
 });

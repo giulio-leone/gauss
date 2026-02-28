@@ -7,7 +7,7 @@
 //   const answer = await gauss('Explain quantum computing')
 //
 // Power user:
-//   import { agent, graph, rag, team, workflow } from 'gauss'
+//   import { agent, graph, rag, memory, team, workflow } from 'gauss'
 //
 // =============================================================================
 
@@ -18,6 +18,8 @@ import { AgentBuilder } from "./agent/agent-builder.js";
 import { AgentGraph } from "./graph/agent-graph.js";
 import { RAGPipeline } from "./rag/pipeline.js";
 import type { RAGPipelineConfig } from "./rag/pipeline.js";
+import type { MemoryPluginOptions } from "./plugins/memory.plugin.js";
+import { createMemoryPlugin } from "./plugins/memory.plugin.js";
 
 // =============================================================================
 // Smart model detection from environment
@@ -124,6 +126,7 @@ async function gauss(prompt: string, options?: QuickOptions): Promise<string> {
 gauss.agent = agent;
 gauss.graph = graph;
 gauss.rag = rag;
+gauss.memory = memory;
 
 export default gauss;
 
@@ -194,6 +197,31 @@ export function graph(config?: Partial<GraphConfig>) {
  */
 export function rag(config: RAGPipelineConfig): RAGPipeline {
   return new RAGPipeline(config);
+}
+
+// =============================================================================
+// memory() — Create a memory plugin for agents
+// =============================================================================
+
+/**
+ * Create a memory plugin that gives agents persistent recall capabilities.
+ *
+ * @example
+ * ```ts
+ * // Simple in-memory (default)
+ * const mem = memory()
+ *
+ * // With custom adapter
+ * const mem = memory({ adapter: myRedisAdapter, autoStore: true })
+ *
+ * // Attach to agent
+ * const myAgent = agent({ model, instructions: '...' })
+ *   .withPlugin(mem)
+ *   .build()
+ * ```
+ */
+export function memory(options?: MemoryPluginOptions) {
+  return createMemoryPlugin(options);
 }
 
 // =============================================================================

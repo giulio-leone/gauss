@@ -3,9 +3,9 @@
 // =============================================================================
 
 // ─── Factory Functions ───────────────────────────────────────────────────────
-// import { agent, graph, rag } from 'gauss'
+// import { agent, graph, rag, memory } from 'gauss'
 
-export { agent, graph, rag } from "./gauss.js";
+export { agent, graph, rag, memory } from "./gauss.js";
 
 // ─── Agent Primitive (new core API) ──────────────────────────────────────────
 
