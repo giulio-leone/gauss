@@ -17,6 +17,7 @@ import {
   create_graph,
   graph_add_node,
   graph_add_edge,
+  graph_add_fork_node,
   graph_run,
   destroy_graph,
 } from "gauss-napi";
@@ -29,6 +30,14 @@ export interface GraphNodeConfig {
   agent: Agent;
   instructions?: string;
   tools?: ToolDef[];
+}
+
+export type ConsensusStrategy = "first" | "concat";
+
+export interface ForkNodeConfig {
+  nodeId: string;
+  agents: Array<{ agent: Agent; instructions?: string }>;
+  consensus?: ConsensusStrategy;
 }
 
 export class Graph implements Disposable {
@@ -52,6 +61,22 @@ export class Graph implements Disposable {
       config.agent.handle,
       config.instructions,
       config.tools ?? []
+    );
+    return this;
+  }
+
+  /** Add a fork node — runs multiple agents in parallel, merging via consensus. */
+  addFork(config: ForkNodeConfig): this {
+    this.assertNotDisposed();
+    graph_add_fork_node(
+      this._handle,
+      config.nodeId,
+      config.agents.map(a => ({
+        agentName: a.agent.name,
+        providerHandle: a.agent.handle,
+        instructions: a.instructions,
+      })),
+      config.consensus ?? "concat"
     );
     return this;
   }
