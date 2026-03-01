@@ -11,7 +11,7 @@ async function main() {
   
   try {
     const providerHandle = createProvider("openai", "gpt-3.5-turbo", {
-      apiKey: "sk-test-dummy-key", // Dummy key
+      apiKey: "DUMMY_KEY", // Clearly fake key for testing
       baseUrl: undefined,
       timeoutMs: undefined,
       maxRetries: 0,
@@ -42,8 +42,9 @@ async function main() {
       );
       console.log("Agent Result:", result);
     } catch (e) {
-      console.log("Agent run failed (expected with dummy key):", e.message);
-      if (e.message.includes("401") || e.message.includes("api key")) {
+      const errMsg = e?.message || String(e);
+      console.log("Agent run failed (expected with dummy key):", errMsg);
+      if (errMsg.includes("401") || errMsg.includes("api key")) {
           console.log("SUCCESS: NAPI call reached the provider logic!");
       } else {
           console.log("WARNING: Unexpected error type.");
