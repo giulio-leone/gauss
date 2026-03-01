@@ -28,6 +28,7 @@ import {
   get_provider_capabilities,
   execute_code,
   available_runtimes,
+  generate_image,
   version,
 } from "gauss-napi";
 
@@ -43,6 +44,8 @@ import type {
   Handle,
   Disposable,
   Citation,
+  ImageGenerationConfig,
+  ImageGenerationResult,
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
@@ -111,6 +114,15 @@ export interface AgentConfig {
 
   /** Enable code execution runtimes. Pass `true` for all defaults, or configure. */
   codeExecution?: boolean | import("./types.js").CodeExecutionOptions;
+
+  /** Enable Google Search grounding (Gemini only). */
+  grounding?: boolean;
+
+  /** Enable native code execution / Gemini code interpreter. */
+  nativeCodeExecution?: boolean;
+
+  /** Response modalities (e.g. ["TEXT", "IMAGE"] for Gemini image generation). */
+  responseModalities?: string[];
 }
 
 // ─── Agent Class ───────────────────────────────────────────────────
@@ -160,6 +172,9 @@ export class Agent implements Disposable {
       thinkingBudget: config.thinkingBudget,
       cacheControl: config.cacheControl,
       codeExecution,
+      grounding: config.grounding,
+      nativeCodeExecution: config.nativeCodeExecution,
+      responseModalities: config.responseModalities,
     };
   }
 
@@ -395,6 +410,47 @@ export class Agent implements Disposable {
   /** Check which code runtimes are available on this system. */
   static async availableRuntimes(): Promise<string[]> {
     return available_runtimes();
+  }
+
+  /**
+   * Generate images using a provider's image generation API.
+   *
+   * ```ts
+   * const result = await Agent.generateImage("A sunset over mountains", {
+   *   provider: "openai",
+   *   model: "dall-e-3",
+   *   size: "1024x1024",
+   * });
+   * console.log(result.images[0].url);
+   * ```
+   */
+  static async generateImage(
+    prompt: string,
+    options: ImageGenerationConfig & {
+      provider?: ProviderType;
+      providerOptions?: ProviderOptions;
+    } = {},
+  ): Promise<ImageGenerationResult> {
+    const detected = detectProvider();
+    const providerType = options.provider ?? detected?.provider ?? "openai";
+    const model = options.model ?? detected?.model ?? "dall-e-3";
+    const apiKey = options.providerOptions?.apiKey ?? resolveApiKey(providerType);
+    const handle = create_provider(providerType, model, { apiKey, ...options.providerOptions });
+    try {
+      return await generate_image(
+        handle,
+        prompt,
+        options.model,
+        options.size,
+        options.quality,
+        options.style,
+        options.aspectRatio,
+        options.n,
+        options.responseFormat,
+      );
+    } finally {
+      destroy_provider(handle);
+    }
   }
 }
 

@@ -30,6 +30,10 @@ vi.mock("gauss-napi", () => ({
   })),
   generate: vi.fn(async () => ({ text: "raw response" })),
   generate_with_tools: vi.fn(async () => ({ text: "tool response" })),
+  generate_image: vi.fn(async () => ({
+    images: [{ url: "https://example.com/img.png", mimeType: "image/png" }],
+    revisedPrompt: "A beautiful sunset over mountains",
+  })),
 }));
 
 import { Agent, gauss, batch } from "../agent.js";
@@ -263,5 +267,81 @@ describe("batch", () => {
     });
     await batch(["a", "b", "c", "d"], { concurrency: 2 });
     expect(maxConcurrent).toBeLessThanOrEqual(2);
+  });
+});
+
+// ─── Grounding & Image Generation ──────────────────────────────────
+
+describe("Agent grounding options", () => {
+  it("passes grounding option to NAPI", async () => {
+    const agent = new Agent({ grounding: true });
+    await agent.run("test with grounding");
+    const call = vi.mocked(agent_run).mock.calls[0];
+    expect(call[4]?.grounding).toBe(true);
+    agent.destroy();
+  });
+
+  it("passes nativeCodeExecution option", async () => {
+    const agent = new Agent({ nativeCodeExecution: true });
+    await agent.run("test with code execution");
+    const call = vi.mocked(agent_run).mock.calls[0];
+    expect(call[4]?.nativeCodeExecution).toBe(true);
+    agent.destroy();
+  });
+
+  it("passes responseModalities option", async () => {
+    const agent = new Agent({ responseModalities: ["TEXT", "IMAGE"] });
+    await agent.run("generate an image");
+    const call = vi.mocked(agent_run).mock.calls[0];
+    expect(call[4]?.responseModalities).toEqual(["TEXT", "IMAGE"]);
+    agent.destroy();
+  });
+});
+
+describe("Agent.generateImage", () => {
+  it("generates images via static method", async () => {
+    const result = await Agent.generateImage("A sunset", {
+      model: "dall-e-3",
+      size: "1024x1024",
+    });
+    expect(result.images).toHaveLength(1);
+    expect(result.images[0].url).toBe("https://example.com/img.png");
+    expect(result.revisedPrompt).toBe("A beautiful sunset over mountains");
+  });
+});
+
+describe("GroundingMetadata type", () => {
+  it("type structure matches expected shape", () => {
+    const metadata: import("../types.js").GroundingMetadata = {
+      searchQueries: ["what is rust"],
+      groundingChunks: [{ url: "https://example.com", title: "Rust" }],
+      searchEntryPoint: "<div>widget</div>",
+    };
+    expect(metadata.searchQueries).toHaveLength(1);
+    expect(metadata.groundingChunks[0].url).toBe("https://example.com");
+    expect(metadata.searchEntryPoint).toBe("<div>widget</div>");
+  });
+});
+
+describe("ImageGeneration types", () => {
+  it("ImageGenerationConfig has correct structure", () => {
+    const config: import("../types.js").ImageGenerationConfig = {
+      model: "dall-e-3",
+      size: "1024x1024",
+      quality: "hd",
+      style: "vivid",
+      n: 1,
+    };
+    expect(config.model).toBe("dall-e-3");
+    expect(config.size).toBe("1024x1024");
+  });
+
+  it("ImageGenerationResult has correct structure", () => {
+    const result: import("../types.js").ImageGenerationResult = {
+      images: [{ url: "https://img.png", mimeType: "image/png" }],
+      revisedPrompt: "revised",
+    };
+    expect(result.images).toHaveLength(1);
+    expect(result.revisedPrompt).toBe("revised");
   });
 });
