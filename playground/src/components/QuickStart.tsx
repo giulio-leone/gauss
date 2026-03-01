@@ -32,7 +32,7 @@ export function QuickStart() {
       <div className="pg-qs-install">
         <div className="pg-code-block">
           <div className="pg-code-lang">bash</div>
-          <pre><code>npm install gauss-ai</code></pre>
+          <pre><code>npm install gauss-ts</code></pre>
         </div>
       </div>
     </div>
