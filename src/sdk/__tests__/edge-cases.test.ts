@@ -31,7 +31,8 @@ vi.mock("gauss-napi", () => ({
   generate_with_tools: vi.fn(async () => ({ text: "tool" })),
 }));
 
-import { Agent, batch } from "../agent.js";
+import { Agent } from "../agent.js";
+import { batch } from "../batch.js";
 import { withRetry, retryable } from "../retry.js";
 import { structured } from "../structured.js";
 import { template } from "../template.js";

@@ -26,10 +26,6 @@ import {
   generate,
   generate_with_tools,
   get_provider_capabilities,
-  execute_code,
-  available_runtimes,
-  generate_image,
-  version,
 } from "gauss-napi";
 
 import type {
@@ -43,13 +39,11 @@ import type {
   StreamCallback,
   Handle,
   Disposable,
-  Citation,
-  ImageGenerationConfig,
-  ImageGenerationResult,
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
+import { AgentStream } from "./stream-iter.js";
 
 /** Transform NAPI result to SDK AgentResult (normalizes citation field names). */
 function toSdkResult(raw: any): AgentResult {
@@ -142,7 +136,6 @@ export class Agent implements Disposable {
   private disposed = false;
 
   constructor(config: AgentConfig = {}) {
-    // Auto-detect provider/model from environment if not specified
     const detected = detectProvider();
     this._provider = config.provider ?? detected?.provider ?? "openai";
     this._model = config.model ?? detected?.model ?? OPENAI_DEFAULT;
@@ -158,7 +151,6 @@ export class Agent implements Disposable {
 
     if (config.tools) this._tools = [...config.tools];
 
-    // Normalize codeExecution: true → default options object
     const ceOpt = config.codeExecution;
     const codeExecution = ceOpt === true
       ? { python: true, javascript: true, bash: true }
@@ -224,14 +216,7 @@ export class Agent implements Disposable {
    * Run the agent. Accepts a string prompt or a message array.
    *
    * @example
-   *   // Simple string prompt
    *   const result = await agent.run("Explain quantum computing");
-   *
-   *   // Message array
-   *   const result = await agent.run([
-   *     { role: "system", content: "You are a physicist." },
-   *     { role: "user", content: "Explain quantum computing" },
-   *   ]);
    */
   async run(input: string | Message[]): Promise<AgentResult> {
     this.assertNotDisposed();
@@ -249,9 +234,6 @@ export class Agent implements Disposable {
 
   /**
    * Run with a JS-side tool executor for tools that need Node.js access.
-   *
-   * The executor receives a JSON string `{ name, arguments }` and must
-   * return the tool result as a JSON string.
    */
   async runWithTools(
     input: string | Message[],
@@ -272,11 +254,7 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Stream agent responses with real-time events.
-   *
-   * @param input - String prompt or message array.
-   * @param onEvent - Called for each stream event (JSON string).
-   * @param toolExecutor - JS-side tool executor.
+   * Stream agent responses with real-time events via callback.
    */
   async stream(
     input: string | Message[],
@@ -302,7 +280,7 @@ export class Agent implements Disposable {
    * Stream as an async iterable — use with `for await`.
    *
    * @example
-   *   for await (const event of agent.streamIter("Tell me a story", toolExecutor)) {
+   *   for await (const event of agent.streamIter("Tell me a story", executor)) {
    *     process.stdout.write(event.text ?? "");
    *   }
    */
@@ -325,7 +303,7 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Raw LLM call without the agent loop. Returns the provider's raw response.
+   * Raw LLM call without the agent loop.
    */
   async generate(
     input: string | Message[],
@@ -344,7 +322,7 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Raw LLM call with tool definitions. Returns tool calls if the model requests them.
+   * Raw LLM call with tool definitions.
    */
   async generateWithTools(
     input: string | Message[],
@@ -388,75 +366,6 @@ export class Agent implements Disposable {
       throw new Error(`Agent "${this._name}" has been destroyed`);
     }
   }
-
-  // ─── Static ─────────────────────────────────────────────────────
-
-  /** Gauss core version. */
-  static version(): string {
-    return version();
-  }
-
-  /**
-   * Execute code in a sandboxed runtime without creating a full Agent.
-   *
-   * ```ts
-   * const result = await Agent.executeCode("python", "print(2 + 2)");
-   * console.log(result.stdout); // "4\n"
-   * ```
-   */
-  static async executeCode(
-    language: "python" | "javascript" | "bash",
-    code: string,
-    options?: { timeoutSecs?: number; workingDir?: string; sandbox?: "default" | "strict" | "permissive" },
-  ): Promise<import("./types.js").CodeExecutionResult> {
-    return execute_code(language, code, options?.timeoutSecs, options?.workingDir, options?.sandbox);
-  }
-
-  /** Check which code runtimes are available on this system. */
-  static async availableRuntimes(): Promise<string[]> {
-    return available_runtimes();
-  }
-
-  /**
-   * Generate images using a provider's image generation API.
-   *
-   * ```ts
-   * const result = await Agent.generateImage("A sunset over mountains", {
-   *   provider: "openai",
-   *   model: "dall-e-3",
-   *   size: "1024x1024",
-   * });
-   * console.log(result.images[0].url);
-   * ```
-   */
-  static async generateImage(
-    prompt: string,
-    options: ImageGenerationConfig & {
-      provider?: ProviderType;
-      providerOptions?: ProviderOptions;
-    } = {},
-  ): Promise<ImageGenerationResult> {
-    const detected = detectProvider();
-    const providerType = options.provider ?? detected?.provider ?? "openai";
-    const model = options.model ?? detected?.model ?? "dall-e-3";
-    const apiKey = options.providerOptions?.apiKey ?? resolveApiKey(providerType);
-    const handle = create_provider(providerType, model, { apiKey, ...options.providerOptions });
-    try {
-      return await generate_image(
-        handle,
-        prompt,
-        options.model,
-        options.size,
-        options.quality,
-        options.style,
-        options.aspectRatio,
-        options.n,
-        options.responseFormat,
-      );
-    } finally {
-      destroy_provider(handle);
-    }
-  }
 }
 
 /** No-op tool executor — used when no tools are registered. */
@@ -468,14 +377,6 @@ const NOOP_TOOL_EXECUTOR: ToolExecutor = async () => "{}";
  * @example
  *   import { gauss } from "gauss-ts";
  *   const answer = await gauss("What is the meaning of life?");
- *   // → "The meaning of life is..."
- *
- *   // With options:
- *   const answer = await gauss("Translate to French: Hello world", {
- *     provider: "anthropic",
- *     model: "claude-sonnet-4-20250514",
- *     temperature: 0,
- *   });
  */
 export async function gauss(
   prompt: string,
@@ -488,126 +389,4 @@ export async function gauss(
   } finally {
     agent.destroy();
   }
-}
-
-// ─── Async iterable stream ─────────────────────────────────────────
-
-/** Parsed stream event. */
-export interface StreamEvent {
-  type: string;
-  text?: string;
-  toolCall?: { name: string; arguments: string };
-  [key: string]: unknown;
-}
-
-/**
- * Async iterable wrapper over the native stream callback.
- *
- * @example
- *   for await (const event of agent.streamIter("Tell me a story", executor)) {
- *     if (event.type === "text_delta") process.stdout.write(event.text ?? "");
- *   }
- *   // Access final result after iteration:
- *   const result = stream.result;
- */
-export class AgentStream implements AsyncIterable<StreamEvent> {
-  private _result: AgentResult | undefined;
-
-  constructor(
-    private readonly agentName: string,
-    private readonly providerHandle: Handle,
-    private readonly tools: ToolDef[],
-    private readonly messages: Message[],
-    private readonly options: AgentOptions,
-    private readonly toolExecutor: ToolExecutor,
-  ) {}
-
-  /** Final result — available after iteration completes. */
-  get result(): AgentResult | undefined { return this._result; }
-
-  async *[Symbol.asyncIterator](): AsyncIterator<StreamEvent> {
-    const buffer: StreamEvent[] = [];
-    let resolve: (() => void) | undefined;
-    let done = false;
-
-    const onEvent = (json: string) => {
-      try {
-        buffer.push(JSON.parse(json) as StreamEvent);
-      } catch {
-        buffer.push({ type: "raw", text: json });
-      }
-      resolve?.();
-    };
-
-    const runPromise = agent_stream_with_tool_executor(
-      this.agentName,
-      this.providerHandle,
-      this.tools,
-      this.messages,
-      this.options,
-      onEvent,
-      this.toolExecutor
-    ).then((r) => {
-      this._result = toSdkResult(r);
-      done = true;
-      resolve?.();
-    });
-
-    while (!done || buffer.length > 0) {
-      if (buffer.length > 0) {
-        yield buffer.shift()!;
-      } else if (!done) {
-        await new Promise<void>((r) => { resolve = r; });
-      }
-    }
-
-    await runPromise;
-  }
-}
-
-// ─── Batch execution ───────────────────────────────────────────────
-
-export interface BatchItem<T = string> {
-  input: T;
-  result?: AgentResult;
-  error?: Error;
-}
-
-/**
- * Run multiple prompts through an agent in parallel with concurrency control.
- *
- * @example
- *   const results = await batch(
- *     ["Translate: Hello", "Translate: World", "Translate: Foo"],
- *     { concurrency: 2, provider: "openai" }
- *   );
- *   results.forEach(r => console.log(r.result?.text ?? r.error?.message));
- */
-export async function batch(
-  prompts: string[],
-  config?: Omit<AgentConfig, "name"> & { concurrency?: number }
-): Promise<BatchItem[]> {
-  const { concurrency = 5, ...agentConfig } = config ?? {};
-  const items: BatchItem[] = prompts.map((input) => ({ input }));
-
-  const agent = new Agent({ name: "batch", ...agentConfig });
-  try {
-    const queue = [...items.entries()];
-    const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-      while (queue.length > 0) {
-        const entry = queue.shift();
-        if (!entry) break;
-        const [idx, item] = entry;
-        try {
-          items[idx].result = await agent.run(item.input);
-        } catch (err) {
-          items[idx].error = err instanceof Error ? err : new Error(String(err));
-        }
-      }
-    });
-    await Promise.all(workers);
-  } finally {
-    agent.destroy();
-  }
-  return items;
 }

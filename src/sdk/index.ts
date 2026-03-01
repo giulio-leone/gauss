@@ -13,7 +13,7 @@
  */
 
 // ─── Quick Start ───────────────────────────────────────────────────
-export { gauss } from "./agent.js";
+// gauss() is re-exported via the Core Agent section below
 
 // ─── Types ─────────────────────────────────────────────────────────
 export type {
@@ -70,8 +70,19 @@ export {
 } from "./models.js";
 
 // ─── Core Agent ────────────────────────────────────────────────────
-export { Agent, AgentStream, batch } from "./agent.js";
-export type { AgentConfig, StreamEvent, BatchItem } from "./agent.js";
+export { Agent, gauss } from "./agent.js";
+export type { AgentConfig } from "./agent.js";
+
+// ─── Streaming ────────────────────────────────────────────────────
+export { AgentStream } from "./stream-iter.js";
+export type { StreamEvent } from "./stream-iter.js";
+
+// ─── Batch ────────────────────────────────────────────────────────
+export { batch } from "./batch.js";
+export type { BatchItem } from "./batch.js";
+
+// ─── Code Execution & Image Generation ─────────────────────────────
+export { executeCode, availableRuntimes, generateImage, version } from "./code-execution.js";
 
 // ─── Memory ────────────────────────────────────────────────────────
 export { Memory } from "./memory.js";

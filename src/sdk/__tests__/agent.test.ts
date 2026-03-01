@@ -36,8 +36,10 @@ vi.mock("gauss-napi", () => ({
   })),
 }));
 
-import { Agent, gauss, batch } from "../agent.js";
-import type { StreamEvent } from "../agent.js";
+import { Agent, gauss } from "../agent.js";
+import { batch } from "../batch.js";
+import type { StreamEvent } from "../stream-iter.js";
+import { version, generateImage } from "../code-execution.js";
 import {
   create_provider,
   destroy_provider,
@@ -182,7 +184,7 @@ describe("Agent", () => {
 
   describe("static methods", () => {
     it("version returns core version", () => {
-      expect(Agent.version()).toBe("1.0.0-test");
+      expect(version()).toBe("1.0.0-test");
     });
   });
 });
@@ -298,9 +300,9 @@ describe("Agent grounding options", () => {
   });
 });
 
-describe("Agent.generateImage", () => {
-  it("generates images via static method", async () => {
-    const result = await Agent.generateImage("A sunset", {
+describe("generateImage", () => {
+  it("generates images via standalone function", async () => {
+    const result = await generateImage("A sunset", {
       model: "dall-e-3",
       size: "1024x1024",
     });
