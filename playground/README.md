@@ -1,6 +1,6 @@
 # Gauss Playground
 
-A standalone Vite + React 19 development UI for interacting with Gauss agents.
+A standalone Vite + React 19 development UI for interacting with Gauss agents and exploring SDK features.
 
 ## Quick Start
 
@@ -27,14 +27,19 @@ playground/
 │   ├── main.tsx              # React 19 root
 │   ├── App.tsx               # Main layout with sidebar + panels
 │   ├── types.ts              # Shared TypeScript types
+│   ├── data/
+│   │   └── features.ts       # Feature catalog, categories & quick start snippets
 │   ├── components/
-│   │   ├── Header.tsx        # App header with connection status
+│   │   ├── Header.tsx        # App header with version, feature count & connection status
 │   │   ├── AgentList.tsx     # Agent sidebar with search/filter
 │   │   ├── ChatPanel.tsx     # Chat with markdown & code blocks
 │   │   ├── ToolInspector.tsx # Tool schema viewer with syntax highlighting
 │   │   ├── ExecutionTimeline.tsx  # Visual timeline with colored nodes
 │   │   ├── MemoryViewer.tsx  # Agent memory/context viewer
-│   │   └── MetricsPanel.tsx  # Token count, latency, cost tracking
+│   │   ├── MetricsPanel.tsx  # Token count, latency, cost tracking
+│   │   ├── FeatureExplorer.tsx   # Feature grid with filtering & code examples
+│   │   ├── FeatureSidebar.tsx    # Categorized feature navigation
+│   │   └── QuickStart.tsx        # Code snippet showcase with tabbed examples
 │   ├── hooks/
 │   │   ├── useAgent.ts       # SSE streaming hook
 │   │   ├── useWebSocket.ts   # WebSocket with auto-reconnect
@@ -45,6 +50,9 @@ playground/
 
 ## Features
 
+- **Feature Explorer** — Browse all 16 SDK features with descriptions, code examples, and category filters
+- **Quick Start** — Tabbed code snippets for common operations (agents, teams, MCP, tools, graphs)
+- **Feature Sidebar** — Categorized navigation: Core, Orchestration, Protocols, Infrastructure
 - **Agent List** — Search and filter available agents
 - **Chat Panel** — Send messages with streaming responses, inline code block rendering
 - **Tool Inspector** — Browse tool schemas with JSON syntax highlighting

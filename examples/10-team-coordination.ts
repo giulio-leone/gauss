@@ -1,75 +1,74 @@
-/**
- * Team Coordination Example
- * ========================
- * Demonstrates TeamBuilder with a coordinator agent and specialist agents.
- * Shows delegation patterns and team-based task execution.
- */
+// =============================================================================
+// 10 — Team Coordination with different strategies
+// =============================================================================
+//
+// Demonstrates Team with sequential and parallel strategies.
+// Sequential: output of one agent feeds the next.
+// Parallel: all agents run simultaneously on the same prompt.
+//
+// Usage: npx tsx examples/10-team-coordination.ts
 
-import { agent, team } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent, Team } from "gauss-ai";
 
-async function main() {
-  // Initialize provider
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4',
-  })
+async function main(): Promise<void> {
+  const analyst = new Agent({
+    name: "analyst",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You analyze data and extract key metrics. Be quantitative.",
+  });
 
-  // Create specialist agents
-  const dataSpecialist = agent({
-    name: 'DataSpecialist',
-    role: 'Analyzes data and provides insights',
-    provider,
-  })
+  const strategist = new Agent({
+    name: "strategist",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You develop business strategies based on analysis. Focus on actionable steps.",
+  });
 
-  const writingSpecialist = agent({
-    name: 'WritingSpecialist',
-    role: 'Writes clear, concise reports',
-    provider,
-  })
+  const writer = new Agent({
+    name: "writer",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You write executive summaries. Be clear and concise.",
+  });
 
-  // Create coordinator agent that delegates work
-  const coordinator = agent({
-    name: 'ProjectCoordinator',
-    role: 'Coordinates work between specialists',
-    provider,
-  })
+  // ── Sequential: analyst → strategist → writer ──────────────────────
+  console.log("=== Sequential Team ===\n");
+  const seqTeam = new Team("sequential-team")
+    .add(analyst, "Analyze the Q4 sales data")
+    .add(strategist, "Develop strategy from the analysis")
+    .add(writer, "Write an executive summary")
+    .strategy("sequential");
 
-  // Build team with delegation strategy
-  const projectTeam = team({
-    coordinator,
-    specialists: [dataSpecialist, writingSpecialist],
-    strategy: 'delegate', // Coordinator decides who does what
-  })
+  const seqResult = await seqTeam.run(
+    "Q4 sales were $2.5M (+35% YoY). Top product: Enterprise Plan. Churn dropped to 3%.",
+  );
+  console.log("Sequential result:", seqResult.finalText.slice(0, 300), "...\n");
 
-  // Execute team task
-  const task = 'Analyze Q4 sales data and write an executive summary'
+  // ── Parallel: all agents work independently ────────────────────────
+  console.log("=== Parallel Team ===\n");
+  const parTeam = new Team("parallel-team")
+    .add(analyst, "Provide your perspective on this data")
+    .add(strategist, "Provide your perspective on this data")
+    .add(writer, "Provide your perspective on this data")
+    .strategy("parallel");
 
-  console.log(`📋 Team Task: ${task}\n`)
+  const parResult = await parTeam.run(
+    "Should we expand into the European market given our current growth?",
+  );
+  console.log("Parallel result:", parResult.finalText.slice(0, 300), "...\n");
 
-  try {
-    const result = await projectTeam.run({
-      task,
-      context: {
-        salesData: {
-          q4Total: '$2.5M',
-          growth: '+35%',
-          topProduct: 'Enterprise Plan',
-        },
-      },
-    })
-
-    console.log('✅ Team Results:')
-    console.log('---')
-    result.contributions.forEach((contrib) => {
-      console.log(`\n${contrib.agent}: ${contrib.summary}`)
-    })
-    console.log('---')
-    console.log('\n📊 Final Output:')
-    console.log(result.output)
-  } catch (error) {
-    console.error('❌ Team execution failed:', error)
+  // Print token usage per agent
+  for (const [i, r] of parResult.results.entries()) {
+    console.log(`  Agent ${i}: ${r.inputTokens} in / ${r.outputTokens} out`);
   }
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  seqTeam.destroy();
+  parTeam.destroy();
+  analyst.destroy();
+  strategist.destroy();
+  writer.destroy();
 }
 
-main()
+main().catch(console.error);

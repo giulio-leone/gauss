@@ -1,72 +1,76 @@
 // =============================================================================
-// 02 — Agent with filesystem, planning, and event monitoring
+// 02 — Planning Agent with tools and a JS-side tool executor
 // =============================================================================
 //
-// Uses the builder pattern to compose an agent with a VirtualFilesystem,
-// planning tools, and event listeners for observability.
+// Shows how to define tools and provide a JavaScript executor so the agent
+// can call Node.js functions during its planning loop.
 //
 // Usage: npx tsx examples/02-planning-agent.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
+import { Agent } from "gauss-ai";
+import type { ToolDef } from "gauss-ai";
 
-import {
-  Agent,
-  VirtualFilesystem,
-} from "gauss";
-import type { AgentEvent } from "gauss";
+// ── Tool definitions ─────────────────────────────────────────────────
+const tools: ToolDef[] = [
+  {
+    name: "list_tasks",
+    description: "List current project tasks",
+    parameters: { status: { type: "string", enum: ["todo", "done", "all"] } },
+  },
+  {
+    name: "add_task",
+    description: "Add a new task to the project board",
+    parameters: {
+      title: { type: "string" },
+      priority: { type: "string", enum: ["low", "medium", "high"] },
+    },
+  },
+];
 
-const model = {} as import("ai").LanguageModel;
+// ── In-memory task store (simulates a real backend) ──────────────────
+const tasks: Array<{ title: string; priority: string; done: boolean }> = [
+  { title: "Set up CI/CD", priority: "high", done: false },
+  { title: "Write README", priority: "medium", done: true },
+];
+
+// ── Tool executor — receives JSON, returns JSON ──────────────────────
+async function toolExecutor(callJson: string): Promise<string> {
+  const { name, arguments: args } = JSON.parse(callJson);
+  switch (name) {
+    case "list_tasks": {
+      const status = args?.status ?? "all";
+      const filtered = status === "all" ? tasks : tasks.filter((t) => (status === "done" ? t.done : !t.done));
+      return JSON.stringify(filtered);
+    }
+    case "add_task": {
+      tasks.push({ title: args.title, priority: args.priority ?? "medium", done: false });
+      return JSON.stringify({ ok: true, total: tasks.length });
+    }
+    default:
+      return JSON.stringify({ error: `Unknown tool: ${name}` });
+  }
+}
 
 async function main(): Promise<void> {
-  const fs = new VirtualFilesystem();
+  const agent = new Agent({
+    name: "planner",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a project planning assistant. Use tools to manage tasks.",
+    tools,
+    maxSteps: 10,
+  });
 
-  // Builder pattern: chain capabilities onto the agent
-  const agent = Agent.create({
-    model,
-    instructions: [
-      "You are a project scaffolding assistant.",
-      "Use the filesystem to create files.",
-      "Plan your work with todos before writing code.",
-    ].join("\n"),
-    maxSteps: 25,
-  })
-    .withFilesystem(fs)
-    .withPlanning()
-
-    // -- Event listeners for progress tracking --------------------------------
-    .on("agent:start", (e: AgentEvent) => {
-      console.log(`[start] session=${e.sessionId}`);
-    })
-    .on("step:end", (e: AgentEvent) => {
-      const data = e.data as { stepIndex: number };
-      console.log(`[step] ${data.stepIndex} completed`);
-    })
-    .on("tool:call", (e: AgentEvent) => {
-      const data = e.data as { toolName: string };
-      console.log(`[tool] calling ${data.toolName}`);
-    })
-    .on("planning:update", (e: AgentEvent) => {
-      console.log("[plan] todos updated:", e.data);
-    })
-    .on("error", (e: AgentEvent) => {
-      console.error("[error]", e.data);
-    })
-    .build();
-
-  // Run a multi-step task
-  const result = await agent.run(
-    "Create a TypeScript project with src/index.ts and a tsconfig.json. "
-    + "Add a hello-world function that returns a greeting string.",
+  // runWithTools passes tool calls to our JS executor
+  const result = await agent.runWithTools(
+    "List all current tasks, then add a new high-priority task: 'Implement auth'. Finally summarize the board.",
+    toolExecutor,
   );
 
-  console.log("Final output:", result.text);
+  console.log("Plan:", result.text);
+  console.log("Tasks in store:", tasks);
 
-  // Inspect files created by the agent
-  const files = await fs.list("/", { recursive: true });
-  console.log("Files created:", files.map((f) => f.path));
-
-  await agent.dispose();
+  agent.destroy();
 }
 
 main().catch(console.error);

@@ -1,77 +1,64 @@
 // =============================================================================
-// 04 — Agent with MCP server integration
+// 04 — MCP (Model Context Protocol) Server
 // =============================================================================
 //
-// Shows how to connect external MCP servers so the agent can discover and
-// invoke their tools. Tools are namespaced as `mcp:<server>:<tool>`.
+// Creates an MCP server with tools, resources, and prompts. The server can
+// handle incoming JSON-RPC messages from any MCP-compatible client.
 //
-// Requires: @ai-sdk/mcp (pnpm add @ai-sdk/mcp)
-// Usage:    npx tsx examples/04-mcp-integration.ts
+// Usage: npx tsx examples/04-mcp-integration.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
-
-import { Agent, AiSdkMcpAdapter } from "gauss";
-import type { McpServerConfig } from "gauss";
-
-const model = {} as import("ai").LanguageModel;
+import { McpServer } from "gauss-ai";
 
 async function main(): Promise<void> {
-  // -- Configure MCP servers --------------------------------------------------
-  const servers: McpServerConfig[] = [
-    {
-      id: "filesystem",
-      name: "Filesystem Server",
-      transport: "stdio",
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/workspace"],
+  const mcp = new McpServer("my-tools", "1.0.0");
+
+  // ── Register tools ─────────────────────────────────────────────────
+  mcp.addTool({
+    name: "get_weather",
+    description: "Get current weather for a location",
+    parameters: {
+      location: { type: "string", description: "City name" },
+      units: { type: "string", enum: ["celsius", "fahrenheit"] },
     },
-    {
-      id: "search",
-      name: "Search Server",
-      transport: "sse",
-      url: "http://localhost:8080/sse",
+  });
+
+  mcp.addTool({
+    name: "search_docs",
+    description: "Search internal documentation",
+    parameters: {
+      query: { type: "string" },
+      limit: { type: "number" },
     },
-  ];
+  });
 
-  // -- Create the MCP adapter and connect servers ----------------------------
-  const mcp = new AiSdkMcpAdapter({ servers });
-  for (const server of servers) {
-    await mcp.connect(server);
-  }
+  // ── Register resources ─────────────────────────────────────────────
+  mcp.addResource({
+    uri: "file:///config/app.json",
+    name: "App Configuration",
+    description: "Current application configuration",
+    mimeType: "application/json",
+  });
 
-  // Inspect discovered tools
-  const tools = await mcp.discoverTools();
-  console.log("Discovered MCP tools:", Object.keys(tools));
+  // ── Register prompts ───────────────────────────────────────────────
+  mcp.addPrompt({
+    name: "summarize",
+    description: "Summarize a document",
+    arguments: [
+      { name: "text", description: "Text to summarize", required: true },
+      { name: "style", description: "Summary style (brief/detailed)" },
+    ],
+  });
 
-  // List connected servers
-  const serverInfos = await mcp.listServers();
-  for (const info of serverInfos) {
-    console.log(`  ${info.id}: ${info.status} (${info.transport})`);
-  }
+  // ── Handle an incoming MCP message (JSON-RPC) ──────────────────────
+  const response = await mcp.handleMessage({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "tools/list",
+    params: {},
+  });
+  console.log("MCP tools/list response:", JSON.stringify(response, null, 2));
 
-  // -- Build agent with MCP tools available ----------------------------------
-  const agent = Agent.create({
-    model,
-    instructions: [
-      "You have access to external tools via MCP servers.",
-      "Use the filesystem tools to read and write files.",
-      "Use the search tools to find information online.",
-    ].join("\n"),
-    maxSteps: 20,
-  })
-    .withMcp(mcp)
-    .withPlanning()
-    .build();
-
-  const result = await agent.run(
-    "List the files in /tmp/workspace and summarize their contents.",
-  );
-
-  console.log("Result:", result.text);
-
-  // Cleanup disconnects all MCP servers
-  await agent.dispose();
+  mcp.destroy();
 }
 
 main().catch(console.error);

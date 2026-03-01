@@ -1,87 +1,62 @@
-/**
- * Workflow DSL Example
- * ===================
- * Demonstrates the WorkflowDSL for building complex, multi-step workflows.
- * Shows sequential execution (.then()), branching, and parallel operations.
- */
+// =============================================================================
+// 12 — Workflow DSL with sequential, dependency-based steps
+// =============================================================================
+//
+// Workflows define multi-step pipelines where each step is backed by an Agent.
+// Steps can have explicit dependencies for automatic ordering.
+//
+// Usage: npx tsx examples/12-workflow-dsl.ts
 
-import { workflow } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent, Workflow } from "gauss-ai";
 
-async function main() {
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4',
-  })
+async function main(): Promise<void> {
+  // ── Create step agents ─────────────────────────────────────────────
+  const ideator = new Agent({
+    name: "ideator",
+    instructions: "You brainstorm creative ideas. Output a numbered list.",
+  });
 
-  console.log('🔄 Building workflow...\n')
+  const researcher = new Agent({
+    name: "researcher",
+    instructions: "You research and expand on ideas with facts and data.",
+  });
 
-  // Build workflow with DSL
-  const contentWorkflow = workflow()
-    // Step 1: Generate blog ideas
-    .step('ideation', async () => {
-      console.log('💡 Brainstorming blog topics...')
-      return 'AI trends, sustainability, remote work'
-    })
-    // Step 2: Branch for parallel content creation
-    .then((ideas) => {
-      console.log(`📚 Creating content from: ${ideas}\n`)
-      return ideas
-    })
-    .parallel([
-      {
-        name: 'outline',
-        fn: async () => {
-          console.log('  📋 Building outline...')
-          return 'Introduction → Trends → Future → Conclusion'
-        },
-      },
-      {
-        name: 'research',
-        fn: async () => {
-          console.log('  🔍 Gathering research...')
-          return 'Market reports, case studies, expert quotes'
-        },
-      },
-      {
-        name: 'seo',
-        fn: async () => {
-          console.log('  🔎 Planning SEO...')
-          return 'Keywords: AI trends, future of work, sustainable tech'
-        },
-      },
-    ])
-    // Step 3: Combine results
-    .then(async (results) => {
-      console.log('\n✅ Parallel tasks complete\n')
-      console.log('📝 Combined Results:')
-      Object.entries(results).forEach(([key, value]) => {
-        console.log(`  • ${key}: ${value}`)
-      })
-      return results
-    })
-    // Step 4: Conditional branching
-    .branch({
-      condition: () => true,
-      true: async () => {
-        console.log('\n📤 Publishing to blog...')
-        return 'Published successfully'
-      },
-      false: async () => {
-        console.log('\n💾 Saving as draft...')
-        return 'Saved as draft'
-      },
-    })
+  const writer = new Agent({
+    name: "writer",
+    instructions: "You write polished content from research. Output a complete article.",
+  });
 
-  try {
-    console.log('🚀 Executing workflow...\n')
-    const result = await contentWorkflow.build()
-    console.log('\n' + '='.repeat(50))
-    console.log('✅ Workflow Complete!')
-    console.log('='.repeat(50))
-  } catch (error) {
-    console.error('❌ Workflow failed:', error)
+  const editor = new Agent({
+    name: "editor",
+    instructions: "You proofread and improve writing quality. Output the final version.",
+  });
+
+  // ── Build workflow with dependencies ───────────────────────────────
+  const workflow = new Workflow()
+    .addStep({ stepId: "ideate", agent: ideator, instructions: "Generate 5 blog post ideas about AI agents" })
+    .addStep({ stepId: "research", agent: researcher, instructions: "Research the best idea in depth" })
+    .addStep({ stepId: "write", agent: writer, instructions: "Write the full blog post" })
+    .addStep({ stepId: "edit", agent: editor, instructions: "Polish and finalize the article" })
+    .addDependency("research", "ideate")   // research waits for ideation
+    .addDependency("write", "research")     // writing waits for research
+    .addDependency("edit", "write");        // editing waits for writing
+
+  // ── Execute ────────────────────────────────────────────────────────
+  console.log("Running content workflow...\n");
+  const result = await workflow.run("Write a blog post about building AI agents with Rust and TypeScript");
+
+  console.log("Workflow results:");
+  for (const [stepId, output] of Object.entries(result)) {
+    const text = typeof output === "string" ? output : JSON.stringify(output);
+    console.log(`\n[${stepId}] ${text.slice(0, 200)}...`);
   }
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  workflow.destroy();
+  ideator.destroy();
+  researcher.destroy();
+  writer.destroy();
+  editor.destroy();
 }
 
-main()
+main().catch(console.error);

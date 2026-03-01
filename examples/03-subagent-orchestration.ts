@@ -1,63 +1,56 @@
 // =============================================================================
-// 03 — Parent agent that spawns specialized subagents
+// 03 — Multi-agent orchestration with Team
 // =============================================================================
 //
-// Demonstrates hierarchical agent orchestration. The parent agent can delegate
-// subtasks to child agents via the `task` tool, with configurable depth limits
-// and timeouts.
+// Uses the Team class to coordinate multiple specialized agents.
+// Each agent runs sequentially — the output of one feeds the next.
 //
 // Usage: npx tsx examples/03-subagent-orchestration.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
-
-import { Agent } from "gauss";
-import type { AgentEvent, SubagentConfig } from "gauss";
-
-const model = {} as import("ai").LanguageModel;
+import { Agent, Team } from "gauss-ai";
 
 async function main(): Promise<void> {
-  const subagentConfig: Partial<SubagentConfig> = {
-    maxDepth: 2,              // subagents can nest up to 2 levels
-    timeoutMs: 120_000,       // 2 minute timeout per subagent
-    allowNesting: true,       // subagents may spawn their own children
-  };
+  // ── Specialized agents ─────────────────────────────────────────────
+  const researcher = new Agent({
+    name: "researcher",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a research specialist. Provide detailed findings on the given topic.",
+  });
 
-  const agent = Agent.create({
-    model,
-    instructions: [
-      "You are a lead engineer that decomposes complex tasks.",
-      "Use the `task` tool to delegate subtasks to specialized subagents.",
-      "Each subagent receives its own instructions and works independently.",
-      "Synthesize all subagent results into a final answer.",
-    ].join("\n"),
-    maxSteps: 30,
-  })
-    .withPlanning()
-    .withSubagents(subagentConfig)
+  const writer = new Agent({
+    name: "writer",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a technical writer. Take research findings and produce a clear, structured summary.",
+  });
 
-    // Monitor subagent lifecycle
-    .on("subagent:spawn", (e: AgentEvent) => {
-      const data = e.data as { taskDescription: string };
-      console.log(`[subagent] spawned: ${data.taskDescription}`);
-    })
-    .on("subagent:complete", (e: AgentEvent) => {
-      const data = e.data as { taskDescription: string };
-      console.log(`[subagent] done: ${data.taskDescription}`);
-    })
-    .build();
+  const reviewer = new Agent({
+    name: "reviewer",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a code/content reviewer. Review the text for accuracy and suggest improvements.",
+  });
 
-  // The agent will decompose this into smaller subtasks
-  const result = await agent.run(
-    "Build a REST API design for a todo application. "
-    + "One subagent should design the data model, another should "
-    + "define the endpoints, and a third should write example requests.",
-  );
+  // ── Team: sequential pipeline ──────────────────────────────────────
+  const team = new Team("content-team")
+    .add(researcher, "Research the topic thoroughly")
+    .add(writer, "Write a structured article from the research")
+    .add(reviewer, "Review and refine the final article")
+    .strategy("sequential");
 
-  console.log("Final design:", result.text);
-  console.log("Total steps:", result.steps.length);
+  const result = await team.run("Explain the benefits of Rust for building AI agent frameworks");
 
-  await agent.dispose();
+  console.log("Final output:", result.finalText);
+  for (const [i, r] of result.results.entries()) {
+    console.log(`  Agent ${i}: ${r.steps} steps, ${r.inputTokens + r.outputTokens} tokens`);
+  }
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  team.destroy();
+  researcher.destroy();
+  writer.destroy();
+  reviewer.destroy();
 }
 
 main().catch(console.error);

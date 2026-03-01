@@ -1,71 +1,35 @@
-/**
- * Voice Pipeline Example
- * =====================
- * Demonstrates voice I/O using OpenAI's speech capabilities.
- * Combines STT (speech-to-text) and TTS (text-to-speech) with an agent.
- */
+// =============================================================================
+// 11 — Voice Pipeline (placeholder)
+// =============================================================================
+//
+// ⚠️  Voice/audio support requires a dedicated audio provider integration.
+//     This example is a placeholder showing the intended API surface.
+//     Voice STT/TTS will be available in a future release.
+//
+// Usage: npx tsx examples/11-voice-pipeline.ts
 
-import { agent, VoicePipeline } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent } from "gauss-ai";
 
-async function main() {
-  // Initialize provider with voice capabilities
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4',
-  })
+async function main(): Promise<void> {
+  console.log("Voice Pipeline — placeholder example\n");
+  console.log("Voice/audio support is not yet available in the native SDK.");
+  console.log("The intended flow will be:\n");
+  console.log("  1. Audio input → STT (speech-to-text)");
+  console.log("  2. Text → Agent.run(text)");
+  console.log("  3. Agent response → TTS (text-to-speech)");
+  console.log("  4. Audio output\n");
 
-  // Create conversational agent
-  const voiceAgent = agent({
-    name: 'VoiceAssistant',
-    role: 'Conversational voice assistant',
-    provider,
-    system: 'You are a helpful voice assistant. Keep responses concise and natural.',
-  })
+  // For now, demonstrate the text-based part of the pipeline
+  const agent = new Agent({
+    name: "voice-ready",
+    instructions: "You are a conversational assistant. Keep answers short and natural.",
+    maxSteps: 3,
+  });
 
-  // Create voice pipeline
-  // Input: microphone → STT → Agent → TTS → speaker
-  const voicePipeline = VoicePipeline({
-    agent: voiceAgent,
-    stt: {
-      provider: 'openai',
-      language: 'en',
-    },
-    tts: {
-      provider: 'openai',
-      voice: 'alloy',
-      speed: 1.0,
-    },
-  })
+  const result = await agent.run("What's the weather like today?");
+  console.log("Agent (text):", result.text);
 
-  console.log('🎤 Voice Pipeline Active')
-  console.log('Say something and listen for the response...\n')
-
-  try {
-    // Example: Process audio file instead of live mic
-    const audioFile = process.argv[2]
-
-    if (audioFile) {
-      console.log(`📝 Processing audio: ${audioFile}`)
-
-      const result = await voicePipeline.process({
-        input: audioFile, // Path to audio file
-        outputPath: './response_audio.mp3',
-      })
-
-      console.log('✅ Voice Processing Complete')
-      console.log(`📝 Transcribed: ${result.transcription}`)
-      console.log(`💬 Response: ${result.response}`)
-      console.log(`🔊 Audio saved: ${result.outputPath}`)
-    } else {
-      console.log('Usage: ts-node 11-voice-pipeline.ts <audio-file>')
-      console.log(
-        'Example: ts-node 11-voice-pipeline.ts ./sample.wav'
-      )
-    }
-  } catch (error) {
-    console.error('❌ Voice pipeline error:', error)
-  }
+  agent.destroy();
 }
 
-main()
+main().catch(console.error);

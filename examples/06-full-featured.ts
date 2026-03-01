@@ -1,73 +1,85 @@
-// 06 — Full-featured agent with all capabilities
-// Combines filesystem, planning, subagents, MCP, memory, approval, and events.
+// =============================================================================
+// 06 — Full-featured pipeline: Agent + Memory + Middleware + Guardrails + Telemetry
+// =============================================================================
+//
+// Combines all major SDK components into a single observable, safe pipeline.
+//
 // Usage: npx tsx examples/06-full-featured.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
-
 import {
-  Agent, LocalFilesystem, SupabaseMemoryAdapter, AiSdkMcpAdapter,
-} from "gauss";
-import type { AgentEvent, ApprovalRequest } from "gauss";
-
-const model = {} as import("ai").LanguageModel;
+  Agent,
+  Memory,
+  MiddlewareChain,
+  GuardrailChain,
+  Telemetry,
+} from "gauss-ai";
 
 async function main(): Promise<void> {
-  const fs = new LocalFilesystem("/tmp/gauss-workspace");
+  // ── Middleware: logging + caching ───────────────────────────────────
+  const middleware = new MiddlewareChain()
+    .useLogging()
+    .useCaching(60_000); // 60s TTL
 
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? "https://your-project.supabase.co",
-    process.env.SUPABASE_KEY ?? "your-anon-key",
-  );
-  const memory = new SupabaseMemoryAdapter(supabase);
+  // ── Guardrails: content safety ─────────────────────────────────────
+  const guardrails = new GuardrailChain()
+    .addContentModeration(["password", "secret"], ["internal"])
+    .addPiiDetection("redact")
+    .addTokenLimit(4000, 2000)
+    .addRegexFilter(["\\b(?:DROP|DELETE)\\s+TABLE\\b"], []);
 
-  const mcp = new AiSdkMcpAdapter({
-    servers: [{
-      id: "tools", name: "Custom Tools", transport: "stdio",
-      command: "node", args: ["my-mcp-server.js"],
-    }],
+  console.log("Active guardrails:", guardrails.list());
+
+  // ── Telemetry: spans + metrics ─────────────────────────────────────
+  const telemetry = new Telemetry();
+
+  // ── Memory: conversation history ───────────────────────────────────
+  const memory = new Memory();
+  await memory.store({
+    id: "ctx-1",
+    content: "User is building a Node.js microservice.",
+    entryType: "fact",
+    timestamp: new Date().toISOString(),
   });
 
-  // Build with filesystem, memory, MCP, planning, subagents, and approval
-  const agent = Agent.create({
-    model,
-    instructions: [
-      "You are a senior engineer working on a real codebase.",
-      "Plan work with todos. Delegate subtasks to subagents.",
-      "Write files to the local filesystem. Use MCP tools as needed.",
-      "Destructive operations (delete, overwrite) require approval.",
-    ].join("\n"),
-    maxSteps: 50,
-    checkpoint: { enabled: true, baseStepInterval: 5, maxCheckpoints: 10 },
-  })
-    .withFilesystem(fs)
-    .withMemory(memory)
-    .withMcp(mcp)
-    .withPlanning()
-    .withSubagents({ maxDepth: 2, timeoutMs: 180_000 })
-    .withApproval({
-      defaultMode: "approve-all",
-      requireApproval: ["write_file", "edit_file"],
-      onApprovalRequired: async (req: ApprovalRequest): Promise<boolean> => {
-        console.log(`[approval] ${req.toolName} — auto-approving`);
-        return true;
-      },
-    })
-    .on("*", (e: AgentEvent) => {
-      console.log(`[${e.type}] ${JSON.stringify(e.data).slice(0, 120)}`);
-    })
-    .build();
+  // ── Agent ──────────────────────────────────────────────────────────
+  const agent = new Agent({
+    name: "full-pipeline",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a senior engineer. Be precise and security-conscious.",
+    temperature: 0.3,
+    maxSteps: 10,
+  });
 
-  const result = await agent.run(
-    "Scaffold a Node.js CLI tool called 'quicknote' with package.json, "
-    + "src/index.ts, src/commands/add.ts, src/commands/list.ts, and README.md. "
-    + "Delegate the README writing to a subagent.",
-  );
+  // Record a span around the agent call
+  const start = Date.now();
+  const result = await agent.run("Design a rate-limiting middleware for Express.js");
+  const duration = Date.now() - start;
 
-  console.log("Done:", result.text);
-  console.log("Session:", result.sessionId, "| Steps:", result.steps.length);
-  await agent.dispose();
+  telemetry.recordSpan("agent.run", duration, {
+    agent: "full-pipeline",
+    tokens: result.inputTokens + result.outputTokens,
+  });
+
+  // Store the conversation
+  await memory.store({
+    id: "msg-1",
+    content: result.text,
+    entryType: "conversation",
+    timestamp: new Date().toISOString(),
+  });
+
+  console.log("Response:", result.text.slice(0, 200), "...");
+  console.log("Spans:", telemetry.exportSpans());
+  console.log("Metrics:", telemetry.exportMetrics());
+  console.log("Memory stats:", await memory.stats());
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  agent.destroy();
+  memory.destroy();
+  middleware.destroy();
+  guardrails.destroy();
+  telemetry.destroy();
 }
 
 main().catch(console.error);

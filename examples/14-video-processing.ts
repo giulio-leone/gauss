@@ -1,77 +1,39 @@
-/**
- * Video Processing Example
- * =======================
- * Demonstrates VideoProcessor for video analysis:
- * - Video description with frame extraction
- * - Scene detection and summarization
- * - Activity recognition
- */
+// =============================================================================
+// 14 — Video Processing (placeholder)
+// =============================================================================
+//
+// ⚠️  Video processing requires a dedicated video provider integration
+//     (frame extraction, scene detection, transcription).
+//     This example is a placeholder showing the intended workflow.
+//
+// Usage: npx tsx examples/14-video-processing.ts
 
-import { videoProcessor } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent } from "gauss-ai";
 
-async function main() {
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4-vision',
-  })
+async function main(): Promise<void> {
+  console.log("Video Processing — placeholder example\n");
+  console.log("Video processing is not yet available in the native SDK.");
+  console.log("The intended flow will be:\n");
+  console.log("  1. Extract key frames from video at intervals");
+  console.log("  2. Send frames to a vision-capable agent for analysis");
+  console.log("  3. Optionally transcribe audio track via STT");
+  console.log("  4. Combine visual + audio analysis into a summary\n");
 
-  // Create video processor
-  const processor = videoProcessor({
-    provider,
-    frameInterval: 5, // Extract frame every 5 seconds
-    maxFrames: 10, // Maximum frames to process
-  })
+  // Demonstrate the text-based analysis part
+  const agent = new Agent({
+    name: "video-analyst",
+    instructions: "You analyze video descriptions and provide structured summaries.",
+    maxSteps: 3,
+  });
 
-  console.log('🎬 Video Processing Agent\n')
+  const result = await agent.run(
+    "A 30-second video shows: Frame 1: a person typing at a desk. "
+    + "Frame 2: a code editor with Rust code. Frame 3: terminal showing test results. "
+    + "Summarize the video content.",
+  );
+  console.log("Analysis:", result.text);
 
-  try {
-    const videoFile = process.argv[2]
-
-    if (!videoFile) {
-      console.log('Usage: ts-node 14-video-processing.ts <video-file>')
-      console.log('Example: ts-node 14-video-processing.ts ./sample.mp4')
-      return
-    }
-
-    console.log(`📽️  Processing: ${videoFile}\n`)
-
-    // Extract and analyze frames
-    console.log('🎞️  Extracting frames...')
-    const frames = await processor.extractFrames(videoFile)
-    console.log(`✅ Extracted ${frames.length} frames\n`)
-
-    // Describe overall video content
-    console.log('📝 Generating video description...')
-    const description = await processor.describeVideo({
-      videoPath: videoFile,
-      detailed: true,
-    })
-    console.log(`Description:\n${description}\n`)
-
-    // Detect scenes and transitions
-    console.log('🎯 Detecting scenes...')
-    const scenes = await processor.detectScenes(videoFile)
-    console.log('Scenes detected:')
-    scenes.forEach((scene, idx) => {
-      console.log(`  Scene ${idx + 1}: ${scene.description} (${scene.duration}s)`)
-    })
-    console.log()
-
-    // Summarize key activities
-    console.log('📊 Summarizing activities...')
-    const summary = await processor.summarizeActivities(videoFile)
-    console.log(`Activities Summary:\n${summary}\n`)
-
-    // Extract audio transcription
-    console.log('🔊 Extracting audio...')
-    const transcript = await processor.extractAudio(videoFile)
-    console.log(`Transcript:\n${transcript}\n`)
-
-    console.log('✅ Video processing complete')
-  } catch (error) {
-    console.error('❌ Video processing error:', error)
-  }
+  agent.destroy();
 }
 
-main()
+main().catch(console.error);

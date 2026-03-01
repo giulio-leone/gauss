@@ -1,50 +1,46 @@
 // =============================================================================
-// 01 — Basic agent with planning (minimal setup)
+// 01 — Basic Agent, gauss() shorthand, and batch() for parallel execution
 // =============================================================================
 //
-// The simplest way to create a Agent. Uses `Agent.minimal()` which
-// wires up an in-memory filesystem, planning tools, and sensible defaults.
+// Demonstrates the three main ways to run prompts:
+//   1. Agent class — full control over provider, model, and options
+//   2. gauss()     — one-liner shorthand (auto-detects provider from env)
+//   3. batch()     — run multiple prompts in parallel with concurrency control
 //
 // Usage: npx tsx examples/01-basic-agent.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
-
-import { Agent } from "gauss";
-import type { AgentResult } from "gauss";
-
-// -- Placeholder model (replace with a real provider) ------------------------
-const model = {} as import("ai").LanguageModel;
+import { Agent, gauss, batch } from "gauss-ai";
 
 async function main(): Promise<void> {
-  // Agent.minimal() creates an agent with:
-  //   - VirtualFilesystem (in-memory)
-  //   - InMemoryAdapter for persistence
-  //   - Planning tools (write_todos, review_todos)
-  //   - ApproximateTokenCounter
-  const agent = Agent.minimal({
-    model,
-    instructions: [
-      "You are a helpful coding assistant.",
-      "Break tasks into todos before starting work.",
-      "Mark each todo done as you complete it.",
-    ].join("\n"),
-    maxSteps: 15,
+  // ── 1. Full Agent ──────────────────────────────────────────────────
+  const agent = new Agent({
+    name: "assistant",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "You are a helpful coding assistant. Be concise.",
+    temperature: 0.7,
+    maxSteps: 5,
   });
 
-  console.log(`Session: ${agent.sessionId}`);
-
-  // Run the agent with a simple prompt
-  const result: AgentResult = await agent.run(
-    "List three best practices for writing unit tests.",
-  );
-
-  // Access the final text response
+  const result = await agent.run("List three best practices for writing unit tests.");
   console.log("Response:", result.text);
-  console.log("Steps taken:", result.steps.length);
+  console.log(`Tokens: ${result.inputTokens} in / ${result.outputTokens} out`);
 
-  // Clean up event listeners and MCP connections
-  await agent.dispose();
+  // ── 2. gauss() shorthand ───────────────────────────────────────────
+  // Auto-detects provider from environment variables (OPENAI_API_KEY, etc.)
+  const answer = await gauss("What is the capital of France?");
+  console.log("Quick answer:", answer);
+
+  // ── 3. batch() for parallel prompts ────────────────────────────────
+  const items = await batch(
+    ["Translate 'hello' to French", "Translate 'hello' to Spanish", "Translate 'hello' to Japanese"],
+    { provider: "openai", model: "gpt-4o", concurrency: 3 },
+  );
+  for (const item of items) {
+    console.log(`[batch] ${item.input} → ${item.result?.text ?? item.error?.message}`);
+  }
+
+  agent.destroy();
 }
 
 main().catch(console.error);

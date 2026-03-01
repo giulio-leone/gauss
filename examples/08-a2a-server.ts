@@ -1,73 +1,58 @@
-// 08 — Expose Agent as an A2A JSON-RPC HTTP server
+// =============================================================================
+// 08 — A2A (Agent-to-Agent) Protocol Client
+// =============================================================================
+//
+// Demonstrates the A2A client for communicating with A2A-compliant agents
+// over HTTP using JSON-RPC 2.0.
+//
+// Prerequisite: an A2A-compliant server running (e.g., on port 8080).
 // Usage: npx tsx examples/08-a2a-server.ts
 
-import { createServer, type IncomingMessage } from "node:http";
-
 import {
-  A2APlugin,
-  AgentCardPlugin,
-  Agent,
-} from "gauss";
-
-const model = {} as import("ai").LanguageModel;
-
-function shouldIncludeBody(method: string | undefined, body: string): boolean {
-  if (!body) return false;
-  if (!method) return true;
-  return method !== "GET" && method !== "HEAD";
-}
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  const chunks: Uint8Array[] = [];
-
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-
-  return Buffer.concat(chunks).toString("utf-8");
-}
+  A2aClient,
+  userMessage,
+  extractText,
+  taskText,
+} from "gauss-ai";
 
 async function main(): Promise<void> {
-  const agentCard = new AgentCardPlugin();
-  const a2a = new A2APlugin({ agentCardProvider: agentCard });
+  const baseUrl = process.env.A2A_SERVER_URL ?? "http://localhost:8080";
+  const client = new A2aClient({ baseUrl });
 
-  const agent = Agent.create({
-    model,
-    instructions: "You are a distributed task coordinator.",
-    maxSteps: 30,
-  })
-    .withPlanning()
-    .use(agentCard)
-    .use(a2a)
-    .build();
+  // ── 1. Discover agent capabilities ─────────────────────────────────
+  try {
+    const card = await client.discover();
+    console.log("Agent:", card.name);
+    console.log("Skills:", card.skills?.map((s) => s.name));
+    console.log("Capabilities:", card.capabilities);
+  } catch (err) {
+    console.log("Discovery failed (is the A2A server running?):", (err as Error).message);
+    console.log("Showing API usage patterns instead:\n");
+  }
 
-  const a2aHandler = a2a.createHttpHandler(agent);
-  const port = Number(process.env.PORT ?? 8787);
+  // ── 2. Quick ask (text in → text out) ──────────────────────────────
+  // const answer = await client.ask("Summarize the latest project status.");
+  // console.log("Answer:", answer);
 
-  const server = createServer(async (req, res) => {
-    const body = await readBody(req);
-    const url = `http://localhost:${port}${req.url ?? "/"}`;
+  // ── 3. Full message exchange ───────────────────────────────────────
+  // const result = await client.sendMessage(userMessage("What tasks are pending?"));
+  // if (result.type === "task") {
+  //   console.log("Task ID:", result.task.id);
+  //   console.log("Status:", result.task.status.state);
+  //   console.log("Text:", taskText(result.task));
+  // } else {
+  //   console.log("Response:", extractText(result.message));
+  // }
 
-    const request = new Request(url, {
-      method: req.method ?? "POST",
-      headers: req.headers as HeadersInit,
-      body: shouldIncludeBody(req.method, body) ? body : undefined,
-    });
+  // ── 4. Task lifecycle ──────────────────────────────────────────────
+  // const task = await client.getTask("task-123");
+  // console.log("Task state:", task.status.state);
+  // await client.cancelTask("task-123");
 
-    const response = await a2aHandler(request);
-
-    res.statusCode = response.status;
-    response.headers.forEach((value, key) => {
-      res.setHeader(key, value);
-    });
-
-    res.end(await response.text());
-  });
-
-  server.listen(port, () => {
-    console.log(`A2A server listening on http://localhost:${port}`);
-    console.log("Try JSON-RPC method: tasks/send");
-  });
+  // ── Helper demos (no server needed) ────────────────────────────────
+  const msg = userMessage("Hello from Gauss!");
+  console.log("User message:", msg);
+  console.log("Extracted text:", extractText(msg));
 }
 
 main().catch(console.error);

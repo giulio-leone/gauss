@@ -1,80 +1,77 @@
 // =============================================================================
-// 05 — Agent with Supabase persistence and checkpointing
+// 05 — Persistent Memory + VectorStore for RAG context
 // =============================================================================
 //
-// Demonstrates durable memory: todos, conversation history, and checkpoints
-// are persisted to Supabase. The agent can resume from the last checkpoint
-// if interrupted.
+// Demonstrates the in-memory conversation store (Memory) and the vector store
+// (VectorStore) for similarity-based retrieval. Both are backed by Rust core.
 //
-// Requires: @supabase/supabase-js
-// Usage:    npx tsx examples/05-persistent-memory.ts
+// Usage: npx tsx examples/05-persistent-memory.ts
 
-// import { openai } from "@ai-sdk/openai";
-// const model = openai("gpt-5.2");
-
-import { Agent, SupabaseMemoryAdapter } from "gauss";
-import type { CheckpointConfig } from "gauss";
-
-const model = {} as import("ai").LanguageModel;
+import { Agent, Memory, VectorStore } from "gauss-ai";
 
 async function main(): Promise<void> {
-  // -- Supabase setup ---------------------------------------------------------
-  // Tables required: deep_agent_todos, deep_agent_checkpoints,
-  //                  deep_agent_conversations, deep_agent_metadata
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabase = createClient(
-    process.env.SUPABASE_URL ?? "https://your-project.supabase.co",
-    process.env.SUPABASE_KEY ?? "your-anon-key",
-  );
+  // ── Memory: conversation store ─────────────────────────────────────
+  const memory = new Memory();
 
-  const memory = new SupabaseMemoryAdapter(supabase, { strict: false });
+  // Store conversation entries
+  await memory.store({
+    id: "m1",
+    content: "The user prefers TypeScript over JavaScript.",
+    entryType: "preference",
+    timestamp: new Date().toISOString(),
+    importance: 0.9,
+  });
 
-  // -- Checkpoint configuration -----------------------------------------------
-  const checkpoint: CheckpointConfig = {
-    enabled: true,
-    baseStepInterval: 5,    // save every 5 steps
-    maxCheckpoints: 10,     // keep last 10 checkpoints
-  };
+  await memory.store({
+    id: "m2",
+    content: "Previous conversation: user asked about Rust FFI bindings.",
+    entryType: "conversation",
+    timestamp: new Date().toISOString(),
+    sessionId: "session-001",
+  });
 
-  // -- Build agent with persistent memory ------------------------------------
-  const agent = Agent.create({
-    model,
-    id: "session-abc-123",  // fixed ID allows resuming later
-    instructions: "You are a research assistant. Take notes as you work.",
-    maxSteps: 20,
-    checkpoint,
-  })
-    .withMemory(memory)
-    .withPlanning()
-    .on("checkpoint:save", (e) => {
-      console.log("[checkpoint] saved at step", e.data);
-    })
-    .on("checkpoint:load", (e) => {
-      console.log("[checkpoint] resumed from", e.data);
-    })
-    .build();
+  // Recall all entries (optionally filtered by session)
+  const entries = await memory.recall({ limit: 10 });
+  console.log("Memory entries:", entries.length);
 
-  // First run — creates checkpoint
-  const result = await agent.run("Research the history of the Turing Award.");
-  console.log("Result:", result.text);
+  const stats = await memory.stats();
+  console.log("Memory stats:", stats);
 
-  // Later: a new agent with the same session ID resumes from checkpoint
-  const resumed = Agent.create({
-    model,
-    id: "session-abc-123",
-    instructions: "You are a research assistant. Continue your prior work.",
-    maxSteps: 20,
-    checkpoint,
-  })
-    .withMemory(memory)
-    .withPlanning()
-    .build();
+  // ── VectorStore: similarity search ─────────────────────────────────
+  const store = new VectorStore();
 
-  const continuation = await resumed.run("Expand on the most recent winners.");
-  console.log("Continuation:", continuation.text);
+  // Upsert chunks with embeddings (in real use, generate embeddings via an API)
+  await store.upsert([
+    { id: "c1", documentId: "doc1", content: "Gauss uses Rust NAPI bindings", index: 0, embedding: [0.1, 0.9, 0.3] },
+    { id: "c2", documentId: "doc1", content: "Agents support tool execution", index: 1, embedding: [0.2, 0.8, 0.4] },
+    { id: "c3", documentId: "doc2", content: "Teams coordinate multiple agents", index: 0, embedding: [0.7, 0.1, 0.6] },
+  ]);
 
-  await agent.dispose();
-  await resumed.dispose();
+  // Search by embedding similarity
+  const results = await store.search([0.15, 0.85, 0.35], 2);
+  console.log("Vector search results:");
+  for (const r of results) {
+    console.log(`  [${r.score.toFixed(3)}] ${r.text}`);
+  }
+
+  // Cosine similarity helper
+  const sim = VectorStore.cosineSimilarity([1, 0, 0], [0, 1, 0]);
+  console.log("Cosine similarity [1,0,0] vs [0,1,0]:", sim);
+
+  // ── Agent with context from memory ─────────────────────────────────
+  const context = entries.map((e) => e.content).join("\n");
+  const agent = new Agent({
+    name: "context-agent",
+    instructions: `Use this context:\n${context}`,
+  });
+
+  const result = await agent.run("Based on my preferences, suggest a project idea.");
+  console.log("Agent response:", result.text);
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  agent.destroy();
+  memory.destroy();
+  store.destroy();
 }
 
 main().catch(console.error);

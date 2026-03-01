@@ -1,64 +1,48 @@
-// 07 — Plugin System basics with custom plugin + AgentCardPlugin
+// =============================================================================
+// 07 — Plugin System with PluginRegistry
+// =============================================================================
+//
+// The PluginRegistry provides an event-driven plugin system backed by Rust.
+// Built-in plugins include telemetry and memory. Custom events can be emitted.
+//
 // Usage: npx tsx examples/07-plugin-system.ts
 
-import { tool } from "ai";
-import { z } from "zod";
-
-import {
-  AgentCardPlugin,
-  Agent,
-  type Plugin,
-} from "gauss";
-
-const model = {} as import("ai").LanguageModel;
-
-const observabilityPlugin: Plugin = {
-  name: "observability",
-  tools: {
-    "ops:health": tool({
-      description: "Return health status for operational checks",
-      inputSchema: z.object({}),
-      execute: async () => ({ status: "ok", checkedAt: new Date().toISOString() }),
-    }),
-  },
-  hooks: {
-    beforeRun: async (_ctx, params) => ({
-      prompt: `[trace-enabled] ${params.prompt}`,
-    }),
-    afterRun: async (_ctx, params) => {
-      console.log("[plugin] response size:", params.result.text.length);
-    },
-  },
-};
+import { PluginRegistry } from "gauss-ai";
 
 async function main(): Promise<void> {
-  const agentCard = new AgentCardPlugin({
-    overrides: {
-      agents: {
-        summary: "Production orchestrator with plugin extensions.",
-      },
-    },
+  const registry = new PluginRegistry();
+
+  // ── Register built-in plugins ──────────────────────────────────────
+  registry.addTelemetry(); // Auto-records spans and metrics
+  registry.addMemory();    // Auto-stores conversation context
+
+  // List active plugins
+  console.log("Active plugins:", registry.list());
+
+  // ── Emit custom events ─────────────────────────────────────────────
+  // Plugins can react to any event type via the Rust event bus
+  registry.emit({
+    type: "agent:start",
+    agentName: "my-agent",
+    timestamp: new Date().toISOString(),
   });
 
-  const agent = Agent.create({
-    model,
-    instructions: "You are an ops coordinator. Prefer deterministic execution.",
-    maxSteps: 20,
-  })
-    .withPlanning()
-    .use(observabilityPlugin)
-    .use(agentCard)
-    .build();
+  registry.emit({
+    type: "tool:call",
+    toolName: "search",
+    arguments: { query: "Rust NAPI" },
+  });
 
-  const result = await agent.run("Create a release checklist for sprint 42");
-  const card = await agentCard.getAgentCard();
+  registry.emit({
+    type: "agent:complete",
+    agentName: "my-agent",
+    tokensUsed: 1234,
+    durationMs: 4500,
+  });
 
-  console.log("Result:", result.text);
-  console.log("Agents card source:", card.source.agents);
-  console.log("Agents card preview:");
-  console.log(card.agentsMd.split("\n").slice(0, 12).join("\n"));
+  console.log("Events emitted successfully.");
 
-  await agent.dispose();
+  registry.destroy();
 }
 
 main().catch(console.error);

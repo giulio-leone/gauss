@@ -1,89 +1,48 @@
-/**
- * Multimodal Vision Example
- * ========================
- * Demonstrates MultimodalAgent for image understanding:
- * - Image description and analysis
- * - Text extraction (OCR)
- * - Image comparison and similarity
- */
+// =============================================================================
+// 13 — Multimodal Vision (image input via message array)
+// =============================================================================
+//
+// Sends an image to a vision-capable model using the message array format.
+// The Agent supports multimodal content via the Message interface.
+//
+// Usage: npx tsx examples/13-multimodal-vision.ts
 
-import { multimodal } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent } from "gauss-ai";
+import * as fs from "node:fs";
 
-async function main() {
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4-vision',
-  })
+async function main(): Promise<void> {
+  const agent = new Agent({
+    name: "vision",
+    provider: "openai",
+    model: "gpt-4o", // Vision-capable model
+    instructions: "You analyze images and describe what you see in detail.",
+  });
 
-  // Create multimodal agent with vision capabilities
-  const visionAgent = multimodal.agent({
-    name: 'VisionAnalyzer',
-    provider,
-  })
+  // Check provider capabilities
+  console.log("Provider capabilities:", agent.capabilities);
 
-  console.log('👁️  Multimodal Vision Agent\n')
+  // ── Option 1: Image from URL ───────────────────────────────────────
+  const urlResult = await agent.run([
+    { role: "user", content: "Describe this image: https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Camponotus_flavomarginatus_ant.jpg/320px-Camponotus_flavomarginatus_ant.jpg" },
+  ]);
+  console.log("URL image analysis:", urlResult.text.slice(0, 200), "...\n");
 
-  try {
-    // Example 1: Describe an image
-    console.log('📸 Example 1: Image Description')
-    console.log('---')
+  // ── Option 2: Image from base64 (local file) ──────────────────────
+  const imagePath = process.argv[2];
+  if (imagePath && fs.existsSync(imagePath)) {
+    const base64 = fs.readFileSync(imagePath).toString("base64");
+    const mime = imagePath.endsWith(".png") ? "image/png" : "image/jpeg";
 
-    const description = await visionAgent.describeImage({
-      imagePath: process.argv[2] || './sample-image.jpg',
-      context: 'Analyze the image and describe what you see',
-    })
-
-    console.log(`Description: ${description}`)
-    console.log()
-
-    // Example 2: Extract text (OCR)
-    console.log('📄 Example 2: Text Extraction (OCR)')
-    console.log('---')
-
-    const extractedText = await visionAgent.extractText({
-      imagePath: process.argv[3] || './document.png',
-    })
-
-    console.log(`Extracted Text:\n${extractedText}`)
-    console.log()
-
-    // Example 3: Compare two images
-    console.log('🔀 Example 3: Image Comparison')
-    console.log('---')
-
-    const comparison = await visionAgent.compareImages({
-      image1: process.argv[2] || './image1.jpg',
-      image2: process.argv[3] || './image2.jpg',
-      aspect: 'overall similarity and differences',
-    })
-
-    console.log(`Comparison: ${comparison}`)
-    console.log()
-
-    // Example 4: Analyze image for specific content
-    console.log('🎯 Example 4: Targeted Analysis')
-    console.log('---')
-
-    const analysis = await visionAgent.analyze({
-      imagePath: process.argv[2] || './chart.png',
-      questions: [
-        'What is the main trend?',
-        'What are the key numbers?',
-        'What insights can you draw?',
-      ],
-    })
-
-    console.log('Answers:')
-    analysis.forEach((answer, idx) => {
-      console.log(`  ${idx + 1}. ${answer}`)
-    })
-
-    console.log('\n✅ Vision analysis complete')
-  } catch (error) {
-    console.error('❌ Vision agent error:', error)
-    console.log('Tip: Provide image paths as arguments')
+    const fileResult = await agent.run([
+      { role: "user", content: `Analyze this image (base64 ${mime}): data:${mime};base64,${base64.slice(0, 100)}...` },
+    ]);
+    console.log("Local image analysis:", fileResult.text.slice(0, 200), "...\n");
+  } else {
+    console.log("Tip: pass an image path as argument for local file analysis.");
+    console.log("  npx tsx examples/13-multimodal-vision.ts ./photo.jpg\n");
   }
+
+  agent.destroy();
 }
 
-main()
+main().catch(console.error);

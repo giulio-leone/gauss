@@ -1,102 +1,74 @@
-/**
- * LLM Recording & Replay Example
- * ==============================
- * Demonstrates LLMRecorder and LLMReplayer for testing and debugging.
- * - Record LLM interactions for analysis
- * - Replay recordings deterministically for tests
- * - Debug and optimize prompts
- */
+// =============================================================================
+// 16 — Telemetry + EvalRunner for LLM recording and evaluation
+// =============================================================================
+//
+// Records agent interactions via Telemetry spans, then uses EvalRunner
+// to evaluate outputs with configurable scorers.
+//
+// Usage: npx tsx examples/16-llm-recording.ts
 
-import { LLMRecorder, LLMReplayer } from 'gauss'
-import { openai } from 'gauss/providers'
+import { Agent, Telemetry, EvalRunner } from "gauss-ai";
 
-async function main() {
-  const provider = openai({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: 'gpt-4',
-  })
+async function main(): Promise<void> {
+  const telemetry = new Telemetry();
 
-  console.log('🎙️  LLM Recording & Replay Demo\n')
+  // ── 1. Record agent interactions ───────────────────────────────────
+  const agent = new Agent({
+    name: "recorded-agent",
+    provider: "openai",
+    model: "gpt-4o",
+    instructions: "Answer factual questions accurately and concisely.",
+    temperature: 0,
+  });
 
-  try {
-    // Mode 1: Record interactions
-    console.log('📹 Mode 1: Recording Interactions')
-    console.log('---')
+  const questions = [
+    "What is the capital of France?",
+    "Who wrote 'Romeo and Juliet'?",
+    "What is 2 + 2?",
+  ];
 
-    const recorder = LLMRecorder({
-      sessionId: 'session-' + Date.now(),
-      outputPath: './recordings',
-    })
+  console.log("Recording agent interactions...\n");
+  const recordings: Array<{ prompt: string; response: string; durationMs: number }> = [];
 
-    // Wrap provider with recorder
-    const recordingProvider = recorder.wrap(provider)
+  for (const q of questions) {
+    const start = Date.now();
+    const result = await agent.run(q);
+    const durationMs = Date.now() - start;
 
-    const response1 = await recordingProvider.query({
-      prompt: 'What is machine learning?',
-      maxTokens: 100,
-    })
+    telemetry.recordSpan("llm.call", durationMs, {
+      prompt: q,
+      response: result.text,
+      tokens: result.inputTokens + result.outputTokens,
+    });
 
-    const response2 = await recordingProvider.query({
-      prompt: 'Explain neural networks',
-      maxTokens: 100,
-    })
-
-    const recordingFile = await recorder.save()
-    console.log(`✅ Recorded to: ${recordingFile}\n`)
-
-    // Mode 2: Replay for deterministic testing
-    console.log('▶️  Mode 2: Replaying Interactions')
-    console.log('---')
-
-    const replayer = LLMReplayer({
-      recordingPath: recordingFile,
-    })
-
-    // These will return exact same responses as recorded
-    const replayResponse1 = await replayer.query({
-      prompt: 'What is machine learning?',
-      maxTokens: 100,
-    })
-
-    const replayResponse2 = await replayer.query({
-      prompt: 'Explain neural networks',
-      maxTokens: 100,
-    })
-
-    console.log(`✅ Replayed ${replayer.callCount} interactions`)
-    console.log(`Responses match: ${
-      response1 === replayResponse1 && response2 === replayResponse2
-    }\n`)
-
-    // Mode 3: Analyze recordings
-    console.log('📊 Mode 3: Recording Analysis')
-    console.log('---')
-
-    const analysis = await replayer.analyze()
-    console.log(`Total calls: ${analysis.totalCalls}`)
-    console.log(`Average latency: ${analysis.avgLatency.toFixed(0)}ms`)
-    console.log(`Total tokens: ${analysis.totalTokens}`)
-    console.log(`Estimated cost: $${analysis.estimatedCost.toFixed(4)}\n`)
-
-    // Mode 4: Test suite with replay
-    console.log('🧪 Mode 4: Deterministic Test Suite')
-    console.log('---')
-
-    console.log('Running tests with recorded responses...')
-
-    for (let i = 0; i < 3; i++) {
-      const testResponse = await replayer.query({
-        prompt: 'What is machine learning?',
-        maxTokens: 100,
-      })
-
-      console.log(`  Test ${i + 1}: ✓ (deterministic)`)
-    }
-
-    console.log('\n✅ Recording & replay demo complete')
-  } catch (error) {
-    console.error('❌ Recording error:', error)
+    recordings.push({ prompt: q, response: result.text, durationMs });
+    console.log(`  Q: ${q}`);
+    console.log(`  A: ${result.text} (${durationMs}ms)\n`);
   }
+
+  // ── 2. Export telemetry ────────────────────────────────────────────
+  console.log("Spans recorded:", JSON.stringify(telemetry.exportSpans(), null, 2).slice(0, 300));
+  console.log("Metrics:", telemetry.exportMetrics());
+
+  // ── 3. Evaluate with EvalRunner ────────────────────────────────────
+  const evalRunner = new EvalRunner(0.5); // threshold = 0.5
+  evalRunner.addScorer("exact_match");
+  evalRunner.addScorer("contains");
+  evalRunner.addScorer("length_ratio");
+
+  // Load a dataset for evaluation
+  const dataset = JSON.stringify([
+    { input: "What is the capital of France?", expected: "Paris" },
+    { input: "Who wrote Romeo and Juliet?", expected: "Shakespeare" },
+    { input: "What is 2 + 2?", expected: "4" },
+  ]);
+  const parsed = EvalRunner.loadDatasetJson(dataset);
+  console.log("\nEval dataset loaded:", parsed);
+
+  // ── Cleanup ────────────────────────────────────────────────────────
+  evalRunner.destroy();
+  telemetry.destroy();
+  agent.destroy();
 }
 
-main()
+main().catch(console.error);

@@ -6,18 +6,25 @@ import { ToolInspector } from './components/ToolInspector';
 import { ExecutionTimeline } from './components/ExecutionTimeline';
 import { MemoryViewer } from './components/MemoryViewer';
 import { MetricsPanel } from './components/MetricsPanel';
+import { FeatureExplorer } from './components/FeatureExplorer';
+import { FeatureSidebar } from './components/FeatureSidebar';
+import { QuickStart } from './components/QuickStart';
 import { useAgent } from './hooks/useAgent';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useMetrics } from './hooks/useMetrics';
+import { FEATURES } from './data/features';
 import type { AgentInfo } from './types';
 
 type RightPanel = 'timeline' | 'memory' | 'metrics';
+type MainView = 'chat' | 'features' | 'quickstart';
 
 export function App() {
   const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [rightPanel, setRightPanel] = useState<RightPanel>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mainView, setMainView] = useState<MainView>('features');
+  const [activeFeatureId, setActiveFeatureId] = useState<string | null>(null);
 
   const { agents, messages, timeline, isStreaming, lastToolCall, sendMessage } = useAgent();
   const { connected } = useWebSocket({ url: `ws://${window.location.host}/ws`, autoConnect: true });
@@ -26,6 +33,7 @@ export function App() {
   const handleSelectAgent = useCallback((agent: AgentInfo) => {
     setSelectedAgent(agent);
     setSelectedTool(null);
+    setMainView('chat');
   }, []);
 
   const handleSend = useCallback(
@@ -34,6 +42,11 @@ export function App() {
     },
     [selectedAgent, sendMessage],
   );
+
+  const handleSelectFeature = useCallback((id: string) => {
+    setActiveFeatureId((prev) => (prev === id ? null : id));
+    setMainView('features');
+  }, []);
 
   const currentToolCall = selectedTool ? lastToolCall.get(selectedTool) ?? null : null;
   const currentTools = selectedAgent?.tools ?? [];
@@ -52,24 +65,66 @@ export function App() {
 
       <div className="pg-body">
         <aside className="pg-sidebar">
-          <div className="pg-sidebar-search">
-            <input
-              type="text"
-              placeholder="Search agents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pg-search-input"
+          {/* View switcher */}
+          <div className="pg-sidebar-nav">
+            <button
+              className={`pg-sidebar-nav-btn ${mainView === 'features' ? 'pg-sidebar-nav-btn--active' : ''}`}
+              onClick={() => setMainView('features')}
+            >
+              🧩 Features
+            </button>
+            <button
+              className={`pg-sidebar-nav-btn ${mainView === 'quickstart' ? 'pg-sidebar-nav-btn--active' : ''}`}
+              onClick={() => setMainView('quickstart')}
+            >
+              🚀 Quick Start
+            </button>
+            <button
+              className={`pg-sidebar-nav-btn ${mainView === 'chat' ? 'pg-sidebar-nav-btn--active' : ''}`}
+              onClick={() => setMainView('chat')}
+            >
+              💬 Chat
+            </button>
+          </div>
+
+          {/* Feature sidebar */}
+          <FeatureSidebar
+            onSelectFeature={handleSelectFeature}
+            activeFeatureId={activeFeatureId}
+          />
+
+          {/* Agent list section */}
+          <div className="pg-sidebar-section">
+            <div className="pg-sidebar-section-title">Agents</div>
+            <div className="pg-sidebar-search">
+              <input
+                type="text"
+                placeholder="Search agents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pg-search-input"
+              />
+            </div>
+            <AgentList
+              agents={filteredAgents}
+              selectedId={selectedAgent?.id ?? null}
+              onSelect={handleSelectAgent}
             />
           </div>
-          <AgentList
-            agents={filteredAgents}
-            selectedId={selectedAgent?.id ?? null}
-            onSelect={handleSelectAgent}
-          />
         </aside>
 
         <main className="pg-main">
-          {selectedAgent ? (
+          {mainView === 'features' && (
+            <FeatureExplorer />
+          )}
+
+          {mainView === 'quickstart' && (
+            <div className="pg-main-scroll">
+              <QuickStart />
+            </div>
+          )}
+
+          {mainView === 'chat' && selectedAgent && (
             <>
               <div className="pg-chat-area">
                 <ChatPanel
@@ -114,7 +169,9 @@ export function App() {
                 />
               </div>
             </>
-          ) : (
+          )}
+
+          {mainView === 'chat' && !selectedAgent && (
             <div className="pg-empty-state">
               <div className="pg-empty-icon">⚡</div>
               <h2>Select an agent to begin</h2>
