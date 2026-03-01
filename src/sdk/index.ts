@@ -80,7 +80,21 @@ export { MiddlewareChain } from "./middleware.js";
 export { PluginRegistry } from "./plugin.js";
 
 // ─── MCP ───────────────────────────────────────────────────────────
-export { McpServer } from "./mcp.js";
+export {
+  McpServer,
+  type McpResource,
+  type McpPrompt,
+  type McpPromptArgument,
+  type McpPromptMessage,
+  type McpContent,
+  type McpResourceContent,
+  type McpPromptResult,
+  type McpModelHint,
+  type McpModelPreferences,
+  type McpSamplingMessage,
+  type McpSamplingRequest,
+  type McpSamplingResponse,
+} from "./mcp.js";
 
 // ─── Guardrails ────────────────────────────────────────────────────
 export { GuardrailChain } from "./guardrail.js";
