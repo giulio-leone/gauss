@@ -1,4 +1,4 @@
-name: Publish to GitHub Packages
+name: Publish to npm & GitHub Packages
 
 on:
   release:
@@ -9,7 +9,7 @@ permissions:
   packages: write
 
 jobs:
-  publish:
+  publish-npm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,18 +17,33 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
+          registry-url: https://registry.npmjs.org
 
       - run: npm ci
 
-      - run: npx tsup
+      - run: npm run check-types
 
-      - run: npx vitest run
+      - run: npm run build
+
+      - run: npm test
+
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-github:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v6
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
+
+      - run: npm ci
+
+      - run: npm run build
 
       - run: npm publish
         env:

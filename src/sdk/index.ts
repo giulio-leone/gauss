@@ -125,3 +125,14 @@ export {
   extract,
 } from "./template.js";
 export type { PromptTemplate } from "./template.js";
+
+// ─── Pipeline & Async Helpers ─────────────────────────────────────
+export {
+  pipe,
+  mapAsync,
+  filterAsync,
+  reduceAsync,
+  tapAsync,
+  compose,
+} from "./pipeline.js";
+export type { PipeStep } from "./pipeline.js";

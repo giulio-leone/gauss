@@ -1,14 +1,13 @@
 {
   "name": "gauss-ai",
-  "version": "1.0.0",
-  "description": "Gauss \u2014 The most complete AI agent framework for TypeScript. 57+ features including multi-agent teams, RAG, workflow DSL, voice STT/TTS, multimodal vision, MCP/A2A protocols, 40+ LLM providers, hexagonal architecture, and visual agent builder.",
+  "version": "6.0.0",
+  "description": "Production-grade AI agent SDK for TypeScript — thin wrapper over Rust core via NAPI. Agents, RAG, graphs, workflows, multi-agent networks, middleware, streaming, structured output, and more.",
   "license": "MIT",
   "type": "module",
   "keywords": [
     "ai",
     "agent",
     "agentic",
-    "framework",
     "llm",
     "rag",
     "workflow",
@@ -17,17 +16,17 @@
     "tools",
     "multi-agent",
     "typescript",
-    "hexagonal-architecture",
-    "voice",
-    "multimodal",
-    "a2a"
+    "rust",
+    "napi",
+    "streaming",
+    "structured-output",
+    "prompt-template"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/giulio-leone/gauss.git",
-    "directory": "gauss-flow"
+    "url": "https://github.com/giulio-leone/gauss.git"
   },
-  "homepage": "https://giulio-leone.github.io/gauss/",
+  "homepage": "https://github.com/giulio-leone/gauss",
   "bugs": {
     "url": "https://github.com/giulio-leone/gauss/issues"
   },
@@ -52,8 +51,7 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE",
-    "CHANGELOG.md"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup",
@@ -61,40 +59,16 @@
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:quality:semantic": "vitest run src/evals/__tests__/semantic-search.quality-gate.test.ts src/evals/__tests__/semantic-search-harness.test.ts",
-    "test:benchmark:semantic": "vitest run src/evals/__tests__/semantic-search-benchmark.test.ts src/evals/__tests__/semantic-search.benchmark-gate.test.ts",
-    "test:stress:semantic": "vitest run src/evals/__tests__/semantic-search-stress-suite.test.ts src/evals/__tests__/semantic-search.stress-gate.test.ts",
-    "quality:gate": "npm run test:quality:semantic",
-    "benchmark:gate": "npm run test:benchmark:semantic",
-    "stress:gate": "npm run test:stress:semantic",
     "prepublishOnly": "npm run build",
-    "clean": "rimraf dist",
-    "docs": "typedoc --out docs src/index.ts --skipErrorChecking"
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "gauss-napi": "file:../gauss-core/crates/gauss-napi"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^3.0.50",
-    "@ai-sdk/google": "^3.0.34",
-    "@ai-sdk/groq": "^3.0.26",
-    "@ai-sdk/mcp": "^1.0.0",
-    "@ai-sdk/mistral": "^3.0.21",
-    "@ai-sdk/openai": "^3.0.37",
-    "@aws-sdk/client-s3": "^3.1000.0",
-    "@aws-sdk/s3-request-presigner": "^3.1000.0",
-    "@openrouter/ai-sdk-provider": "^2.2.3",
-    "@supabase/supabase-js": "^2.0.0",
     "@types/node": "^25.2.3",
-    "@types/pg": "^8.16.0",
-    "@vitest/coverage-v8": "^4.0.15",
-    "bullmq": "^5.70.1",
-    "ioredis": "^5.10.0",
-    "pg": "^8.19.0",
     "rimraf": "^6.1.2",
-    "tiktoken": "^1.0.0",
     "tsup": "^8.0.2",
-    "typedoc": "^0.28.17",
     "typescript": "^5.9.3",
     "vitest": "^4.0.15"
   }
