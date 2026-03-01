@@ -68,7 +68,9 @@ export class Team implements Disposable {
   /** Run the team with a prompt or messages. */
   async run(prompt: string): Promise<TeamResult> {
     this.assertNotDisposed();
-    const messages = JSON.stringify([{ role: "user", content: prompt }]);
+    const messages = JSON.stringify([
+      { role: "user", content: [{ type: "text", text: prompt }] },
+    ]);
     return team_run(this._handle, messages) as Promise<TeamResult>;
   }
 

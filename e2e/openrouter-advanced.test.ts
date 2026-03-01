@@ -14,7 +14,11 @@ import { template } from "../src/sdk/template.js";
 import { pipe, mapAsync, compose } from "../src/sdk/pipeline.js";
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
-if (!OPENROUTER_KEY) throw new Error("OPENROUTER_API_KEY required");
+if (!OPENROUTER_KEY) {
+  describe.skip("OpenRouter Advanced (OPENROUTER_API_KEY not set)", () => {
+    it("skipped", () => {});
+  });
+} else {
 
 const MODEL = "arcee-ai/trinity-large-preview:free";
 
@@ -405,3 +409,4 @@ describe("OpenRouter Advanced Features — arcee-ai/trinity-large-preview:free",
     console.log("════════════════════════════════════════════════════════════════════════════════\n");
   });
 });
+}
