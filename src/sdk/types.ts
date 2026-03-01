@@ -63,6 +63,20 @@ export interface AgentOptions {
   outputSchema?: Record<string, unknown>;
 }
 
+/** A citation reference from document-aware responses. */
+export interface Citation {
+  /** Citation type: char_location, page_location, content_block_location. */
+  type: string;
+  /** The cited text from the document. */
+  citedText?: string;
+  /** Title of the source document. */
+  documentTitle?: string;
+  /** Start index (character, page, or block depending on type). */
+  start?: number;
+  /** End index (character, page, or block depending on type). */
+  end?: number;
+}
+
 export interface AgentResult {
   text: string;
   steps: number;
@@ -71,6 +85,8 @@ export interface AgentResult {
   structuredOutput?: Record<string, unknown>;
   /** Extended thinking output (Anthropic). */
   thinking?: string;
+  /** Citations from document-aware responses (Anthropic). */
+  citations?: Citation[];
 }
 
 // ─── Memory ────────────────────────────────────────────────────────

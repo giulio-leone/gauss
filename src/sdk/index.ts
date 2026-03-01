@@ -25,6 +25,7 @@ export type {
   JsMessage,
   AgentOptions,
   AgentResult,
+  Citation,
   ToolExecutor,
   StreamCallback,
   MemoryEntry,
