@@ -196,3 +196,9 @@ export type {
   TaskState,
   TaskStatus,
 } from "./a2a.js";
+export {
+  ToolRegistry,
+  type ToolExample,
+  type ToolRegistryEntry,
+  type ToolSearchResult,
+} from "./tool-registry.js";
