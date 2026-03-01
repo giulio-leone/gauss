@@ -32,7 +32,8 @@ vi.mock("gauss-napi", () => ({
   generate_with_tools: vi.fn(async () => ({ text: "tool response" })),
 }));
 
-import { Agent, gauss } from "../agent.js";
+import { Agent, gauss, batch } from "../agent.js";
+import type { StreamEvent } from "../agent.js";
 import {
   create_provider,
   destroy_provider,
@@ -203,5 +204,64 @@ describe("gauss (quick-start)", () => {
     vi.mocked(agent_run).mockRejectedValueOnce(new Error("boom"));
     await expect(gauss("fail")).rejects.toThrow("boom");
     expect(destroy_provider).toHaveBeenCalledOnce();
+  });
+});
+
+describe("AgentStream", () => {
+  it("yields events as async iterable", async () => {
+    const { agent_stream_with_tool_executor: mockStream } = await import("gauss-napi");
+    vi.mocked(mockStream).mockImplementation(async (_name, _h, _t, _m, _o, onEvent, _exec) => {
+      onEvent?.('{"type":"text_delta","text":"Hello"}');
+      onEvent?.('{"type":"text_delta","text":" World"}');
+      return { text: "Hello World", steps: 1, inputTokens: 5, outputTokens: 10 };
+    });
+    const agent = new Agent({ providerOptions: { apiKey: "k" } });
+    const executor = vi.fn(async () => "{}");
+    const events: StreamEvent[] = [];
+    const stream = agent.streamIter("Hello", executor);
+    for await (const event of stream) {
+      events.push(event);
+    }
+    expect(events).toHaveLength(2);
+    expect(events[0].text).toBe("Hello");
+    expect(events[1].text).toBe(" World");
+    expect(stream.result?.text).toBe("Hello World");
+    agent.destroy();
+  });
+});
+
+describe("batch", () => {
+  it("runs multiple prompts in parallel", async () => {
+    const results = await batch(["p1", "p2", "p3"], { concurrency: 2 });
+    expect(results).toHaveLength(3);
+    results.forEach(r => {
+      expect(r.result?.text).toBe("Hello from Rust core");
+      expect(r.error).toBeUndefined();
+    });
+  });
+
+  it("captures errors per item without failing batch", async () => {
+    vi.mocked(agent_run)
+      .mockResolvedValueOnce({ text: "ok", steps: 1, inputTokens: 5, outputTokens: 5 })
+      .mockRejectedValueOnce(new Error("boom"))
+      .mockResolvedValueOnce({ text: "ok2", steps: 1, inputTokens: 5, outputTokens: 5 });
+    const results = await batch(["a", "b", "c"], { concurrency: 1 });
+    expect(results[0].result?.text).toBe("ok");
+    expect(results[1].error?.message).toBe("boom");
+    expect(results[2].result?.text).toBe("ok2");
+  });
+
+  it("respects concurrency limit", async () => {
+    let concurrent = 0;
+    let maxConcurrent = 0;
+    vi.mocked(agent_run).mockImplementation(async () => {
+      concurrent++;
+      maxConcurrent = Math.max(maxConcurrent, concurrent);
+      await new Promise(r => setTimeout(r, 10));
+      concurrent--;
+      return { text: "ok", steps: 1, inputTokens: 1, outputTokens: 1 };
+    });
+    await batch(["a", "b", "c", "d"], { concurrency: 2 });
+    expect(maxConcurrent).toBeLessThanOrEqual(2);
   });
 });

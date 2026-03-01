@@ -237,6 +237,32 @@ export class Agent implements Disposable {
   }
 
   /**
+   * Stream as an async iterable — use with `for await`.
+   *
+   * @example
+   *   for await (const event of agent.streamIter("Tell me a story", toolExecutor)) {
+   *     process.stdout.write(event.text ?? "");
+   *   }
+   */
+  streamIter(
+    input: string | Message[],
+    toolExecutor: ToolExecutor
+  ): AgentStream {
+    this.assertNotDisposed();
+    const messages = typeof input === "string"
+      ? [{ role: "user" as const, content: input }]
+      : input;
+    return new AgentStream(
+      this._name,
+      this.providerHandle,
+      this._tools,
+      messages,
+      this._options,
+      toolExecutor
+    );
+  }
+
+  /**
    * Raw LLM call without the agent loop. Returns the provider's raw response.
    */
   async generate(
@@ -337,4 +363,126 @@ export async function gauss(
   } finally {
     agent.destroy();
   }
+}
+
+// ─── Async iterable stream ─────────────────────────────────────────
+
+/** Parsed stream event. */
+export interface StreamEvent {
+  type: string;
+  text?: string;
+  toolCall?: { name: string; arguments: string };
+  [key: string]: unknown;
+}
+
+/**
+ * Async iterable wrapper over the native stream callback.
+ *
+ * @example
+ *   for await (const event of agent.streamIter("Tell me a story", executor)) {
+ *     if (event.type === "text_delta") process.stdout.write(event.text ?? "");
+ *   }
+ *   // Access final result after iteration:
+ *   const result = stream.result;
+ */
+export class AgentStream implements AsyncIterable<StreamEvent> {
+  private _result: AgentResult | undefined;
+
+  constructor(
+    private readonly agentName: string,
+    private readonly providerHandle: Handle,
+    private readonly tools: ToolDef[],
+    private readonly messages: Message[],
+    private readonly options: AgentOptions,
+    private readonly toolExecutor: ToolExecutor,
+  ) {}
+
+  /** Final result — available after iteration completes. */
+  get result(): AgentResult | undefined { return this._result; }
+
+  async *[Symbol.asyncIterator](): AsyncIterator<StreamEvent> {
+    const buffer: StreamEvent[] = [];
+    let resolve: (() => void) | undefined;
+    let done = false;
+
+    const onEvent = (json: string) => {
+      try {
+        buffer.push(JSON.parse(json) as StreamEvent);
+      } catch {
+        buffer.push({ type: "raw", text: json });
+      }
+      resolve?.();
+    };
+
+    const runPromise = agent_stream_with_tool_executor(
+      this.agentName,
+      this.providerHandle,
+      this.tools,
+      this.messages,
+      this.options,
+      onEvent,
+      this.toolExecutor
+    ).then((r) => {
+      this._result = r;
+      done = true;
+      resolve?.();
+    });
+
+    while (!done || buffer.length > 0) {
+      if (buffer.length > 0) {
+        yield buffer.shift()!;
+      } else if (!done) {
+        await new Promise<void>((r) => { resolve = r; });
+      }
+    }
+
+    await runPromise;
+  }
+}
+
+// ─── Batch execution ───────────────────────────────────────────────
+
+export interface BatchItem<T = string> {
+  input: T;
+  result?: AgentResult;
+  error?: Error;
+}
+
+/**
+ * Run multiple prompts through an agent in parallel with concurrency control.
+ *
+ * @example
+ *   const results = await batch(
+ *     ["Translate: Hello", "Translate: World", "Translate: Foo"],
+ *     { concurrency: 2, provider: "openai" }
+ *   );
+ *   results.forEach(r => console.log(r.result?.text ?? r.error?.message));
+ */
+export async function batch(
+  prompts: string[],
+  config?: Omit<AgentConfig, "name"> & { concurrency?: number }
+): Promise<BatchItem[]> {
+  const { concurrency = 5, ...agentConfig } = config ?? {};
+  const items: BatchItem[] = prompts.map((input) => ({ input }));
+
+  const agent = new Agent({ name: "batch", ...agentConfig });
+  try {
+    const queue = [...items.entries()];
+    const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+      while (queue.length > 0) {
+        const entry = queue.shift();
+        if (!entry) break;
+        const [idx, item] = entry;
+        try {
+          items[idx].result = await agent.run(item.input);
+        } catch (err) {
+          items[idx].error = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+    });
+    await Promise.all(workers);
+  } finally {
+    agent.destroy();
+  }
+  return items;
 }

@@ -42,8 +42,8 @@ export type {
 export { resolveApiKey, detectProvider } from "./types.js";
 
 // ─── Core Agent ────────────────────────────────────────────────────
-export { Agent } from "./agent.js";
-export type { AgentConfig } from "./agent.js";
+export { Agent, AgentStream, batch } from "./agent.js";
+export type { AgentConfig, StreamEvent, BatchItem } from "./agent.js";
 
 // ─── Memory ────────────────────────────────────────────────────────
 export { Memory } from "./memory.js";
