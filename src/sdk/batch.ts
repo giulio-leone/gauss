@@ -14,24 +14,57 @@ import { Agent } from "./agent.js";
 import type { AgentConfig } from "./agent.js";
 import type { AgentResult } from "./types.js";
 
+/**
+ * Represents a single item in a batch execution.
+ *
+ * @description Each `BatchItem` holds the original input and, after execution, either
+ * a successful {@link AgentResult} or an {@link Error}. Exactly one of `result` or `error`
+ * will be populated after the batch completes.
+ *
+ * @typeParam T - The input type (defaults to `string`).
+ *
+ * @example
+ * ```ts
+ * const item: BatchItem = { input: "Translate: Hello", result: { text: "Bonjour", ... } };
+ * if (item.error) console.error(item.error.message);
+ * ```
+ *
+ * @since 1.0.0
+ */
 export interface BatchItem<T = string> {
+  /** The original input prompt. */
   input: T;
+  /** The successful agent result, if the execution succeeded. */
   result?: AgentResult;
+  /** The error, if the execution failed. */
   error?: Error;
 }
 
 /**
  * Run multiple prompts through an agent in parallel with concurrency control.
  *
- * @param prompts - Array of string prompts.
- * @param config - Agent config + optional `concurrency` (default: 5).
- * @returns Array of BatchItem, one per prompt.
+ * @description Creates a single shared {@link Agent} and dispatches all prompts through it
+ * using a worker pool. Failed prompts do not abort the batch — their errors are captured
+ * in the corresponding {@link BatchItem.error} field. The agent is automatically destroyed
+ * after all prompts complete.
+ *
+ * @param prompts - Array of string prompts to process.
+ * @param config - Optional agent configuration plus a `concurrency` field (default: `5`).
+ * @returns An array of {@link BatchItem} objects, one per prompt, in the same order.
+ * @throws {Error} If the agent cannot be created (e.g. missing API key).
  *
  * @example
- *   const results = await batch(
- *     ["Translate: Hello", "Translate: World", "Translate: Foo"],
- *     { concurrency: 2, provider: "openai" }
- *   );
+ * ```ts
+ * import { batch } from "gauss-ts";
+ *
+ * const results = await batch(
+ *   ["Translate: Hello", "Translate: World", "Translate: Foo"],
+ *   { concurrency: 2, provider: "openai" },
+ * );
+ * results.forEach(r => console.log(r.result?.text ?? r.error?.message));
+ * ```
+ *
+ * @since 1.0.0
  */
 export async function batch(
   prompts: string[],

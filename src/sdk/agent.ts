@@ -45,7 +45,16 @@ import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
 import { AgentStream } from "./stream-iter.js";
 
-/** Transform NAPI result to SDK AgentResult (normalizes citation field names). */
+/**
+ * Transform a raw NAPI result into the public {@link AgentResult} shape.
+ *
+ * @description Normalises citation field names returned by different native providers
+ * into the unified SDK format.
+ *
+ * @param raw - Raw result object from the NAPI layer.
+ * @returns Normalised {@link AgentResult}.
+ * @internal
+ */
 function toSdkResult(raw: any): AgentResult {
   return {
     ...raw,
@@ -61,44 +70,62 @@ function toSdkResult(raw: any): AgentResult {
 
 // ─── Config ────────────────────────────────────────────────────────
 
+/**
+ * Configuration object for creating an {@link Agent} instance.
+ *
+ * @description All fields are optional — sensible defaults are applied and the provider is auto-detected from environment variables when omitted.
+ *
+ * @example
+ * ```ts
+ * const config: AgentConfig = {
+ *   provider: "anthropic",
+ *   model: "claude-sonnet-4-20250514",
+ *   instructions: "You are a helpful assistant.",
+ *   temperature: 0.7,
+ * };
+ * const agent = new Agent(config);
+ * ```
+ *
+ * @since 1.0.0
+ */
 export interface AgentConfig {
-  /** Agent name (default: "agent"). */
+  /** Agent name (default: `"agent"`). Used for logging and identification. */
   name?: string;
 
   /** LLM provider. Auto-detected from env if omitted. */
   provider?: ProviderType;
 
-  /** Model identifier. Auto-selected if omitted. */
+  /** Model identifier (e.g. `"gpt-4o"`, `"claude-sonnet-4-20250514"`). Auto-selected if omitted. */
   model?: string;
 
   /** Provider connection options. API key auto-resolved from env if omitted. */
   providerOptions?: ProviderOptions;
 
-  /** System instructions. */
+  /** System instructions prepended to every conversation. */
   instructions?: string;
 
-  /** Tool definitions. */
+  /** Tool definitions available to the agent. */
   tools?: ToolDef[];
 
-  /** Temperature (0–2). */
+  /** Sampling temperature (0–2). Higher values produce more creative output. */
   temperature?: number;
 
-  /** Max agent steps. */
+  /** Maximum number of agentic loop iterations before stopping. */
   maxSteps?: number;
 
-  /** Top-p sampling. */
+  /** Top-p (nucleus) sampling threshold. */
   topP?: number;
 
-  /** Max output tokens. */
+  /** Maximum number of output tokens per response. */
   maxTokens?: number;
 
-  /** Deterministic seed. */
+  /** Deterministic seed for reproducible outputs. */
   seed?: number;
 
-  /** Stop when this tool is called. */
+  /** Stop the agentic loop when this tool name is called. */
   stopOnTool?: string;
 
-  /** JSON schema for structured output. */
+  /** JSON schema for structured output. The model will conform its response to this schema. */
   outputSchema?: Record<string, unknown>;
 
   /** Extended thinking budget (Anthropic). Number of tokens for internal reasoning. */
@@ -110,7 +137,7 @@ export interface AgentConfig {
   /** Enable prompt caching (Anthropic). Auto-annotates system messages and tools. */
   cacheControl?: boolean;
 
-  /** Enable code execution runtimes. Pass `true` for all defaults, or configure. */
+  /** Enable code execution runtimes. Pass `true` for all defaults, or configure individually. */
   codeExecution?: boolean | import("./types.js").CodeExecutionOptions;
 
   /** Enable Google Search grounding (Gemini only). */
@@ -119,12 +146,34 @@ export interface AgentConfig {
   /** Enable native code execution / Gemini code interpreter. */
   nativeCodeExecution?: boolean;
 
-  /** Response modalities (e.g. ["TEXT", "IMAGE"] for Gemini image generation). */
+  /** Response modalities (e.g. `["TEXT", "IMAGE"]` for Gemini image generation). */
   responseModalities?: string[];
 }
 
 // ─── Agent Class ───────────────────────────────────────────────────
 
+/**
+ * Core agent class that wraps a native LLM provider and manages the agentic loop.
+ *
+ * @description `Agent` is the primary entry-point for interacting with language models in Gauss.
+ * It supports single-shot completions, multi-step tool-use loops, streaming, and raw generation.
+ * Each instance owns a native provider handle that **must** be released via {@link Agent.destroy}
+ * (or the `using` pattern) to avoid resource leaks.
+ *
+ * @example
+ * ```ts
+ * const agent = new Agent({
+ *   provider: "openai",
+ *   model: "gpt-4o",
+ *   instructions: "You are a helpful assistant.",
+ * });
+ * const result = await agent.run("What is the meaning of life?");
+ * console.log(result.text);
+ * agent.destroy();
+ * ```
+ *
+ * @since 1.0.0
+ */
 export class Agent implements Disposable {
   private readonly providerHandle: Handle;
   private readonly _name: string;
@@ -135,6 +184,23 @@ export class Agent implements Disposable {
   private _options: AgentOptions = {};
   private disposed = false;
 
+  /**
+   * Create a new Agent.
+   *
+   * @description Initialises the native provider connection and configures the agentic
+   * loop options. The provider and model are auto-detected from environment variables
+   * when not explicitly set.
+   *
+   * @param config - Agent configuration. All fields are optional.
+   * @throws {Error} If the native provider cannot be created (e.g. invalid API key).
+   *
+   * @example
+   * ```ts
+   * const agent = new Agent({ instructions: "Be concise." });
+   * ```
+   *
+   * @since 1.0.0
+   */
   constructor(config: AgentConfig = {}) {
     const detected = detectProvider();
     this._provider = config.provider ?? detected?.provider ?? "openai";
@@ -177,34 +243,106 @@ export class Agent implements Disposable {
 
   // ─── Accessors ──────────────────────────────────────────────────
 
+  /**
+   * @description The agent's name.
+   * @since 1.0.0
+   */
   get name(): string { return this._name; }
+
+  /**
+   * @description The resolved LLM provider type.
+   * @since 1.0.0
+   */
   get provider(): ProviderType { return this._provider; }
+
+  /**
+   * @description The resolved model identifier.
+   * @since 1.0.0
+   */
   get model(): string { return this._model; }
+
+  /**
+   * @description The system instructions string.
+   * @since 1.0.0
+   */
   get instructions(): string { return this._instructions; }
 
-  /** Native handle — used internally by Network, Graph, etc. */
+  /**
+   * @description Native provider handle. Used internally by Network, Graph, and other subsystems.
+   * @since 1.0.0
+   * @internal
+   */
   get handle(): Handle { return this.providerHandle; }
 
-  /** Query what features this provider/model supports. */
+  /**
+   * @description Query what features this provider/model combination supports.
+   * @returns The capability flags for the current provider and model.
+   * @since 1.0.0
+   */
   get capabilities(): import("./types.js").ProviderCapabilities {
     return get_provider_capabilities(this.providerHandle);
   }
 
   // ─── Fluent Configuration ───────────────────────────────────────
 
-  /** Add a single tool. Chainable. */
+  /**
+   * Register a single tool definition. Chainable.
+   *
+   * @description Appends a tool to the agent's tool list so the LLM can invoke it during the agentic loop.
+   *
+   * @param tool - The tool definition to add.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * agent.addTool({ name: "search", description: "Web search", parameters: { query: { type: "string" } } });
+   * ```
+   *
+   * @since 1.0.0
+   */
   addTool(tool: ToolDef): this {
     this._tools.push(tool);
     return this;
   }
 
-  /** Add multiple tools. Chainable. */
+  /**
+   * Register multiple tool definitions at once. Chainable.
+   *
+   * @description Appends all provided tools to the agent's tool list.
+   *
+   * @param tools - Array of tool definitions to add.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * agent.addTools([
+   *   { name: "search", description: "Web search", parameters: { query: { type: "string" } } },
+   *   { name: "calculate", description: "Math calculator", parameters: { expr: { type: "string" } } },
+   * ]);
+   * ```
+   *
+   * @since 1.0.0
+   */
   addTools(tools: ToolDef[]): this {
     this._tools.push(...tools);
     return this;
   }
 
-  /** Merge additional options. Chainable. */
+  /**
+   * Merge additional agent options into the current configuration. Chainable.
+   *
+   * @description Shallow-merges the provided options with the existing ones. Later calls override earlier values.
+   *
+   * @param options - Partial agent options to merge.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * agent.setOptions({ temperature: 0.5, maxTokens: 1024 });
+   * ```
+   *
+   * @since 1.0.0
+   */
   setOptions(options: Partial<AgentOptions>): this {
     this._options = { ...this._options, ...options };
     return this;
@@ -213,10 +351,23 @@ export class Agent implements Disposable {
   // ─── Execution ──────────────────────────────────────────────────
 
   /**
-   * Run the agent. Accepts a string prompt or a message array.
+   * Run the agentic loop to completion.
+   *
+   * @description Sends the input through the full agentic loop (tool calls, multi-step reasoning)
+   * and returns the final result. Accepts either a plain string prompt or a pre-built message array.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @returns The completed {@link AgentResult} containing the response text, token counts, and optional structured output.
+   * @throws {Error} If the agent has been destroyed.
    *
    * @example
-   *   const result = await agent.run("Explain quantum computing");
+   * ```ts
+   * const result = await agent.run("Explain quantum computing");
+   * console.log(result.text);
+   * console.log(`Tokens: ${result.inputTokens} in / ${result.outputTokens} out`);
+   * ```
+   *
+   * @since 1.0.0
    */
   async run(input: string | Message[]): Promise<AgentResult> {
     this.assertNotDisposed();
@@ -233,7 +384,26 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Run with a JS-side tool executor for tools that need Node.js access.
+   * Run the agentic loop with a JavaScript-side tool executor.
+   *
+   * @description Like {@link Agent.run}, but delegates tool invocations to the provided
+   * `toolExecutor` callback. Use this when tools need access to the Node.js runtime
+   * (file system, network, databases, etc.).
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param toolExecutor - Async callback that receives a JSON-encoded tool call and returns a JSON-encoded result.
+   * @returns The completed {@link AgentResult}.
+   * @throws {Error} If the agent has been destroyed.
+   *
+   * @example
+   * ```ts
+   * const result = await agent.runWithTools("Search for cats", async (callJson) => {
+   *   const call = JSON.parse(callJson);
+   *   return JSON.stringify({ results: ["cat1", "cat2"] });
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   async runWithTools(
     input: string | Message[],
@@ -254,7 +424,26 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Stream agent responses with real-time events via callback.
+   * Stream agent responses with real-time events via a callback.
+   *
+   * @description Runs the agentic loop while invoking `onEvent` for each streaming event
+   * (text deltas, tool calls, etc.). Returns the final aggregated result after the stream ends.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param onEvent - Callback invoked with each JSON-encoded stream event.
+   * @param toolExecutor - Optional async callback for handling tool invocations.
+   * @returns The completed {@link AgentResult}.
+   * @throws {Error} If the agent has been destroyed.
+   *
+   * @example
+   * ```ts
+   * const result = await agent.stream("Tell me a joke", (eventJson) => {
+   *   const event = JSON.parse(eventJson);
+   *   if (event.type === "text_delta") process.stdout.write(event.text ?? "");
+   * });
+   * ```
+   *
+   * @since 1.0.0
    */
   async stream(
     input: string | Message[],
@@ -279,10 +468,25 @@ export class Agent implements Disposable {
   /**
    * Stream as an async iterable — use with `for await`.
    *
+   * @description Returns an {@link AgentStream} that yields {@link StreamEvent} objects.
+   * After iteration completes, the final {@link AgentResult} is available via
+   * `stream.result`.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param toolExecutor - Optional async callback for handling tool invocations.
+   * @returns An {@link AgentStream} async iterable of {@link StreamEvent} objects.
+   * @throws {Error} If the agent has been destroyed.
+   *
    * @example
-   *   for await (const event of agent.streamIter("Tell me a story", executor)) {
-   *     process.stdout.write(event.text ?? "");
-   *   }
+   * ```ts
+   * const stream = agent.streamIter("Tell me a story");
+   * for await (const event of stream) {
+   *   if (event.type === "text_delta") process.stdout.write(event.text ?? "");
+   * }
+   * console.log(stream.result?.text);
+   * ```
+   *
+   * @since 1.0.0
    */
   streamIter(
     input: string | Message[],
@@ -303,7 +507,23 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Raw LLM call without the agent loop.
+   * Perform a single raw LLM call without the agentic loop.
+   *
+   * @description Bypasses the multi-step agent loop and sends the input directly to the model
+   * for a one-shot completion. Useful when you need a simple generation without tool use.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param options - Optional generation parameters.
+   * @param options.temperature - Sampling temperature override.
+   * @param options.maxTokens - Maximum output tokens override.
+   * @returns The raw provider response.
+   *
+   * @example
+   * ```ts
+   * const response = await agent.generate("Translate 'hello' to French", { temperature: 0 });
+   * ```
+   *
+   * @since 1.0.0
    */
   async generate(
     input: string | Message[],
@@ -322,7 +542,28 @@ export class Agent implements Disposable {
   }
 
   /**
-   * Raw LLM call with tool definitions.
+   * Perform a single raw LLM call with tool definitions (no agentic loop).
+   *
+   * @description Like {@link Agent.generate}, but also passes tool definitions to the model.
+   * The model may return tool-call requests in its response, but the caller is responsible
+   * for executing them — no automatic loop is performed.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param tools - Tool definitions to make available to the model.
+   * @param options - Optional generation parameters.
+   * @param options.temperature - Sampling temperature override.
+   * @param options.maxTokens - Maximum output tokens override.
+   * @returns The raw provider response, potentially containing tool call requests.
+   *
+   * @example
+   * ```ts
+   * const response = await agent.generateWithTools(
+   *   "What's the weather?",
+   *   [{ name: "get_weather", description: "Get weather", parameters: { city: { type: "string" } } }],
+   * );
+   * ```
+   *
+   * @since 1.0.0
    */
   async generateWithTools(
     input: string | Message[],
@@ -344,7 +585,15 @@ export class Agent implements Disposable {
 
   // ─── Lifecycle ──────────────────────────────────────────────────
 
-  /** Release all native resources. Safe to call multiple times. */
+  /**
+   * Release all native resources held by this agent.
+   *
+   * @description Destroys the underlying native provider handle. Safe to call multiple times;
+   * subsequent calls are no-ops. After calling `destroy()`, any further method calls on this
+   * agent will throw.
+   *
+   * @since 1.0.0
+   */
   destroy(): void {
     if (!this.disposed) {
       this.disposed = true;
@@ -356,7 +605,19 @@ export class Agent implements Disposable {
     }
   }
 
-  /** Alias for destroy — for `using` pattern support. */
+  /**
+   * Alias for {@link Agent.destroy} — enables the TC39 `using` pattern.
+   *
+   * @example
+   * ```ts
+   * {
+   *   using agent = new Agent({ instructions: "Be helpful." });
+   *   const result = await agent.run("Hi!");
+   * } // agent is automatically destroyed here
+   * ```
+   *
+   * @since 1.0.0
+   */
   [Symbol.dispose](): void {
     this.destroy();
   }
@@ -372,11 +633,25 @@ export class Agent implements Disposable {
 const NOOP_TOOL_EXECUTOR: ToolExecutor = async () => "{}";
 
 /**
- * One-liner agent call.
+ * One-liner convenience function — create an agent, run a prompt, and return the text.
+ *
+ * @description Creates a temporary {@link Agent}, sends the prompt through the agentic loop,
+ * and returns just the response text. The agent is automatically destroyed after the call.
+ * Ideal for quick, single-turn interactions.
+ *
+ * @param prompt - The user prompt to send to the agent.
+ * @param config - Optional agent configuration (everything except `name`).
+ * @returns The agent's response text.
+ * @throws {Error} If the provider cannot be initialised or the call fails.
  *
  * @example
- *   import { gauss } from "gauss-ts";
- *   const answer = await gauss("What is the meaning of life?");
+ * ```ts
+ * import { gauss } from "gauss-ts";
+ * const answer = await gauss("What is the meaning of life?");
+ * console.log(answer);
+ * ```
+ *
+ * @since 1.0.0
  */
 export async function gauss(
   prompt: string,
