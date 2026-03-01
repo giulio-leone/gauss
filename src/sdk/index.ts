@@ -106,3 +106,22 @@ export { ToolValidator } from "./tool-validator.js";
 
 // ─── Stream Utils ──────────────────────────────────────────────────
 export { parsePartialJson } from "./stream.js";
+
+// ─── Retry ─────────────────────────────────────────────────────────
+export { withRetry, retryable } from "./retry.js";
+export type { RetryConfig } from "./retry.js";
+
+// ─── Structured Output ────────────────────────────────────────────
+export { structured } from "./structured.js";
+export type { JsonSchema, StructuredConfig, StructuredResult } from "./structured.js";
+
+// ─── Prompt Templates ─────────────────────────────────────────────
+export {
+  template,
+  summarize,
+  translate,
+  codeReview,
+  classify,
+  extract,
+} from "./template.js";
+export type { PromptTemplate } from "./template.js";
