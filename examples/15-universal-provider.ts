@@ -7,8 +7,8 @@
 //
 // Usage: npx tsx examples/15-universal-provider.ts
 
-import { Agent } from "gauss-ai";
-import type { AgentConfig } from "gauss-ai";
+import { Agent } from "gauss-ts";
+import type { AgentConfig } from "gauss-ts";
 
 const prompt = "Say 'Hello from <your model name>' in exactly one sentence.";
 

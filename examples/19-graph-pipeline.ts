@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/19-graph-pipeline.ts
 
-import { Agent, Graph } from "gauss-ai";
+import { Agent, Graph } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Create specialized agents ──────────────────────────────────────

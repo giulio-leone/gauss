@@ -18,7 +18,7 @@ import {
   compose,
   withRetry,
   retryable,
-} from "gauss-ai";
+} from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── 1. Prompt Templates ────────────────────────────────────────────

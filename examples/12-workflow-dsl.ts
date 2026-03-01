@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/12-workflow-dsl.ts
 
-import { Agent, Workflow } from "gauss-ai";
+import { Agent, Workflow } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Create step agents ─────────────────────────────────────────────

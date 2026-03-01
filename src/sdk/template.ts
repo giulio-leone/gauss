@@ -2,7 +2,7 @@
  * Prompt Templates — composable, type-safe prompt construction.
  *
  * @example
- *   import { template, PromptTemplate } from "gauss-ai";
+ *   import { template, PromptTemplate } from "gauss-ts";
  *
  *   const summarize = template("Summarize the following {{format}}:\n\n{{text}}");
  *   const prompt = summarize({ format: "article", text: "Lorem ipsum..." });

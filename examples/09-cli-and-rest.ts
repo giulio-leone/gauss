@@ -8,7 +8,7 @@
 // Usage: npx tsx examples/09-cli-and-rest.ts
 
 import * as readline from "node:readline";
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 
 async function main(): Promise<void> {
   const agent = new Agent({

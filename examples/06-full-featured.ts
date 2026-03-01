@@ -12,7 +12,7 @@ import {
   MiddlewareChain,
   GuardrailChain,
   Telemetry,
-} from "gauss-ai";
+} from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Middleware: logging + caching ───────────────────────────────────

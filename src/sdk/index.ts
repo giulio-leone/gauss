@@ -2,11 +2,11 @@
  * Gauss SDK — Thin TypeScript wrappers over Rust core (via NAPI).
  *
  * Quick start:
- *   import { gauss } from "gauss-ai";
+ *   import { gauss } from "gauss-ts";
  *   const answer = await gauss("What is the meaning of life?");
  *
  * Full control:
- *   import { Agent, Graph, Memory, Network } from "gauss-ai";
+ *   import { Agent, Graph, Memory, Network } from "gauss-ts";
  *
  * All orchestration (agent loop, tool execution, middleware, plugins,
  * graph/workflow execution) is handled by the Rust core.

@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/18-tool-registry.ts
 
-import { ToolRegistry } from "gauss-ai";
+import { ToolRegistry } from "gauss-ts";
 
 async function main(): Promise<void> {
   const registry = new ToolRegistry();

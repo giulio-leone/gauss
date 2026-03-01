@@ -7,8 +7,8 @@
 //
 // Usage: npx tsx examples/02-planning-agent.ts
 
-import { Agent } from "gauss-ai";
-import type { ToolDef } from "gauss-ai";
+import { Agent } from "gauss-ts";
+import type { ToolDef } from "gauss-ts";
 
 // ── Tool definitions ─────────────────────────────────────────────────
 const tools: ToolDef[] = [

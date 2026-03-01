@@ -9,7 +9,7 @@
 //   export OPENAI_API_KEY=sk-...
 //   npx tsx examples/17-zero-config.ts
 
-import { gauss } from "gauss-ai";
+import { gauss } from "gauss-ts";
 
 async function main(): Promise<void> {
   // One-liner — auto-detects provider from env

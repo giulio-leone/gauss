@@ -2,7 +2,7 @@
  * Structured Output — validate and extract typed JSON from LLM responses.
  *
  * @example
- *   import { structured, zodSchema } from "gauss-ai";
+ *   import { structured, zodSchema } from "gauss-ts";
  *
  *   const result = await structured(agent, "List 3 fruits", {
  *     schema: { type: "object", properties: { fruits: { type: "array", items: { type: "string" } } } },

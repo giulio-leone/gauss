@@ -1,6 +1,6 @@
 {
-  "name": "gauss-ai",
-  "version": "6.1.0",
+  "name": "gauss-ts",
+  "version": "1.0.0",
   "description": "Production-grade AI agent SDK for TypeScript — thin wrapper over Rust core via NAPI. Agents, RAG, graphs, workflows, multi-agent networks, middleware, streaming, structured output, and more.",
   "license": "MIT",
   "type": "module",

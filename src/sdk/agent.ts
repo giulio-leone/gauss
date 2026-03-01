@@ -461,7 +461,7 @@ const NOOP_TOOL_EXECUTOR: ToolExecutor = async () => "{}";
  * One-liner agent call.
  *
  * @example
- *   import { gauss } from "gauss-ai";
+ *   import { gauss } from "gauss-ts";
  *   const answer = await gauss("What is the meaning of life?");
  *   // → "The meaning of life is..."
  *

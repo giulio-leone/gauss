@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/20-network-delegation.ts
 
-import { Agent, Network } from "gauss-ai";
+import { Agent, Network } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Create domain agents ───────────────────────────────────────────

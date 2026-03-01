@@ -2,7 +2,7 @@
  * Pipeline — compose agent operations into clean data flows.
  *
  * @example
- *   import { pipe, map, filter, tap } from "gauss-ai";
+ *   import { pipe, map, filter, tap } from "gauss-ts";
  *
  *   const result = await pipe(
  *     ["apple", "banana", "cherry"],

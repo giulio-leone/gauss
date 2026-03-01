@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/05-persistent-memory.ts
 
-import { Agent, Memory, VectorStore } from "gauss-ai";
+import { Agent, Memory, VectorStore } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Memory: conversation store ─────────────────────────────────────

@@ -13,7 +13,7 @@ export function Header({ connected, agentCount }: HeaderProps) {
     <header className="pg-header">
       <div className="pg-header-left">
         <h1 className="pg-header-title">⚡ Gauss Playground</h1>
-        <span className="pg-header-version">v6.1.0</span>
+        <span className="pg-header-version">v1.0.0</span>
       </div>
       <div className="pg-header-right">
         <span className="pg-header-features">{FEATURES.length} features</span>

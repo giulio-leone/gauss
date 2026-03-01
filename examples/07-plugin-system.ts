@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/07-plugin-system.ts
 
-import { PluginRegistry } from "gauss-ai";
+import { PluginRegistry } from "gauss-ts";
 
 async function main(): Promise<void> {
   const registry = new PluginRegistry();

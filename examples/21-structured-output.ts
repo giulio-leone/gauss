@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/21-structured-output.ts
 
-import { Agent, structured } from "gauss-ai";
+import { Agent, structured } from "gauss-ts";
 
 async function main(): Promise<void> {
   const agent = new Agent({

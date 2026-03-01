@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/04-mcp-integration.ts
 
-import { McpServer } from "gauss-ai";
+import { McpServer } from "gauss-ts";
 
 async function main(): Promise<void> {
   const mcp = new McpServer("my-tools", "1.0.0");

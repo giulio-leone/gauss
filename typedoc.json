@@ -15,6 +15,6 @@
   "searchInComments": true,
   "navigationLinks": {
     "GitHub": "https://github.com/giulio-leone/gauss",
-    "npm": "https://www.npmjs.com/package/gauss-ai"
+    "npm": "https://www.npmjs.com/package/gauss-ts"
   }
 }

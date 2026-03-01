@@ -9,7 +9,7 @@
 //
 // Usage: npx tsx examples/01-basic-agent.ts
 
-import { Agent, gauss, batch } from "gauss-ai";
+import { Agent, gauss, batch } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── 1. Full Agent ──────────────────────────────────────────────────

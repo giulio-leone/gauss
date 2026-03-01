@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/11-voice-pipeline.ts
 
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 
 async function main(): Promise<void> {
   console.log("Voice Pipeline — placeholder example\n");

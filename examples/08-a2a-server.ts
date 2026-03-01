@@ -13,7 +13,7 @@ import {
   userMessage,
   extractText,
   taskText,
-} from "gauss-ai";
+} from "gauss-ts";
 
 async function main(): Promise<void> {
   const baseUrl = process.env.A2A_SERVER_URL ?? "http://localhost:8080";

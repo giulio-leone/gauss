@@ -14,7 +14,7 @@ export const FEATURES: Feature[] = [
     icon: '🤖',
     category: 'core',
     description: 'Create LLM-powered agents with tools, memory, structured output, and streaming.',
-    code: `import { Agent } from 'gauss-ai';
+    code: `import { Agent } from 'gauss-ts';
 
 const agent = new Agent({
   name: 'assistant',
@@ -32,7 +32,7 @@ console.log(result.content);`,
     icon: '👥',
     category: 'orchestration',
     description: 'Coordinate multiple agents in parallel or sequential team workflows with shared context.',
-    code: `import { Agent, Team } from 'gauss-ai';
+    code: `import { Agent, Team } from 'gauss-ts';
 
 const researcher = new Agent({ name: 'researcher', model: 'gpt-4o' });
 const writer = new Agent({ name: 'writer', model: 'gpt-4o' });
@@ -51,7 +51,7 @@ const result = await team.run('Write about quantum computing');`,
     icon: '🔀',
     category: 'orchestration',
     description: 'Build DAG-based execution pipelines with conditional branching and parallel nodes.',
-    code: `import { Graph } from 'gauss-ai';
+    code: `import { Graph } from 'gauss-ts';
 
 const graph = new Graph('pipeline');
 
@@ -70,7 +70,7 @@ const result = await graph.run({ input: 'Help me reset my password' });`,
     icon: '⚙️',
     category: 'orchestration',
     description: 'Define stateful, step-based workflows with retries, checkpoints, and approval gates.',
-    code: `import { Workflow } from 'gauss-ai';
+    code: `import { Workflow } from 'gauss-ts';
 
 const workflow = new Workflow('onboarding');
 
@@ -94,7 +94,7 @@ const result = await workflow.run({ email: 'user@example.com' });`,
     icon: '🌐',
     category: 'orchestration',
     description: 'Multi-agent networks with dynamic routing, message passing, and shared state.',
-    code: `import { Network } from 'gauss-ai';
+    code: `import { Network } from 'gauss-ts';
 
 const network = new Network({
   name: 'support-network',
@@ -113,7 +113,7 @@ const result = await network.run('My invoice is incorrect');`,
     icon: '🔌',
     category: 'protocol',
     description: 'Model Context Protocol — expose agents as MCP servers or consume external MCP tools.',
-    code: `import { MCPServer } from 'gauss-ai';
+    code: `import { MCPServer } from 'gauss-ts';
 
 const server = new MCPServer({
   name: 'gauss-tools',
@@ -136,7 +136,7 @@ await server.listen({ transport: 'stdio' });`,
     icon: '🔗',
     category: 'protocol',
     description: 'Agent-to-Agent protocol for cross-system agent communication and task delegation.',
-    code: `import { A2AServer, A2AClient } from 'gauss-ai';
+    code: `import { A2AServer, A2AClient } from 'gauss-ts';
 
 // Expose an agent as an A2A service
 const server = new A2AServer({
@@ -157,7 +157,7 @@ const result = await client.sendTask({
     icon: '🧰',
     category: 'core',
     description: 'Centralized tool management with validation, versioning, and dynamic discovery.',
-    code: `import { ToolRegistry } from 'gauss-ai';
+    code: `import { ToolRegistry } from 'gauss-ts';
 
 const registry = new ToolRegistry();
 
@@ -184,7 +184,7 @@ const agent = new Agent({ tools: registry.all() });`,
     icon: '📋',
     category: 'core',
     description: 'Type-safe structured output with Zod schemas and automatic validation.',
-    code: `import { Agent } from 'gauss-ai';
+    code: `import { Agent } from 'gauss-ts';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -204,7 +204,7 @@ const result = await agent.run('Analyze: Great product!', {
     icon: '🌊',
     category: 'core',
     description: 'Real-time token streaming with SSE, tool call events, and progress tracking.',
-    code: `import { Agent } from 'gauss-ai';
+    code: `import { Agent } from 'gauss-ts';
 
 const stream = agent.stream('Explain relativity');
 
@@ -228,7 +228,7 @@ for await (const event of stream) {
     icon: '🧠',
     category: 'infra',
     description: 'Pluggable memory backends — in-memory, Redis, vector stores — with automatic context management.',
-    code: `import { Agent, VectorMemory } from 'gauss-ai';
+    code: `import { Agent, VectorMemory } from 'gauss-ts';
 
 const memory = new VectorMemory({
   store: 'qdrant',
@@ -248,7 +248,7 @@ const agent = new Agent({
     icon: '🛡️',
     category: 'infra',
     description: 'Input/output guardrails for content safety, PII detection, and policy enforcement.',
-    code: `import { Agent, Guardrail } from 'gauss-ai';
+    code: `import { Agent, Guardrail } from 'gauss-ts';
 
 const piiGuard = new Guardrail({
   name: 'pii-filter',
@@ -269,7 +269,7 @@ const agent = new Agent({
     icon: '🔧',
     category: 'infra',
     description: 'Composable middleware pipeline for logging, caching, rate limiting, and custom transforms.',
-    code: `import { Agent, middleware } from 'gauss-ai';
+    code: `import { Agent, middleware } from 'gauss-ts';
 
 const agent = new Agent({
   name: 'assistant',
@@ -287,7 +287,7 @@ const agent = new Agent({
     icon: '📊',
     category: 'infra',
     description: 'OpenTelemetry integration for distributed tracing, metrics, and observability.',
-    code: `import { Agent, Telemetry } from 'gauss-ai';
+    code: `import { Agent, Telemetry } from 'gauss-ts';
 
 Telemetry.init({
   serviceName: 'my-ai-app',
@@ -306,7 +306,7 @@ const result = await agent.run('Hello');
     icon: '🧪',
     category: 'infra',
     description: 'Built-in evaluation framework for testing agent quality, accuracy, and performance.',
-    code: `import { Eval } from 'gauss-ai';
+    code: `import { Eval } from 'gauss-ts';
 
 const suite = new Eval({
   agent: myAgent,
@@ -326,7 +326,7 @@ console.log(results.accuracy); // 1.0`,
     icon: '🔄',
     category: 'infra',
     description: 'Circuit breakers, retries with backoff, fallback chains, and timeout management.',
-    code: `import { Agent, resilience } from 'gauss-ai';
+    code: `import { Agent, resilience } from 'gauss-ts';
 
 const agent = new Agent({
   name: 'resilient-agent',
@@ -351,7 +351,7 @@ export const QUICK_START_SNIPPETS = [
   {
     id: 'basic-agent',
     title: 'Basic Agent',
-    code: `import { Agent } from 'gauss-ai';
+    code: `import { Agent } from 'gauss-ts';
 
 const agent = new Agent({
   name: 'assistant',
@@ -365,7 +365,7 @@ console.log(result.content);`,
   {
     id: 'team-coord',
     title: 'Team Coordination',
-    code: `import { Agent, Team } from 'gauss-ai';
+    code: `import { Agent, Team } from 'gauss-ts';
 
 const researcher = new Agent({ name: 'researcher', model: 'gpt-4o' });
 const writer = new Agent({ name: 'writer', model: 'gpt-4o' });
@@ -381,7 +381,7 @@ const result = await team.run('Write about AI agents');`,
   {
     id: 'mcp-server',
     title: 'MCP Server',
-    code: `import { MCPServer } from 'gauss-ai';
+    code: `import { MCPServer } from 'gauss-ts';
 
 const server = new MCPServer({
   name: 'my-tools',
@@ -399,7 +399,7 @@ await server.listen({ transport: 'stdio' });`,
   {
     id: 'tool-reg',
     title: 'Tool Registry',
-    code: `import { ToolRegistry, Agent } from 'gauss-ai';
+    code: `import { ToolRegistry, Agent } from 'gauss-ts';
 
 const registry = new ToolRegistry();
 
@@ -415,7 +415,7 @@ const agent = new Agent({ tools: registry.all() });`,
   {
     id: 'graph-pipeline',
     title: 'Graph Pipeline',
-    code: `import { Graph } from 'gauss-ai';
+    code: `import { Graph } from 'gauss-ts';
 
 const graph = new Graph('classify-and-respond');
 

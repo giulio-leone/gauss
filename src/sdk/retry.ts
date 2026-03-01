@@ -2,7 +2,7 @@
  * Retry utilities — exponential backoff and configurable retry logic.
  *
  * @example
- *   import { withRetry, RetryConfig } from "gauss-ai";
+ *   import { withRetry, RetryConfig } from "gauss-ts";
  *
  *   const result = await withRetry(() => agent.run("Hello"), {
  *     maxRetries: 3,

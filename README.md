@@ -1,6 +1,6 @@
 # Gauss
 
-[![npm version](https://img.shields.io/npm/v/gauss-ai)](https://www.npmjs.com/package/gauss-ai)
+[![npm version](https://img.shields.io/npm/v/gauss-ts)](https://www.npmjs.com/package/gauss-ts)
 [![CI](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml/badge.svg)](https://github.com/giulio-leone/gauss/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -12,13 +12,13 @@
 ## Install
 
 ```bash
-npm install gauss-ai
+npm install gauss-ts
 ```
 
 ## Quick Start — One Line
 
 ```ts
-import { gauss } from "gauss-ai";
+import { gauss } from "gauss-ts";
 
 const answer = await gauss("Explain quantum computing in 3 sentences");
 ```
@@ -28,7 +28,7 @@ That's it. Auto-detects your API key from environment variables.
 ## Agent with Tools
 
 ```ts
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 
 const agent = new Agent({
   name: "assistant",
@@ -50,7 +50,7 @@ console.log(result.text);
 ## Streaming
 
 ```ts
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 
 const agent = new Agent({ provider: "openai", model: "gpt-4o" });
 const stream = agent.streamIter("Tell me a story");
@@ -68,7 +68,7 @@ console.log("\n\nFull text:", stream.text);
 Run multiple prompts in parallel with concurrency control:
 
 ```ts
-import { batch } from "gauss-ai";
+import { batch } from "gauss-ts";
 
 const results = await batch(
   ["Translate: Hello", "Translate: World", "Translate: Goodbye"],
@@ -80,7 +80,7 @@ results.forEach((r) => console.log(r.result?.text ?? r.error?.message));
 ## Multi-Agent Graph
 
 ```ts
-import { Agent, Graph } from "gauss-ai";
+import { Agent, Graph } from "gauss-ts";
 
 const researcher = new Agent({ name: "researcher", instructions: "Research thoroughly" });
 const writer = new Agent({ name: "writer", instructions: "Write clearly" });
@@ -96,7 +96,7 @@ const result = await pipeline.run("Explain quantum computing");
 ## Workflow
 
 ```ts
-import { Agent, Workflow } from "gauss-ai";
+import { Agent, Workflow } from "gauss-ts";
 
 const planner = new Agent({ name: "planner" });
 const executor = new Agent({ name: "executor" });
@@ -112,7 +112,7 @@ const result = await wf.run("Build a REST API");
 ## Multi-Agent Network
 
 ```ts
-import { Agent, Network } from "gauss-ai";
+import { Agent, Network } from "gauss-ts";
 
 const analyst = new Agent({ name: "analyst" });
 const coder = new Agent({ name: "coder" });
@@ -128,7 +128,7 @@ const result = await net.delegate("coder", "Implement a sorting algorithm");
 ## Retry with Backoff
 
 ```ts
-import { Agent, withRetry, retryable } from "gauss-ai";
+import { Agent, withRetry, retryable } from "gauss-ts";
 
 // Wrap any async function:
 const data = await withRetry(() => agent.run("Summarize this"), {
@@ -149,7 +149,7 @@ const result = await resilientRun("Hello");
 Extract typed JSON from LLM responses with auto-retry on parse failure:
 
 ```ts
-import { Agent, structured } from "gauss-ai";
+import { Agent, structured } from "gauss-ts";
 
 const agent = new Agent({ provider: "openai", model: "gpt-4o" });
 
@@ -172,7 +172,7 @@ console.log(data.languages); // ["TypeScript", "Rust", "Python"]
 Composable, type-safe prompt construction with `{{variable}}` placeholders:
 
 ```ts
-import { template, summarize, translate, codeReview } from "gauss-ai";
+import { template, summarize, translate, codeReview } from "gauss-ts";
 
 // Custom template:
 const greet = template("Hello {{name}}, you are a {{role}}.");
@@ -196,7 +196,7 @@ const prompt2 = withTone({
 Compose agent operations into clean data flows:
 
 ```ts
-import { pipe, mapAsync, filterAsync, reduceAsync, compose } from "gauss-ai";
+import { pipe, mapAsync, filterAsync, reduceAsync, compose } from "gauss-ts";
 
 // Pipe: chain async steps
 const result = await pipe(
@@ -238,7 +238,7 @@ const enhance = compose(
 ## Resilience
 
 ```ts
-import { createFallbackProvider, createCircuitBreaker, createResilientAgent } from "gauss-ai";
+import { createFallbackProvider, createCircuitBreaker, createResilientAgent } from "gauss-ts";
 
 const fallback = createFallbackProvider([
   { provider: "openai", model: "gpt-4o" },
@@ -313,7 +313,7 @@ TypeScript SDK (24 modules)
 | Package | Language | Description |
 |---------|----------|-------------|
 | [`gauss-core`](https://github.com/giulio-leone/gauss-core) | Rust | Core engine — NAPI + PyO3 + WASM |
-| [`gauss-ai`](https://github.com/giulio-leone/gauss) | TypeScript | This SDK (NAPI bindings) |
+| [`gauss-ts`](https://github.com/giulio-leone/gauss) | TypeScript | This SDK (NAPI bindings) |
 | [`gauss-py`](https://github.com/giulio-leone/gauss-py) | Python | Python SDK (PyO3 bindings) |
 
 ## API Reference

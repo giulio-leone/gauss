@@ -3,7 +3,7 @@
  *
  * @example
  * ```ts
- * import { AgentSpec, SkillSpec, discoverAgents } from "gauss-ai";
+ * import { AgentSpec, SkillSpec, discoverAgents } from "gauss-ts";
  *
  * // Parse a single AGENTS.MD
  * const spec = AgentSpec.fromMarkdown(content);

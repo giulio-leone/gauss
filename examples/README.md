@@ -6,7 +6,7 @@ Production-ready examples covering all major features of the Gauss native SDK.
 
 ```bash
 # Install dependencies
-npm install gauss-ai
+npm install gauss-ts
 
 # Set your API key
 export OPENAI_API_KEY=sk-...
@@ -47,4 +47,4 @@ npx tsx examples/17-zero-config.ts
 - Node.js 18+
 - TypeScript 5+
 - API key for your chosen provider (OpenAI, Anthropic, Google, Groq, DeepSeek)
-- `gauss-ai` npm package (native Rust bindings via NAPI)
+- `gauss-ts` npm package (native Rust bindings via NAPI)

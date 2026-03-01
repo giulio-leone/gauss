@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/10-team-coordination.ts
 
-import { Agent, Team } from "gauss-ai";
+import { Agent, Team } from "gauss-ts";
 
 async function main(): Promise<void> {
   const analyst = new Agent({

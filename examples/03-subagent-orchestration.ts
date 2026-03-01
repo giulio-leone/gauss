@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/03-subagent-orchestration.ts
 
-import { Agent, Team } from "gauss-ai";
+import { Agent, Team } from "gauss-ts";
 
 async function main(): Promise<void> {
   // ── Specialized agents ─────────────────────────────────────────────

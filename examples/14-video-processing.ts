@@ -8,7 +8,7 @@
 //
 // Usage: npx tsx examples/14-video-processing.ts
 
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 
 async function main(): Promise<void> {
   console.log("Video Processing — placeholder example\n");

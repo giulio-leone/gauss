@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/16-llm-recording.ts
 
-import { Agent, Telemetry, EvalRunner } from "gauss-ai";
+import { Agent, Telemetry, EvalRunner } from "gauss-ts";
 
 async function main(): Promise<void> {
   const telemetry = new Telemetry();

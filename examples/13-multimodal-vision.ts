@@ -7,7 +7,7 @@
 //
 // Usage: npx tsx examples/13-multimodal-vision.ts
 
-import { Agent } from "gauss-ai";
+import { Agent } from "gauss-ts";
 import * as fs from "node:fs";
 
 async function main(): Promise<void> {
