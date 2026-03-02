@@ -117,6 +117,10 @@ export { MiddlewareChain } from "./middleware.js";
 // ─── Plugin System ─────────────────────────────────────────────────
 export { PluginRegistry } from "./plugin.js";
 
+// ─── Typed Tools ──────────────────────────────────────────────────
+export { tool, isTypedTool, createToolExecutor } from "./tool.js";
+export type { TypedToolDef } from "./tool.js";
+
 // ─── MCP ───────────────────────────────────────────────────────────
 export {
   McpServer,
@@ -133,6 +137,10 @@ export {
   type McpSamplingRequest,
   type McpSamplingResponse,
 } from "./mcp.js";
+
+// ─── MCP Client ───────────────────────────────────────────────────
+export { McpClient } from "./mcp-client.js";
+export type { McpClientConfig, McpToolDef, McpToolResult } from "./mcp-client.js";
 
 // ─── Guardrails ────────────────────────────────────────────────────
 export { GuardrailChain } from "./guardrail.js";

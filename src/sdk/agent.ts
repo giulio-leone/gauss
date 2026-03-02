@@ -39,11 +39,17 @@ import type {
   StreamCallback,
   Handle,
   Disposable,
+  MemoryEntry,
 } from "./types.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
 import { AgentStream } from "./stream-iter.js";
+import { isTypedTool, createToolExecutor, type TypedToolDef } from "./tool.js";
+import type { MiddlewareChain } from "./middleware.js";
+import type { GuardrailChain } from "./guardrail.js";
+import type { Memory } from "./memory.js";
+import type { McpClient } from "./mcp-client.js";
 
 /**
  * Transform a raw NAPI result into the public {@link AgentResult} shape.
@@ -104,8 +110,23 @@ export interface AgentConfig {
   /** System instructions prepended to every conversation. */
   instructions?: string;
 
-  /** Tool definitions available to the agent. */
-  tools?: ToolDef[];
+  /** Tool definitions available to the agent. Accepts both raw ToolDef and typed tools with execute callbacks. */
+  tools?: (ToolDef | TypedToolDef)[];
+
+  /** Middleware chain to apply (logging, caching, rate limiting). */
+  middleware?: MiddlewareChain;
+
+  /** Guardrail chain to apply (PII, content moderation, schema validation). */
+  guardrails?: GuardrailChain;
+
+  /** Memory instance for automatic conversation history. */
+  memory?: Memory;
+
+  /** Session ID for memory scoping (default: auto-generated). */
+  sessionId?: string;
+
+  /** MCP clients to consume tools from external MCP servers. */
+  mcpClients?: McpClient[];
 
   /** Sampling temperature (0–2). Higher values produce more creative output. */
   temperature?: number;
@@ -180,9 +201,17 @@ export class Agent implements Disposable {
   private readonly _provider: ProviderType;
   private readonly _model: string;
   private readonly _instructions: string;
-  private _tools: ToolDef[] = [];
+  private _tools: (ToolDef | TypedToolDef)[] = [];
   private _options: AgentOptions = {};
   private disposed = false;
+
+  // ─── Integration Glue (M35) ──────────────────────────────────────
+  private _middleware: MiddlewareChain | null = null;
+  private _guardrails: GuardrailChain | null = null;
+  private _memory: Memory | null = null;
+  private _sessionId: string = "";
+  private _mcpClients: McpClient[] = [];
+  private _mcpToolsLoaded = false;
 
   /**
    * Create a new Agent.
@@ -216,6 +245,13 @@ export class Agent implements Disposable {
     });
 
     if (config.tools) this._tools = [...config.tools];
+
+    // Integration glue (M35)
+    if (config.middleware) this._middleware = config.middleware;
+    if (config.guardrails) this._guardrails = config.guardrails;
+    if (config.memory) this._memory = config.memory;
+    if (config.sessionId) this._sessionId = config.sessionId;
+    if (config.mcpClients) this._mcpClients = [...config.mcpClients];
 
     const ceOpt = config.codeExecution;
     const codeExecution = ceOpt === true
@@ -300,7 +336,7 @@ export class Agent implements Disposable {
    *
    * @since 1.0.0
    */
-  addTool(tool: ToolDef): this {
+  addTool(tool: ToolDef | TypedToolDef): this {
     this._tools.push(tool);
     return this;
   }
@@ -323,7 +359,7 @@ export class Agent implements Disposable {
    *
    * @since 1.0.0
    */
-  addTools(tools: ToolDef[]): this {
+  addTools(tools: (ToolDef | TypedToolDef)[]): this {
     this._tools.push(...tools);
     return this;
   }
@@ -345,6 +381,99 @@ export class Agent implements Disposable {
    */
   setOptions(options: Partial<AgentOptions>): this {
     this._options = { ...this._options, ...options };
+    return this;
+  }
+
+  // ─── Integration Glue (M35) ────────────────────────────────────
+
+  /**
+   * Attach a middleware chain (logging, caching, rate limiting). Chainable.
+   *
+   * @param chain - A configured {@link MiddlewareChain} instance.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * agent.withMiddleware(
+   *   new MiddlewareChain().useLogging().useCaching(60000).useRateLimit(100)
+   * );
+   * ```
+   *
+   * @since 1.2.0
+   */
+  withMiddleware(chain: MiddlewareChain): this {
+    this._middleware = chain;
+    return this;
+  }
+
+  /**
+   * Attach a guardrail chain (content moderation, PII, schema validation). Chainable.
+   *
+   * @param chain - A configured {@link GuardrailChain} instance.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * agent.withGuardrails(
+   *   new GuardrailChain().addPiiDetection("redact").addContentModeration(["violence"], [])
+   * );
+   * ```
+   *
+   * @since 1.2.0
+   */
+  withGuardrails(chain: GuardrailChain): this {
+    this._guardrails = chain;
+    return this;
+  }
+
+  /**
+   * Attach memory for automatic conversation history. Chainable.
+   *
+   * @description When memory is attached, the agent automatically:
+   * - Recalls recent entries before each run (prepended as context)
+   * - Stores the conversation (input + output) after each run
+   *
+   * @param memory - A {@link Memory} instance.
+   * @param sessionId - Optional session ID for scoping memory entries.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * const memory = new Memory();
+   * agent.withMemory(memory, "session-123");
+   * await agent.run("Hello!"); // stored in memory
+   * await agent.run("What did I just say?"); // recalls previous context
+   * ```
+   *
+   * @since 1.2.0
+   */
+  withMemory(memory: Memory, sessionId?: string): this {
+    this._memory = memory;
+    if (sessionId) this._sessionId = sessionId;
+    return this;
+  }
+
+  /**
+   * Consume tools from an external MCP server. Chainable.
+   *
+   * @description Registers an MCP client whose tools will be loaded
+   * and made available to the agent on the first run.
+   *
+   * @param client - A connected {@link McpClient} instance.
+   * @returns `this` for fluent chaining.
+   *
+   * @example
+   * ```ts
+   * const mcp = new McpClient({ command: "npx", args: ["-y", "@mcp/server-fs"] });
+   * await mcp.connect();
+   * agent.useMcpServer(mcp);
+   * ```
+   *
+   * @since 1.2.0
+   */
+  useMcpServer(client: McpClient): this {
+    this._mcpClients.push(client);
+    this._mcpToolsLoaded = false;
     return this;
   }
 
@@ -371,16 +500,71 @@ export class Agent implements Disposable {
    */
   async run(input: string | Message[]): Promise<AgentResult> {
     this.assertNotDisposed();
-    const messages = typeof input === "string"
+
+    // Load MCP tools if needed
+    await this.ensureMcpTools();
+
+    let messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
-      : input;
-    return toSdkResult(await agent_run(
-      this._name,
-      this.providerHandle,
-      this._tools,
-      messages,
-      this._options
-    ));
+      : [...input];
+
+    // Memory recall: inject context
+    if (this._memory) {
+      const recalled = await this._memory.recall(
+        this._sessionId ? { sessionId: this._sessionId } : undefined
+      );
+      if (recalled.length > 0) {
+        const contextText = recalled.map(e => e.content).join("\n");
+        messages = [
+          { role: "system" as const, content: `Previous context:\n${contextText}` },
+          ...messages,
+        ];
+      }
+    }
+
+    // Extract tool definitions (strip execute callbacks for NAPI)
+    const { toolDefs, executor } = this.resolveToolsAndExecutor();
+
+    let result: AgentResult;
+    if (executor) {
+      result = toSdkResult(await agent_run_with_tool_executor(
+        this._name,
+        this.providerHandle,
+        toolDefs,
+        messages,
+        this._options,
+        executor
+      ));
+    } else {
+      result = toSdkResult(await agent_run(
+        this._name,
+        this.providerHandle,
+        toolDefs,
+        messages,
+        this._options
+      ));
+    }
+
+    // Memory store: save conversation
+    if (this._memory) {
+      const userText = typeof input === "string" ? input : input.map(m => m.content).join("\n");
+      await this._memory.store({
+        id: `${Date.now()}-user`,
+        content: userText,
+        entryType: "conversation",
+        timestamp: new Date().toISOString(),
+        sessionId: this._sessionId || undefined,
+      });
+      await this._memory.store({
+        id: `${Date.now()}-assistant`,
+        content: result.text,
+        entryType: "conversation",
+        timestamp: new Date().toISOString(),
+        sessionId: this._sessionId || undefined,
+      });
+    }
+
+    return result;
   }
 
   /**
@@ -410,16 +594,33 @@ export class Agent implements Disposable {
     toolExecutor: ToolExecutor
   ): Promise<AgentResult> {
     this.assertNotDisposed();
+
+    await this.ensureMcpTools();
+
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
+
+    const { toolDefs, executor: typedExecutor } = this.resolveToolsAndExecutor();
+
+    // Compose typed tool executor with user-provided executor
+    const composedExecutor: ToolExecutor = async (callJson: string) => {
+      // Try typed tools first, then fall back to user executor
+      if (typedExecutor) {
+        const result = await typedExecutor(callJson);
+        const parsed = JSON.parse(result);
+        if (!parsed.error?.startsWith("Unknown tool:")) return result;
+      }
+      return toolExecutor(callJson);
+    };
+
     return toSdkResult(await agent_run_with_tool_executor(
       this._name,
       this.providerHandle,
-      this._tools,
+      toolDefs,
       messages,
       this._options,
-      toolExecutor
+      composedExecutor
     ));
   }
 
@@ -451,17 +652,24 @@ export class Agent implements Disposable {
     toolExecutor?: ToolExecutor
   ): Promise<AgentResult> {
     this.assertNotDisposed();
+
+    await this.ensureMcpTools();
+
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
+
+    const { toolDefs, executor: typedExecutor } = this.resolveToolsAndExecutor();
+    const finalExecutor = toolExecutor ?? typedExecutor ?? NOOP_TOOL_EXECUTOR;
+
     return toSdkResult(await agent_stream_with_tool_executor(
       this._name,
       this.providerHandle,
-      this._tools,
+      toolDefs,
       messages,
       this._options,
       onEvent,
-      toolExecutor ?? NOOP_TOOL_EXECUTOR
+      finalExecutor
     ));
   }
 
@@ -496,13 +704,17 @@ export class Agent implements Disposable {
     const messages = typeof input === "string"
       ? [{ role: "user" as const, content: input }]
       : input;
+
+    const { toolDefs, executor: typedExecutor } = this.resolveToolsAndExecutor();
+    const finalExecutor = toolExecutor ?? typedExecutor ?? NOOP_TOOL_EXECUTOR;
+
     return new AgentStream(
       this._name,
       this.providerHandle,
-      this._tools,
+      toolDefs,
       messages,
       this._options,
-      toolExecutor ?? NOOP_TOOL_EXECUTOR
+      finalExecutor
     );
   }
 
@@ -597,6 +809,10 @@ export class Agent implements Disposable {
   destroy(): void {
     if (!this.disposed) {
       this.disposed = true;
+      // Close MCP clients
+      for (const client of this._mcpClients) {
+        try { client.close(); } catch { /* ignore */ }
+      }
       try {
         destroy_provider(this.providerHandle);
       } catch {
@@ -626,6 +842,53 @@ export class Agent implements Disposable {
     if (this.disposed) {
       throw new Error(`Agent "${this._name}" has been destroyed`);
     }
+  }
+
+  /**
+   * Resolve typed tools into plain ToolDefs + a ToolExecutor.
+   * @internal
+   */
+  private resolveToolsAndExecutor(): { toolDefs: ToolDef[]; executor: ToolExecutor | null } {
+    const typedTools = this._tools.filter(isTypedTool);
+
+    // Strip execute callbacks for the NAPI layer
+    const toolDefs: ToolDef[] = this._tools.map(t => ({
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
+    }));
+
+    const executor = typedTools.length > 0
+      ? createToolExecutor(typedTools)
+      : null;
+
+    return { toolDefs, executor };
+  }
+
+  /**
+   * Load tools from all connected MCP clients (lazy, once).
+   * @internal
+   */
+  private async ensureMcpTools(): Promise<void> {
+    if (this._mcpToolsLoaded || this._mcpClients.length === 0) return;
+
+    for (const client of this._mcpClients) {
+      const { tools, executor } = await client.getToolsWithExecutor();
+      // Add MCP tools as typed tools with the MCP executor as their execute callback
+      for (const t of tools) {
+        const mcpTool: TypedToolDef = {
+          ...t,
+          execute: async (params: Record<string, unknown>) => {
+            const callJson = JSON.stringify({ tool: t.name, args: params });
+            const resultJson = await executor(callJson);
+            return JSON.parse(resultJson);
+          },
+        };
+        this._tools.push(mcpTool);
+      }
+    }
+
+    this._mcpToolsLoaded = true;
   }
 }
 

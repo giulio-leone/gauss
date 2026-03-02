@@ -137,7 +137,7 @@ describe("Agent", () => {
         [{ name: "search", description: "Search" }],
         [{ role: "user", content: "query" }],
         expect.any(Object),
-        executor
+        expect.any(Function)
       );
       agent.destroy();
     });
