@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { ControlPlane } from "../control-plane.js";
 import { clearPricing, setPricing } from "../tokens.js";
@@ -51,5 +54,57 @@ describe("ControlPlane", () => {
 
     await cp.stopServer();
   });
-});
 
+  it("supports auth token protection", async () => {
+    const cp = new ControlPlane({ authToken: "secret-token" });
+    const { url } = await cp.startServer("127.0.0.1", 0);
+
+    const denied = await fetch(`${url}/api/snapshot`);
+    expect(denied.status).toBe(401);
+
+    const allowed = await fetch(`${url}/api/snapshot?token=secret-token`);
+    expect(allowed.status).toBe(200);
+
+    await cp.stopServer();
+  });
+
+  it("supports section filters, history, timeline, dag, and persistence", async () => {
+    const persistPath = join(tmpdir(), `gauss-cp-${Date.now()}.jsonl`);
+    const cp = new ControlPlane({
+      persistPath,
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }, { name: "s2" }],
+        exportMetrics: () => ({ totalSpans: 2 }),
+      },
+      approvals: {
+        listPending: () => [{ id: "req-1" }],
+      },
+      model: "cp-test-model",
+    });
+    setPricing("cp-test-model", { inputPerToken: 0.001, outputPerToken: 0.001 });
+    cp.setCostUsage({ inputTokens: 2, outputTokens: 3 });
+
+    const { url } = await cp.startServer("127.0.0.1", 0);
+    const metricsOnly = await fetch(`${url}/api/snapshot?section=metrics`);
+    const metricsBody = await metricsOnly.json() as { metrics: { totalSpans: number } };
+    expect(metricsBody.metrics.totalSpans).toBe(2);
+
+    const timelineRes = await fetch(`${url}/api/timeline`);
+    const timeline = await timelineRes.json() as Array<{ spanCount: number; pendingApprovalsCount: number }>;
+    expect(timeline.length).toBeGreaterThan(0);
+    expect(timeline[timeline.length - 1].spanCount).toBe(2);
+    expect(timeline[timeline.length - 1].pendingApprovalsCount).toBe(1);
+
+    const dagRes = await fetch(`${url}/api/dag`);
+    const dag = await dagRes.json() as { nodes: Array<unknown>; edges: Array<unknown> };
+    expect(dag.nodes.length).toBe(2);
+    expect(dag.edges.length).toBe(1);
+
+    await cp.stopServer();
+    clearPricing();
+    expect(existsSync(persistPath)).toBe(true);
+    const lines = readFileSync(persistPath, "utf8").trim().split("\n");
+    expect(lines.length).toBeGreaterThan(0);
+    rmSync(persistPath, { force: true });
+  });
+});
