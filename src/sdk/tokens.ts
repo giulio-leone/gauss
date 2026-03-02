@@ -1,5 +1,5 @@
 /**
- * Token counting utilities backed by Rust core (tiktoken).
+ * Token counting and cost estimation utilities backed by Rust core (tiktoken).
  */
 import {
   count_tokens,
@@ -10,6 +10,53 @@ import {
 } from "gauss-napi";
 
 import type { CostEstimate, JsMessage } from "./types.js";
+
+// ─── Runtime Pricing Override ────────────────────────────────────────
+
+/**
+ * Per-token pricing for a model.
+ * All values are in USD per token.
+ */
+export interface ModelPricing {
+  inputPerToken: number;
+  outputPerToken: number;
+  reasoningPerToken?: number;
+  cacheReadPerToken?: number;
+  cacheCreationPerToken?: number;
+}
+
+const _pricingOverrides = new Map<string, ModelPricing>();
+
+/**
+ * Set custom pricing for a model (overrides built-in Rust pricing).
+ *
+ * @example
+ * ```ts
+ * setPricing("my-custom-model", {
+ *   inputPerToken: 0.000003,
+ *   outputPerToken: 0.000015,
+ * });
+ * ```
+ */
+export function setPricing(model: string, pricing: ModelPricing): void {
+  _pricingOverrides.set(model, pricing);
+}
+
+/**
+ * Get custom pricing for a model, if set.
+ */
+export function getPricing(model: string): ModelPricing | undefined {
+  return _pricingOverrides.get(model);
+}
+
+/**
+ * Clear all custom pricing overrides.
+ */
+export function clearPricing(): void {
+  _pricingOverrides.clear();
+}
+
+// ─── Token Counting ──────────────────────────────────────────────────
 
 export function countTokens(text: string): number {
   return count_tokens(text);
@@ -27,6 +74,8 @@ export function getContextWindowSize(model: string): number {
   return get_context_window_size(model);
 }
 
+// ─── Cost Estimation ─────────────────────────────────────────────────
+
 export function estimateCost(
   model: string,
   usage: {
@@ -37,6 +86,34 @@ export function estimateCost(
     cacheCreationTokens?: number;
   }
 ): CostEstimate {
+  // Check for SDK-level pricing override first
+  const override = _pricingOverrides.get(model);
+  if (override) {
+    const inputCost = usage.inputTokens * override.inputPerToken;
+    const outputCost = usage.outputTokens * override.outputPerToken;
+    const reasoningCost = (usage.reasoningTokens ?? 0) * (override.reasoningPerToken ?? override.outputPerToken);
+    const cacheReadCost = (usage.cacheReadTokens ?? 0) * (override.cacheReadPerToken ?? override.inputPerToken * 0.5);
+    const cacheCreationCost = (usage.cacheCreationTokens ?? 0) * (override.cacheCreationPerToken ?? override.inputPerToken * 1.25);
+
+    return {
+      model,
+      normalizedModel: model,
+      currency: "USD",
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      reasoningTokens: usage.reasoningTokens ?? 0,
+      cacheReadTokens: usage.cacheReadTokens ?? 0,
+      cacheCreationTokens: usage.cacheCreationTokens ?? 0,
+      inputCostUsd: inputCost,
+      outputCostUsd: outputCost,
+      reasoningCostUsd: reasoningCost,
+      cacheReadCostUsd: cacheReadCost,
+      cacheCreationCostUsd: cacheCreationCost,
+      totalCostUsd: inputCost + outputCost + reasoningCost + cacheReadCost + cacheCreationCost,
+    };
+  }
+
+  // Fall back to Rust core pricing
   const raw = estimate_cost(
     model,
     usage.inputTokens,

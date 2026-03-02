@@ -170,6 +170,10 @@ export {
   countMessageTokens,
   getContextWindowSize,
   estimateCost,
+  setPricing,
+  getPricing,
+  clearPricing,
+  type ModelPricing,
 } from "./tokens.js";
 
 // ─── Config ────────────────────────────────────────────────────────
