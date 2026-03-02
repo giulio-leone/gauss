@@ -51,6 +51,19 @@ export class VectorStore implements Disposable {
     ) as Promise<SearchResult[]>;
   }
 
+  /**
+   * Search by text query with auto-embedding via a provider.
+   */
+  async searchByText(
+    query: string,
+    topK: number,
+    embedFn: (text: string) => Promise<number[]>
+  ): Promise<SearchResult[]> {
+    this.assertNotDisposed();
+    const embedding = await embedFn(query);
+    return this.search(embedding, topK);
+  }
+
   destroy(): void {
     if (!this.disposed) {
       this.disposed = true;

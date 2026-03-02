@@ -97,6 +97,10 @@ export { Memory } from "./memory.js";
 
 // ─── RAG / Vector Store ────────────────────────────────────────────
 export { VectorStore } from "./vector-store.js";
+export { TextSplitter, splitText } from "./text-splitter.js";
+export type { TextSplitterOptions, TextChunk } from "./text-splitter.js";
+export { loadText, loadMarkdown, loadJson } from "./document-loader.js";
+export type { DocumentLoaderOptions, LoadedDocument } from "./document-loader.js";
 
 // ─── Graph & Workflow ──────────────────────────────────────────────
 export { Graph } from "./graph.js";
