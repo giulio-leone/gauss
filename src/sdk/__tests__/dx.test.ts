@@ -33,7 +33,7 @@ import { Agent } from "../agent.js";
 import { withRetry, retryable } from "../retry.js";
 import { structured } from "../structured.js";
 import { template, summarize, translate, codeReview, classify, extract } from "../template.js";
-import { agent_run } from "gauss-napi";
+import { agent_run, create_provider } from "gauss-napi";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -106,6 +106,33 @@ describe("retryable", () => {
     const run = retryable(agent, { maxRetries: 1, baseDelayMs: 1 });
     const result = await run("Hello");
     expect(result.text).toBeDefined();
+    agent.destroy();
+  });
+});
+
+describe("routing policy", () => {
+  it("resolves model aliases to configured provider/model targets", () => {
+    const agent = new Agent({
+      provider: "openai",
+      model: "fast-chat",
+      providerOptions: { apiKey: "k" },
+      routingPolicy: {
+        aliases: {
+          "fast-chat": [
+            { provider: "openai", model: "gpt-4o-mini", priority: 1 },
+            { provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 },
+          ],
+        },
+      },
+    });
+
+    expect(agent.provider).toBe("anthropic");
+    expect(agent.model).toBe("claude-3-5-haiku-latest");
+    expect(create_provider).toHaveBeenCalledWith(
+      "anthropic",
+      "claude-3-5-haiku-latest",
+      expect.anything(),
+    );
     agent.destroy();
   });
 });

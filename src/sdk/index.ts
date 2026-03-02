@@ -83,6 +83,12 @@ export { Agent, gauss } from "./agent.js";
 export type { AgentConfig } from "./agent.js";
 export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
+export {
+  resolveRoutingTarget,
+  type RoutingPolicy,
+  type RoutingCandidate,
+  type ResolvedRoutingTarget,
+} from "./routing-policy.js";
 
 // ─── Streaming ────────────────────────────────────────────────────
 export { AgentStream } from "./stream-iter.js";

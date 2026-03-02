@@ -145,6 +145,16 @@ const a = Agent.fromEnv({ instructions: "Be precise." });
 
 // Clone with a different model
 const b = a.withModel("gpt-4.1");
+
+// Optional routing policy: alias + provider/model target
+const c = new Agent({
+  model: "fast-chat",
+  routingPolicy: {
+    aliases: {
+      "fast-chat": [{ provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 }],
+    },
+  },
+});
 ```
 
 ### Unified Control Plane (M51 foundation)
@@ -179,6 +189,7 @@ console.log(`Control Plane: ${url}`);
 - **Reliability**: retry, circuit breaker, fallback providers
 - **Observability & quality**: `Telemetry`, `EvalRunner`
 - **Control plane**: `ControlPlane` (local snapshot API + dashboard)
+- **Routing policy**: `routingPolicy` + `resolveRoutingTarget()`
 - **Enterprise preset**: `enterprisePreset()`, `enterpriseRun()`
 
 ---

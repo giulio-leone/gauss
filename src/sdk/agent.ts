@@ -47,6 +47,8 @@ import { DisposedError } from "./errors.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
+import type { RoutingPolicy } from "./routing-policy.js";
+import { resolveRoutingTarget } from "./routing-policy.js";
 import { AgentStream } from "./stream-iter.js";
 import { tool as toolFn, isTypedTool, createToolExecutor, type TypedToolDef } from "./tool.js";
 import type { MiddlewareChain } from "./middleware.js";
@@ -126,6 +128,9 @@ export interface AgentConfig {
 
   /** Model identifier (e.g. `"gpt-4o"`, `"claude-sonnet-4-20250514"`). Auto-selected if omitted. */
   model?: string;
+
+  /** Optional alias/fallback routing policy for model selection. */
+  routingPolicy?: RoutingPolicy;
 
   /** Provider connection options. API key auto-resolved from env if omitted. */
   providerOptions?: ProviderOptions;
@@ -256,8 +261,11 @@ export class Agent implements Disposable {
    */
   constructor(config: AgentConfig = {}) {
     const detected = detectProvider();
-    this._provider = config.provider ?? detected?.provider ?? "openai";
-    this._model = config.model ?? detected?.model ?? OPENAI_DEFAULT;
+    const requestedProvider = config.provider ?? detected?.provider ?? "openai";
+    const requestedModel = config.model ?? detected?.model ?? OPENAI_DEFAULT;
+    const resolved = resolveRoutingTarget(config.routingPolicy, requestedProvider, requestedModel);
+    this._provider = resolved.provider;
+    this._model = resolved.model;
     this._name = config.name ?? "agent";
     this._instructions = config.instructions ?? "";
 
