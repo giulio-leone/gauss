@@ -44,8 +44,48 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.cjs",
+      "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./agent": {
+      "types": "./dist/agent.d.ts",
+      "import": "./dist/agent.js",
+      "require": "./dist/agent.cjs"
+    },
+    "./rag": {
+      "types": "./dist/rag.d.ts",
+      "import": "./dist/rag.js",
+      "require": "./dist/rag.cjs"
+    },
+    "./orchestration": {
+      "types": "./dist/orchestration.d.ts",
+      "import": "./dist/orchestration.js",
+      "require": "./dist/orchestration.cjs"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.js",
+      "require": "./dist/middleware.cjs"
+    },
+    "./mcp": {
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js",
+      "require": "./dist/mcp.cjs"
+    },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "import": "./dist/tools.js",
+      "require": "./dist/tools.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "agent": ["dist/agent.d.ts"],
+      "rag": ["dist/rag.d.ts"],
+      "orchestration": ["dist/orchestration.d.ts"],
+      "middleware": ["dist/middleware.d.ts"],
+      "mcp": ["dist/mcp.d.ts"],
+      "tools": ["dist/tools.d.ts"]
     }
   },
   "files": [
