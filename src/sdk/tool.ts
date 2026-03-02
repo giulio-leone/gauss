@@ -126,7 +126,7 @@ export function createToolExecutor(
       return typeof result === "string" ? result : JSON.stringify(result);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      return JSON.stringify({ error: message });
+      return JSON.stringify({ error: `Tool "${toolName}" failed: ${message}` });
     }
   };
 }

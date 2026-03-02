@@ -120,7 +120,7 @@ describe("createToolExecutor", () => {
 
     const executor = createToolExecutor([failing]);
     const result = await executor(JSON.stringify({ tool: "fail", args: {} }));
-    expect(JSON.parse(result)).toEqual({ error: "boom" });
+    expect(JSON.parse(result)).toEqual({ error: 'Tool "fail" failed: boom' });
   });
 
   it("uses fallback for unmatched tools", async () => {

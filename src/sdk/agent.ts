@@ -40,7 +40,10 @@ import type {
   Handle,
   Disposable,
   MemoryEntry,
+  GroundingMetadata,
 } from "./types.js";
+
+import { DisposedError } from "./errors.js";
 
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
@@ -61,11 +64,31 @@ import type { McpClient } from "./mcp-client.js";
  * @returns Normalised {@link AgentResult}.
  * @internal
  */
-function toSdkResult(raw: any): AgentResult {
+interface RawNapiResult {
+  text: string;
+  steps: number;
+  inputTokens: number;
+  outputTokens: number;
+  messages?: Message[];
+  tool_calls?: Array<{ name: string; arguments: Record<string, unknown> }>;
+  thinking?: string;
+  structuredOutput?: Record<string, unknown>;
+  groundingMetadata?: GroundingMetadata[];
+  citations?: Array<{
+    citationType?: string;
+    type?: string;
+    citedText?: string;
+    documentTitle?: string;
+    start?: number;
+    end?: number;
+  }>;
+}
+
+function toSdkResult(raw: RawNapiResult): AgentResult {
   return {
     ...raw,
-    citations: raw.citations?.map((c: any) => ({
-      type: c.citationType ?? c.type,
+    citations: raw.citations?.map((c) => ({
+      type: c.citationType ?? c.type ?? "unknown",
       citedText: c.citedText,
       documentTitle: c.documentTitle,
       start: c.start,
@@ -860,7 +883,7 @@ export class Agent implements Disposable {
 
   private assertNotDisposed(): void {
     if (this.disposed) {
-      throw new Error(`Agent "${this._name}" has been destroyed`);
+      throw new DisposedError("Agent", this._name);
     }
   }
 

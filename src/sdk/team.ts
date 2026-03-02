@@ -22,8 +22,9 @@ import {
   destroy_team,
 } from "gauss-napi";
 
-import type { Handle, Disposable } from "./types.js";
+import type { Handle, Disposable, ProviderType } from "./types.js";
 import { Agent } from "./agent.js";
+import { DisposedError } from "./errors.js";
 
 export type TeamStrategy = "sequential" | "parallel";
 
@@ -39,6 +40,7 @@ export interface TeamResult {
 
 export class Team implements Disposable {
   private readonly _handle: Handle;
+  private readonly _name: string;
   private disposed = false;
   private agents: Agent[] = [];
 
@@ -62,7 +64,7 @@ export class Team implements Disposable {
     for (const spec of agents) {
       const agent = new Agent({
         name: spec.name,
-        provider: (spec.provider as any) ?? "openai",
+        provider: (spec.provider as ProviderType) ?? "openai",
         model: spec.model ?? "gpt-4o",
         instructions: spec.instructions,
       });
@@ -73,6 +75,7 @@ export class Team implements Disposable {
   }
 
   constructor(name: string) {
+    this._name = name;
     this._handle = create_team(name);
   }
 
@@ -120,6 +123,6 @@ export class Team implements Disposable {
   }
 
   private assertNotDisposed(): void {
-    if (this.disposed) throw new Error("Team has been destroyed");
+    if (this.disposed) throw new DisposedError("Team", this._name);
   }
 }

@@ -24,6 +24,7 @@ import {
 
 import type { Handle, Disposable, ToolDef } from "./types.js";
 import type { Agent } from "./agent.js";
+import { DisposedError, ValidationError } from "./errors.js";
 
 /** Router function invoked at runtime to decide the next node. */
 export type RouterFn = (result: Record<string, unknown>) => string | Promise<string>;
@@ -166,7 +167,7 @@ export class Graph implements Disposable {
     ]);
     const entryNodes = [...this._nodes.keys()].filter(n => !targets.has(n));
     if (entryNodes.length === 0) {
-      throw new Error("Graph has no entry node (every node has an incoming edge)");
+      throw new ValidationError("Graph has no entry node (every node has an incoming edge)");
     }
 
     const outputs: Record<string, Record<string, unknown>> = {};
@@ -176,7 +177,7 @@ export class Graph implements Disposable {
     while (currentNodeId) {
       const nodeCfg = this._nodes.get(currentNodeId);
       if (!nodeCfg) {
-        throw new Error(`Node "${currentNodeId}" not found in graph`);
+        throw new ValidationError(`Node "${currentNodeId}" not found in graph`);
       }
 
       const agentInput = nodeCfg.instructions
@@ -212,6 +213,6 @@ export class Graph implements Disposable {
   }
 
   private assertNotDisposed(): void {
-    if (this.disposed) throw new Error("Graph has been destroyed");
+    if (this.disposed) throw new DisposedError("Graph", "graph");
   }
 }

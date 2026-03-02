@@ -15,6 +15,9 @@
 // ─── Quick Start ───────────────────────────────────────────────────
 // gauss() is re-exported via the Core Agent section below
 
+// ─── Errors ────────────────────────────────────────────────────────
+export { GaussError, DisposedError, ProviderError, ToolExecutionError, ValidationError } from "./errors.js";
+
 // ─── Types ─────────────────────────────────────────────────────────
 export type {
   ProviderOptions,

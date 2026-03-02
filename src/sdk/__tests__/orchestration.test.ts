@@ -73,7 +73,7 @@ describe("Graph", () => {
   it("throws after destroy", async () => {
     const g = new Graph();
     g.destroy();
-    await expect(g.run("test")).rejects.toThrow("Graph has been destroyed");
+    await expect(g.run("test")).rejects.toThrow("has been destroyed");
   });
 });
 
@@ -158,6 +158,6 @@ describe("Team", () => {
   it("throws after destroy", async () => {
     const team = new Team("disposable");
     team.destroy();
-    await expect(team.run("test")).rejects.toThrow("Team has been destroyed");
+    await expect(team.run("test")).rejects.toThrow("has been destroyed");
   });
 });
