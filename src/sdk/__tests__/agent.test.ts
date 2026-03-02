@@ -45,6 +45,7 @@ import {
   destroy_provider,
   agent_run,
   agent_run_with_tool_executor,
+  agent_stream_with_tool_executor,
 } from "gauss-napi";
 
 beforeEach(() => {
@@ -186,6 +187,23 @@ describe("Agent", () => {
     it("version returns core version", () => {
       expect(version()).toBe("1.0.0-test");
     });
+
+    it("fromEnv creates an agent with overrides", () => {
+      const agent = Agent.fromEnv({ name: "env-agent", providerOptions: { apiKey: "k" } });
+      expect(agent.name).toBe("env-agent");
+      expect(create_provider).toHaveBeenCalledOnce();
+      agent.destroy();
+    });
+
+    it("withModel clones the agent with a new model", () => {
+      const base = new Agent({ providerOptions: { apiKey: "k" }, model: "gpt-4.1" });
+      const clone = base.withModel("gpt-5.2");
+      expect(clone).not.toBe(base);
+      expect(clone.model).toBe("gpt-5.2");
+      expect(vi.mocked(create_provider)).toHaveBeenLastCalledWith("openai", "gpt-5.2", { apiKey: "k" });
+      base.destroy();
+      clone.destroy();
+    });
   });
 });
 
@@ -232,6 +250,22 @@ describe("AgentStream", () => {
     expect(events[0].text).toBe("Hello");
     expect(events[1].text).toBe(" World");
     expect(stream.result?.text).toBe("Hello World");
+    agent.destroy();
+  });
+
+  it("streamText aggregates text deltas", async () => {
+    vi.mocked(agent_stream_with_tool_executor).mockImplementation(async (_name, _h, _t, _m, _o, onEvent, _exec) => {
+      onEvent?.('{"type":"text_delta","text":"Hello"}');
+      onEvent?.('{"type":"text_delta","delta":" World"}');
+      return { text: "Hello World", steps: 1, inputTokens: 5, outputTokens: 10 };
+    });
+    const agent = new Agent({ providerOptions: { apiKey: "k" } });
+    const onDelta = vi.fn();
+    const text = await agent.streamText("Hello", onDelta);
+    expect(text).toBe("Hello World");
+    expect(onDelta).toHaveBeenCalledTimes(2);
+    expect(onDelta).toHaveBeenNthCalledWith(1, "Hello");
+    expect(onDelta).toHaveBeenNthCalledWith(2, " World");
     agent.destroy();
   });
 });

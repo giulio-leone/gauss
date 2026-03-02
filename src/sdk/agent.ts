@@ -223,6 +223,7 @@ export class Agent implements Disposable {
   private readonly _name: string;
   private readonly _provider: ProviderType;
   private readonly _model: string;
+  private readonly _providerOptions: ProviderOptions & { apiKey: string };
   private readonly _instructions: string;
   private _tools: (ToolDef | TypedToolDef)[] = [];
   private _options: AgentOptions = {};
@@ -262,10 +263,11 @@ export class Agent implements Disposable {
 
     const apiKey =
       config.providerOptions?.apiKey ?? resolveApiKey(this._provider);
-    this.providerHandle = create_provider(this._provider, this._model, {
+    this._providerOptions = {
       apiKey,
       ...config.providerOptions,
-    });
+    } as ProviderOptions & { apiKey: string };
+    this.providerHandle = create_provider(this._provider, this._model, this._providerOptions);
 
     if (config.tools) this._tools = [...config.tools];
 
@@ -298,6 +300,23 @@ export class Agent implements Disposable {
       nativeCodeExecution: config.nativeCodeExecution,
       responseModalities: config.responseModalities,
     };
+  }
+
+  /**
+   * Create an agent using provider/model auto-detection from environment variables.
+   *
+   * @description Equivalent to `new Agent(config)`, but clearer in intent for env-driven setup.
+   *
+   * @param config - Optional partial configuration overrides.
+   * @returns A new {@link Agent} instance.
+   *
+   * @example
+   * ```ts
+   * const agent = Agent.fromEnv({ instructions: "Be concise." });
+   * ```
+   */
+  static fromEnv(config: AgentConfig = {}): Agent {
+    return new Agent(config);
   }
 
   // ─── Accessors ──────────────────────────────────────────────────
@@ -425,6 +444,23 @@ export class Agent implements Disposable {
   setOptions(options: Partial<AgentOptions>): this {
     this._options = { ...this._options, ...options };
     return this;
+  }
+
+  /**
+   * Clone this agent with a different model.
+   *
+   * @description Returns a **new** agent instance preserving tools and integrations,
+   * but using the provided model identifier.
+   *
+   * @param model - Target model identifier.
+   * @returns A new {@link Agent} configured with the selected model.
+   */
+  withModel(model: string): Agent {
+    this.assertNotDisposed();
+    return new Agent({
+      ...this.toConfig(),
+      model,
+    });
   }
 
   // ─── Integration Glue (M35) ────────────────────────────────────
@@ -762,6 +798,39 @@ export class Agent implements Disposable {
   }
 
   /**
+   * Stream only text deltas with a tiny DX helper.
+   *
+   * @description Aggregates all streamed text deltas into a final string and optionally
+   * invokes `onDelta` for each chunk as it arrives.
+   *
+   * @param input - A string prompt or an array of {@link Message} objects.
+   * @param onDelta - Optional callback invoked for each text delta.
+   * @param toolExecutor - Optional async callback for handling tool invocations.
+   * @returns The final response text.
+   */
+  async streamText(
+    input: string | Message[],
+    onDelta?: (delta: string) => void,
+    toolExecutor?: ToolExecutor
+  ): Promise<string> {
+    this.assertNotDisposed();
+    const stream = this.streamIter(input, toolExecutor);
+    let aggregated = "";
+
+    for await (const event of stream) {
+      if (event.type !== "text_delta") continue;
+      const delta = typeof event.text === "string"
+        ? event.text
+        : (typeof event.delta === "string" ? event.delta : "");
+      if (!delta) continue;
+      aggregated += delta;
+      onDelta?.(delta);
+    }
+
+    return stream.result?.text ?? aggregated;
+  }
+
+  /**
    * Perform a single raw LLM call without the agentic loop.
    *
    * @description Bypasses the multi-step agent loop and sends the input directly to the model
@@ -932,6 +1001,37 @@ export class Agent implements Disposable {
     }
 
     this._mcpToolsLoaded = true;
+  }
+
+  /** Snapshot current agent configuration for cloning helpers. */
+  private toConfig(): AgentConfig {
+    return {
+      name: this._name,
+      provider: this._provider,
+      model: this._model,
+      providerOptions: { ...this._providerOptions },
+      instructions: this._instructions || undefined,
+      tools: [...this._tools],
+      middleware: this._middleware ?? undefined,
+      guardrails: this._guardrails ?? undefined,
+      memory: this._memory ?? undefined,
+      sessionId: this._sessionId || undefined,
+      mcpClients: [...this._mcpClients],
+      temperature: this._options.temperature,
+      maxSteps: this._options.maxSteps,
+      topP: this._options.topP,
+      maxTokens: this._options.maxTokens,
+      seed: this._options.seed,
+      stopOnTool: this._options.stopOnTool,
+      outputSchema: this._options.outputSchema,
+      thinkingBudget: this._options.thinkingBudget,
+      reasoningEffort: this._options.reasoningEffort,
+      cacheControl: this._options.cacheControl,
+      codeExecution: this._options.codeExecution,
+      grounding: this._options.grounding,
+      nativeCodeExecution: this._options.nativeCodeExecution,
+      responseModalities: this._options.responseModalities,
+    };
   }
 }
 
