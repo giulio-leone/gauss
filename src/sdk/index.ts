@@ -100,7 +100,7 @@ export { VectorStore } from "./vector-store.js";
 
 // ─── Graph & Workflow ──────────────────────────────────────────────
 export { Graph } from "./graph.js";
-export type { GraphNodeConfig, ForkNodeConfig, ConsensusStrategy } from "./graph.js";
+export type { GraphNodeConfig, ForkNodeConfig, ConsensusStrategy, RouterFn } from "./graph.js";
 export { Workflow } from "./workflow.js";
 export type { WorkflowStepConfig } from "./workflow.js";
 

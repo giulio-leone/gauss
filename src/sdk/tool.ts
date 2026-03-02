@@ -99,7 +99,7 @@ export function isTypedTool(t: ToolDef): t is TypedToolDef {
  * @since 1.2.0
  */
 export function createToolExecutor(
-  tools: TypedToolDef[],
+  tools: TypedToolDef<any, any>[],
   fallback?: ToolExecutor
 ): ToolExecutor {
   const toolMap = new Map(tools.map(t => [t.name, t]));
