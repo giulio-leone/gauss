@@ -25,6 +25,7 @@ export interface ControlPlaneUsage {
 
 export interface ControlPlaneSnapshot {
   generatedAt: string;
+  context: ControlPlaneContext;
   spans: unknown;
   metrics: unknown;
   pendingApprovals: unknown;
@@ -33,6 +34,12 @@ export interface ControlPlaneSnapshot {
 
 export type ControlPlaneSection = "spans" | "metrics" | "pendingApprovals" | "latestCost";
 
+export interface ControlPlaneContext {
+  tenantId?: string;
+  sessionId?: string;
+  runId?: string;
+}
+
 export interface ControlPlaneOptions {
   telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   approvals?: Pick<ApprovalManager, "listPending">;
@@ -40,6 +47,7 @@ export interface ControlPlaneOptions {
   authToken?: string;
   persistPath?: string;
   historyLimit?: number;
+  context?: ControlPlaneContext;
 }
 
 export interface ControlPlaneTimelinePoint {
@@ -56,6 +64,7 @@ export class ControlPlane implements Disposable {
   private authToken?: string;
   private readonly persistPath?: string;
   private readonly historyLimit: number;
+  private context: ControlPlaneContext;
   private latestCost: ReturnType<typeof estimateCost> | null = null;
   private readonly history: ControlPlaneSnapshot[] = [];
   private server: Server | null = null;
@@ -67,6 +76,7 @@ export class ControlPlane implements Disposable {
     this.authToken = options.authToken;
     this.persistPath = options.persistPath;
     this.historyLimit = options.historyLimit ?? 200;
+    this.context = { ...(options.context ?? {}) };
   }
 
   withModel(model: string): this {
@@ -76,6 +86,11 @@ export class ControlPlane implements Disposable {
 
   withAuthToken(token?: string): this {
     this.authToken = token;
+    return this;
+  }
+
+  withContext(context: ControlPlaneContext): this {
+    this.context = { ...context };
     return this;
   }
 
@@ -91,16 +106,17 @@ export class ControlPlane implements Disposable {
     if (!section) return full;
     return {
       generatedAt: full.generatedAt,
+      context: full.context,
       [section]: full[section],
     };
   }
 
-  getHistory(): ControlPlaneSnapshot[] {
-    return [...this.history];
+  getHistory(filters?: ControlPlaneContext): ControlPlaneSnapshot[] {
+    return this.filterHistory(filters);
   }
 
-  getTimeline(): ControlPlaneTimelinePoint[] {
-    return this.history.map((item) => ({
+  getTimeline(filters?: ControlPlaneContext): ControlPlaneTimelinePoint[] {
+    return this.filterHistory(filters).map((item) => ({
       generatedAt: item.generatedAt,
       spanCount: Array.isArray(item.spans) ? item.spans.length : 0,
       pendingApprovalsCount: Array.isArray(item.pendingApprovals) ? item.pendingApprovals.length : 0,
@@ -108,8 +124,9 @@ export class ControlPlane implements Disposable {
     }));
   }
 
-  getDag(): { nodes: Array<{ id: string; label: string }>; edges: Array<{ from: string; to: string }> } {
-    const latest = this.history[this.history.length - 1];
+  getDag(filters?: ControlPlaneContext): { nodes: Array<{ id: string; label: string }>; edges: Array<{ from: string; to: string }> } {
+    const filtered = this.filterHistory(filters);
+    const latest = filtered[filtered.length - 1];
     if (!latest || !Array.isArray(latest.spans)) {
       return { nodes: [], edges: [] };
     }
@@ -162,20 +179,23 @@ export class ControlPlane implements Disposable {
         }
 
         if (pathname === "/api/history") {
+          const filters = this.parseContextFilters(parsed.searchParams);
           res.setHeader("Content-Type", "application/json; charset=utf-8");
-          res.end(JSON.stringify(this.getHistory(), null, 2));
+          res.end(JSON.stringify(this.getHistory(filters), null, 2));
           return;
         }
 
         if (pathname === "/api/timeline") {
+          const filters = this.parseContextFilters(parsed.searchParams);
           res.setHeader("Content-Type", "application/json; charset=utf-8");
-          res.end(JSON.stringify(this.getTimeline(), null, 2));
+          res.end(JSON.stringify(this.getTimeline(filters), null, 2));
           return;
         }
 
         if (pathname === "/api/dag") {
+          const filters = this.parseContextFilters(parsed.searchParams);
           res.setHeader("Content-Type", "application/json; charset=utf-8");
-          res.end(JSON.stringify(this.getDag(), null, 2));
+          res.end(JSON.stringify(this.getDag(filters), null, 2));
           return;
         }
 
@@ -227,6 +247,7 @@ export class ControlPlane implements Disposable {
   private captureSnapshot(): ControlPlaneSnapshot {
     const snapshot: ControlPlaneSnapshot = {
       generatedAt: new Date().toISOString(),
+      context: { ...this.context },
       spans: this.telemetry?.exportSpans() ?? [],
       metrics: this.telemetry?.exportMetrics() ?? {},
       pendingApprovals: this.approvals?.listPending() ?? [],
@@ -253,6 +274,28 @@ export class ControlPlane implements Disposable {
       return section;
     }
     throw new ValidationError(`Unknown section "${section}"`, "section");
+  }
+
+  private parseContextFilters(params: URLSearchParams): ControlPlaneContext {
+    return {
+      tenantId: params.get("tenant") ?? undefined,
+      sessionId: params.get("session") ?? undefined,
+      runId: params.get("run") ?? undefined,
+    };
+  }
+
+  private filterHistory(filters?: ControlPlaneContext): ControlPlaneSnapshot[] {
+    if (!filters || (!filters.tenantId && !filters.sessionId && !filters.runId)) {
+      return [...this.history];
+    }
+    return this.history.filter((item) => this.matchesContext(item.context, filters));
+  }
+
+  private matchesContext(context: ControlPlaneContext, filters: ControlPlaneContext): boolean {
+    if (filters.tenantId && context.tenantId !== filters.tenantId) return false;
+    if (filters.sessionId && context.sessionId !== filters.sessionId) return false;
+    if (filters.runId && context.runId !== filters.runId) return false;
+    return true;
   }
 
   private spanLabel(span: unknown, index: number): string {

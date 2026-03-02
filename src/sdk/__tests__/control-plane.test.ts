@@ -107,4 +107,38 @@ describe("ControlPlane", () => {
     expect(lines.length).toBeGreaterThan(0);
     rmSync(persistPath, { force: true });
   });
+
+  it("supports tenant/session filters for history, timeline, and dag", async () => {
+    const cp = new ControlPlane({
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
+    cp.withContext({ tenantId: "t-2", sessionId: "s-2", runId: "r-2" }).snapshot();
+
+    const { url } = await cp.startServer("127.0.0.1", 0);
+
+    const historyRes = await fetch(`${url}/api/history?tenant=t-1`);
+    const history = await historyRes.json() as Array<{ context: { tenantId?: string } }>;
+    expect(history.length).toBe(1);
+    expect(history[0].context.tenantId).toBe("t-1");
+
+    const timelineRes = await fetch(`${url}/api/timeline?session=s-2`);
+    const timeline = await timelineRes.json() as Array<{ spanCount: number }>;
+    expect(timeline.length).toBe(1);
+    expect(timeline[0].spanCount).toBe(1);
+
+    const dagRes = await fetch(`${url}/api/dag?run=r-1`);
+    const dag = await dagRes.json() as { nodes: Array<{ label: string }> };
+    expect(dag.nodes.length).toBe(1);
+    expect(dag.nodes[0].label).toBe("s1");
+
+    await cp.stopServer();
+  });
 });
