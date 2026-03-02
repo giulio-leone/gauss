@@ -15,7 +15,7 @@ export interface ProviderOptions {
 export interface ToolDef {
   name: string
   description: string
-  parameters?: any
+  parameters?: Record<string, unknown>
 }
 
 export interface JsMessage {
@@ -31,7 +31,7 @@ export interface AgentOptions {
   maxTokens?: number
   seed?: number
   stopOnTool?: string
-  outputSchema?: any
+  outputSchema?: Record<string, unknown>
   thinkingBudget?: number
   cacheControl?: boolean
   codeExecution?: {
@@ -56,7 +56,7 @@ export interface AgentResult {
   steps: number
   inputTokens: number
   outputTokens: number
-  structuredOutput?: any
+  structuredOutput?: Record<string, unknown>
   thinking?: string
   citations?: Array<{
     citationType: string
@@ -65,7 +65,204 @@ export interface AgentResult {
     start?: number
     end?: number
   }>
-  groundingMetadata?: any
+  groundingMetadata?: Record<string, unknown>
+}
+
+// ============ NAPI Response Types ============
+
+export interface GenerateResponse {
+  text: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  thinking?: string;
+  finishReason?: string;
+}
+
+export interface GenerateWithToolsResponse {
+  text?: string;
+  toolCalls?: Array<{
+    id: string;
+    name: string;
+    arguments: string;
+  }>;
+  inputTokens?: number;
+  outputTokens?: number;
+  finishReason?: string;
+}
+
+export interface NapiProviderCapabilities {
+  streaming: boolean;
+  tool_use: boolean;
+  vision: boolean;
+  audio: boolean;
+  extended_thinking: boolean;
+  citations: boolean;
+  cache_control: boolean;
+  structured_output: boolean;
+  reasoning_effort: boolean;
+  image_generation: boolean;
+  grounding: boolean;
+  code_execution: boolean;
+  web_search: boolean;
+}
+
+export interface NapiCostEstimate {
+  model: string;
+  normalized_model: string;
+  currency: string;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  input_cost_usd: number;
+  output_cost_usd: number;
+  reasoning_cost_usd: number;
+  cache_read_cost_usd: number;
+  cache_creation_cost_usd: number;
+  total_cost_usd: number;
+}
+
+export interface NapiCodeExecutionResult {
+  stdout: string;
+  stderr: string;
+  exit_code: number;
+  timed_out: boolean;
+  runtime: string;
+  success: boolean;
+}
+
+export interface NapiMemoryEntry {
+  id: string;
+  content: string;
+  entry_type: string;
+  timestamp: string;
+  tier?: string;
+  metadata?: Record<string, unknown>;
+  importance?: number;
+  session_id?: string;
+  embedding?: number[];
+}
+
+export interface NapiMemoryStats {
+  total_entries: number;
+  [key: string]: unknown;
+}
+
+export interface NapiSearchResult {
+  id: string;
+  text: string;
+  score: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface NapiImageGenerationResult {
+  images: Array<{
+    url?: string;
+    base64?: string;
+    mime_type?: string;
+  }>;
+  revised_prompt?: string;
+}
+
+export interface NapiGraphRunResult {
+  [nodeId: string]: string | Record<string, unknown>;
+}
+
+export interface NapiWorkflowRunResult {
+  [stepId: string]: string | Record<string, unknown>;
+}
+
+export interface NapiTeamRunResult {
+  text: string;
+  agent?: string;
+  strategy?: string;
+  results?: Array<{ agent: string; text: string }>;
+}
+
+export interface NapiNetworkDelegateResult {
+  text: string;
+  from_agent: string;
+  to_agent: string;
+}
+
+export interface NapiAgentCard {
+  name: string;
+  instructions?: string;
+  [key: string]: unknown;
+}
+
+export interface NapiCheckpointData {
+  id: string;
+  session_id: string;
+  data: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface NapiEvalDataset {
+  items: Array<{
+    input: string;
+    expected?: string;
+    metadata?: Record<string, unknown>;
+  }>;
+}
+
+export interface NapiTelemetrySpan {
+  trace_id: string;
+  span_id: string;
+  name: string;
+  start_time: string;
+  end_time?: string;
+  attributes?: Record<string, unknown>;
+}
+
+export interface NapiTelemetryMetrics {
+  spans_count: number;
+  [key: string]: unknown;
+}
+
+export interface NapiMcpResponse {
+  jsonrpc: string;
+  id?: number | string;
+  result?: Record<string, unknown>;
+  error?: { code: number; message: string; data?: unknown };
+}
+
+export interface NapiApprovalRequest {
+  id: string;
+  tool_name: string;
+  args: string;
+  session_id: string;
+  status: string;
+}
+
+export interface NapiAgentsMdParsed {
+  agents: Array<{
+    name: string;
+    instructions?: string;
+    tools?: string[];
+    [key: string]: unknown;
+  }>;
+}
+
+export interface NapiSkillMdParsed {
+  name: string;
+  description?: string;
+  steps?: string[];
+  [key: string]: unknown;
+}
+
+export interface NapiToolRegistryEntry {
+  name: string;
+  description: string;
+  tags?: string[];
+  parameters?: Record<string, unknown>;
+}
+
+export interface NapiA2aTaskResult {
+  id: string;
+  status: string;
+  [key: string]: unknown;
 }
 
 // ============ Version ============
@@ -115,7 +312,7 @@ export function generate(
   maxTokens?: number | undefined | null,
   thinkingBudget?: number | undefined | null,
   cacheControl?: boolean | undefined | null
-): Promise<any>
+): Promise<GenerateResponse>
 
 export function generate_with_tools(
   providerHandle: number,
@@ -123,11 +320,11 @@ export function generate_with_tools(
   tools: ToolDef[],
   temperature?: number | undefined | null,
   maxTokens?: number | undefined | null
-): Promise<any>
+): Promise<GenerateWithToolsResponse>
 
 // ============ Provider Capabilities ============
 
-export function get_provider_capabilities(providerHandle: number): any
+export function get_provider_capabilities(providerHandle: number): NapiProviderCapabilities
 export function estimate_cost(
   model: string,
   inputTokens: number,
@@ -135,7 +332,7 @@ export function estimate_cost(
   reasoningTokens?: number | undefined | null,
   cacheReadTokens?: number | undefined | null,
   cacheCreationTokens?: number | undefined | null
-): any
+): NapiCostEstimate
 
 // ============ Code Execution (PTC) ============
 
@@ -145,7 +342,7 @@ export function execute_code(
   timeoutSecs?: number | undefined | null,
   workingDir?: string | undefined | null,
   sandbox?: string | undefined | null
-): Promise<any>
+): Promise<NapiCodeExecutionResult>
 
 export function available_runtimes(): Promise<string[]>
 
@@ -161,15 +358,15 @@ export function generate_image(
   aspectRatio?: string | undefined | null,
   n?: number | undefined | null,
   responseFormat?: string | undefined | null
-): Promise<any>
+): Promise<NapiImageGenerationResult>
 
 // ============ Memory ============
 
 export function create_memory(): number
 export function memory_store(handle: number, entryJson: string): Promise<void>
-export function memory_recall(handle: number, optionsJson?: string | undefined | null): Promise<any>
+export function memory_recall(handle: number, optionsJson?: string | undefined | null): Promise<NapiMemoryEntry[]>
 export function memory_clear(handle: number, sessionId?: string | undefined | null): Promise<void>
-export function memory_stats(handle: number): Promise<any>
+export function memory_stats(handle: number): Promise<NapiMemoryStats>
 export function destroy_memory(handle: number): void
 
 // ============ Context / Tokens ============
@@ -183,7 +380,7 @@ export function get_context_window_size(model: string): number
 
 export function create_vector_store(): number
 export function vector_store_upsert(handle: number, chunksJson: string): Promise<void>
-export function vector_store_search(handle: number, embeddingJson: string, topK: number): Promise<any>
+export function vector_store_search(handle: number, embeddingJson: string, topK: number): Promise<NapiSearchResult[]>
 export function destroy_vector_store(handle: number): void
 export function cosine_similarity(a: number[], b: number[]): number
 
@@ -193,7 +390,7 @@ export function create_mcp_server(name: string, versionStr: string): number
 export function mcp_server_add_tool(handle: number, toolJson: string): void
 export function mcpServerAddResource(handle: number, resourceJson: string): void
 export function mcpServerAddPrompt(handle: number, promptJson: string): void
-export function mcp_server_handle(handle: number, messageJson: string): Promise<any>
+export function mcp_server_handle(handle: number, messageJson: string): Promise<NapiMcpResponse>
 export function destroy_mcp_server(handle: number): void
 
 // ============ Network (Multi-Agent) ============
@@ -211,8 +408,8 @@ export function network_delegate(
   fromAgent: string,
   toAgent: string,
   prompt: string
-): Promise<any>
-export function network_agent_cards(handle: number): any
+): Promise<NapiNetworkDelegateResult>
+export function network_agent_cards(handle: number): NapiAgentCard[]
 export function destroy_network(handle: number): void
 
 // ============ Middleware ============
@@ -246,31 +443,31 @@ export function approval_deny(
   requestId: string,
   reason?: string | undefined | null
 ): void
-export function approval_list_pending(handle: number): any
+export function approval_list_pending(handle: number): NapiApprovalRequest[]
 export function destroy_approval_manager(handle: number): void
 
 // ============ HITL — Checkpoints ============
 
 export function create_checkpoint_store(): number
 export function checkpoint_save(handle: number, checkpointJson: string): Promise<void>
-export function checkpoint_load(handle: number, checkpointId: string): Promise<any>
-export function checkpoint_load_latest(handle: number, sessionId: string): Promise<any>
+export function checkpoint_load(handle: number, checkpointId: string): Promise<NapiCheckpointData | null>
+export function checkpoint_load_latest(handle: number, sessionId: string): Promise<NapiCheckpointData | null>
 export function destroy_checkpoint_store(handle: number): void
 
 // ============ Eval ============
 
 export function create_eval_runner(threshold?: number | undefined | null): number
 export function eval_add_scorer(handle: number, scorerType: string): void
-export function load_dataset_jsonl(jsonl: string): any
-export function load_dataset_json(jsonStr: string): any
+export function load_dataset_jsonl(jsonl: string): NapiEvalDataset
+export function load_dataset_json(jsonStr: string): NapiEvalDataset
 export function destroy_eval_runner(handle: number): void
 
 // ============ Telemetry ============
 
 export function create_telemetry(): number
 export function telemetry_record_span(handle: number, spanJson: string): void
-export function telemetry_export_spans(handle: number): any
-export function telemetry_export_metrics(handle: number): any
+export function telemetry_export_spans(handle: number): NapiTelemetrySpan[]
+export function telemetry_export_metrics(handle: number): NapiTelemetryMetrics
 export function telemetry_clear(handle: number): void
 export function destroy_telemetry(handle: number): void
 
@@ -354,7 +551,7 @@ export function graph_add_fork_node(
   agents: ForkAgentDef[],
   consensus: string
 ): void
-export function graph_run(handle: number, prompt: string): Promise<any>
+export function graph_run(handle: number, prompt: string): Promise<NapiGraphRunResult>
 export function destroy_graph(handle: number): void
 
 // ============ Workflow ============
@@ -369,7 +566,7 @@ export function workflow_add_step(
   tools?: ToolDef[]
 ): void
 export function workflow_add_dependency(handle: number, stepId: string, dependsOn: string): void
-export function workflow_run(handle: number, prompt: string): Promise<any>
+export function workflow_run(handle: number, prompt: string): Promise<NapiWorkflowRunResult>
 export function destroy_workflow(handle: number): void
 
 // ============ Stream Utils ============
@@ -386,30 +583,30 @@ export function team_add_agent(
   instructions?: string | undefined | null
 ): void
 export function team_set_strategy(handle: number, strategy: string): void
-export function team_run(handle: number, messagesJson: string): Promise<any>
+export function team_run(handle: number, messagesJson: string): Promise<NapiTeamRunResult>
 export function destroy_team(handle: number): void
 
 // ============ AGENTS.MD & SKILL.MD Parsers ============
 
-export function parseAgentsMd(content: string): any
-export function discoverAgents(dir: string): any
-export function parseSkillMd(content: string): any
+export function parseAgentsMd(content: string): NapiAgentsMdParsed
+export function discoverAgents(dir: string): NapiAgentsMdParsed
+export function parseSkillMd(content: string): NapiSkillMdParsed
 
 // ============ A2A Protocol ============
 
-export function createA2aClient(baseUrl: string, authToken?: string): any
-export function a2aDiscover(baseUrl: string, authToken?: string): Promise<any>
-export function a2aSendMessage(baseUrl: string, authToken?: string | null, messageJson: string, configJson?: string | null): Promise<any>
+export function createA2aClient(baseUrl: string, authToken?: string): { baseUrl: string; authToken?: string }
+export function a2aDiscover(baseUrl: string, authToken?: string): Promise<NapiAgentCard>
+export function a2aSendMessage(baseUrl: string, authToken?: string | null, messageJson: string, configJson?: string | null): Promise<NapiA2aTaskResult>
 export function a2aAsk(baseUrl: string, authToken?: string | null, text: string): Promise<string>
-export function a2aGetTask(baseUrl: string, authToken?: string | null, taskId: string, historyLength?: number | null): Promise<any>
-export function a2aCancelTask(baseUrl: string, authToken?: string | null, taskId: string): Promise<any>
+export function a2aGetTask(baseUrl: string, authToken?: string | null, taskId: string, historyLength?: number | null): Promise<NapiA2aTaskResult>
+export function a2aCancelTask(baseUrl: string, authToken?: string | null, taskId: string): Promise<NapiA2aTaskResult>
 export function a2aHandleRequest(agentCardJson: string, requestBody: string): Promise<string>
 
 // ============ Tool Registry ============
 
 export function createToolRegistry(): number
 export function toolRegistryAdd(handle: number, toolJson: string): void
-export function toolRegistrySearch(handle: number, query: string): any
-export function toolRegistryByTag(handle: number, tag: string): any
-export function toolRegistryList(handle: number): any
+export function toolRegistrySearch(handle: number, query: string): NapiToolRegistryEntry[]
+export function toolRegistryByTag(handle: number, tag: string): NapiToolRegistryEntry[]
+export function toolRegistryList(handle: number): NapiToolRegistryEntry[]
 export function destroyToolRegistry(handle: number): void
