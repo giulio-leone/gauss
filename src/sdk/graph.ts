@@ -44,6 +44,28 @@ export interface ForkNodeConfig {
 }
 
 export class Graph implements Disposable {
+  /**
+   * Quick graph builder — create a linear pipeline from agents.
+   *
+   * @example
+   * ```ts
+   * const result = await Graph.pipeline([
+   *   { nodeId: "research", agent: researcher },
+   *   { nodeId: "write", agent: writer },
+   * ]).run("Explain quantum computing");
+   * ```
+   */
+  static pipeline(nodes: GraphNodeConfig[]): Graph {
+    const graph = new Graph();
+    for (const node of nodes) {
+      graph.addNode(node);
+    }
+    for (let i = 0; i < nodes.length - 1; i++) {
+      graph.addEdge(nodes[i].nodeId, nodes[i + 1].nodeId);
+    }
+    return graph;
+  }
+
   private readonly _handle: Handle;
   private disposed = false;
 

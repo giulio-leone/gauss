@@ -45,7 +45,7 @@ import type {
 import { resolveApiKey, detectProvider } from "./types.js";
 import { OPENAI_DEFAULT } from "./models.js";
 import { AgentStream } from "./stream-iter.js";
-import { isTypedTool, createToolExecutor, type TypedToolDef } from "./tool.js";
+import { tool as toolFn, isTypedTool, createToolExecutor, type TypedToolDef } from "./tool.js";
 import type { MiddlewareChain } from "./middleware.js";
 import type { GuardrailChain } from "./guardrail.js";
 import type { Memory } from "./memory.js";
@@ -361,6 +361,26 @@ export class Agent implements Disposable {
    */
   addTools(tools: (ToolDef | TypedToolDef)[]): this {
     this._tools.push(...tools);
+    return this;
+  }
+
+  /**
+   * Inline tool shortcut — define and attach a tool in one step.
+   *
+   * @example
+   * ```ts
+   * const result = await agent
+   *   .withTool("get_weather", "Get weather for a city", async ({ city }) => ({ temp: 72 }))
+   *   .run("Weather in Paris?");
+   * ```
+   */
+  withTool<TParams = Record<string, unknown>, TResult = unknown>(
+    name: string,
+    description: string,
+    execute: (params: TParams) => TResult | Promise<TResult>,
+    parameters?: Record<string, unknown>
+  ): this {
+    this._tools.push(toolFn({ name, description, parameters: parameters ?? {}, execute }));
     return this;
   }
 

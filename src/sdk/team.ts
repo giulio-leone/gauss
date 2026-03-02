@@ -23,7 +23,7 @@ import {
 } from "gauss-napi";
 
 import type { Handle, Disposable } from "./types.js";
-import type { Agent } from "./agent.js";
+import { Agent } from "./agent.js";
 
 export type TeamStrategy = "sequential" | "parallel";
 
@@ -41,6 +41,36 @@ export class Team implements Disposable {
   private readonly _handle: Handle;
   private disposed = false;
   private agents: Agent[] = [];
+
+  /**
+   * Quick team builder — create a team from role descriptions.
+   *
+   * @example
+   * ```ts
+   * const result = await Team.quick("content-team", "sequential", [
+   *   { name: "researcher", instructions: "Research topics" },
+   *   { name: "writer", instructions: "Write summaries" }
+   * ]).run("Explain quantum computing");
+   * ```
+   */
+  static quick(
+    teamName: string,
+    strategy: TeamStrategy,
+    agents: Array<{ name: string; provider?: string; model?: string; instructions?: string }>
+  ): Team {
+    const team = new Team(teamName);
+    for (const spec of agents) {
+      const agent = new Agent({
+        name: spec.name,
+        provider: (spec.provider as any) ?? "openai",
+        model: spec.model ?? "gpt-4o",
+        instructions: spec.instructions,
+      });
+      team.add(agent);
+    }
+    team.strategy(strategy);
+    return team;
+  }
 
   constructor(name: string) {
     this._handle = create_team(name);
