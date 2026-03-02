@@ -28,6 +28,13 @@ export const OPENROUTER_DEFAULT = "openai/gpt-5.2";
 export const DEEPSEEK_DEFAULT = "deepseek-chat";
 export const DEEPSEEK_REASONING = "deepseek-reasoner";
 
+// ─── Enterprise OpenAI-Compatible Providers ─────────
+export const TOGETHER_DEFAULT = "meta-llama/Llama-3.3-70B-Instruct-Turbo";
+export const FIREWORKS_DEFAULT = "accounts/fireworks/models/llama-v3p1-70b-instruct";
+export const MISTRAL_DEFAULT = "mistral-large-latest";
+export const PERPLEXITY_DEFAULT = "sonar-pro";
+export const XAI_DEFAULT = "grok-3-beta";
+
 // ─── Provider Defaults Map ───────────────────────────
 export const PROVIDER_DEFAULTS: Record<string, string> = {
   openai: OPENAI_DEFAULT,
@@ -37,6 +44,11 @@ export const PROVIDER_DEFAULTS: Record<string, string> = {
   deepseek: DEEPSEEK_DEFAULT,
   groq: "llama-3.3-70b-versatile",
   ollama: "llama3.2",
+  together: TOGETHER_DEFAULT,
+  fireworks: FIREWORKS_DEFAULT,
+  mistral: MISTRAL_DEFAULT,
+  perplexity: PERPLEXITY_DEFAULT,
+  xai: XAI_DEFAULT,
 };
 
 /** Get the default model for a provider */

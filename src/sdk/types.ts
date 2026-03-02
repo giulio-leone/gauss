@@ -16,7 +16,13 @@ export type ProviderType =
   | "google"
   | "groq"
   | "ollama"
-  | "deepseek";
+  | "deepseek"
+  | "openrouter"
+  | "together"
+  | "fireworks"
+  | "mistral"
+  | "perplexity"
+  | "xai";
 
 export interface ProviderOptions {
   /** API key. Auto-resolved from environment if omitted. */
@@ -179,6 +185,23 @@ export interface ProviderCapabilities {
   webSearch: boolean;
 }
 
+export interface CostEstimate {
+  model: string;
+  normalizedModel: string;
+  currency: string;
+  inputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  inputCostUsd: number;
+  outputCostUsd: number;
+  reasoningCostUsd: number;
+  cacheReadCostUsd: number;
+  cacheCreationCostUsd: number;
+  totalCostUsd: number;
+}
+
 // ─── Code Execution (PTC) ──────────────────────────────────────────
 
 /** Configuration for programmatic code execution runtimes. */
@@ -290,6 +313,12 @@ const ENV_KEYS: Record<string, string> = {
   google: "GOOGLE_API_KEY",
   groq: "GROQ_API_KEY",
   deepseek: "DEEPSEEK_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
+  together: "TOGETHER_API_KEY",
+  fireworks: "FIREWORKS_API_KEY",
+  mistral: "MISTRAL_API_KEY",
+  perplexity: "PERPLEXITY_API_KEY",
+  xai: "XAI_API_KEY",
   ollama: "",
 };
 
@@ -308,6 +337,12 @@ export function detectProvider(): { provider: ProviderType; model: string } | un
     { env: "GOOGLE_API_KEY", provider: "google" },
     { env: "GROQ_API_KEY", provider: "groq" },
     { env: "DEEPSEEK_API_KEY", provider: "deepseek" },
+    { env: "OPENROUTER_API_KEY", provider: "openrouter" },
+    { env: "TOGETHER_API_KEY", provider: "together" },
+    { env: "FIREWORKS_API_KEY", provider: "fireworks" },
+    { env: "MISTRAL_API_KEY", provider: "mistral" },
+    { env: "PERPLEXITY_API_KEY", provider: "perplexity" },
+    { env: "XAI_API_KEY", provider: "xai" },
   ];
   for (const { env, provider } of checks) {
     if (typeof process !== "undefined" && process.env[env]) {

@@ -5,6 +5,7 @@ import {
   create_middleware_chain,
   middleware_use_logging,
   middleware_use_caching,
+  middleware_use_rate_limit,
   destroy_middleware_chain,
 } from "gauss-napi";
 
@@ -31,6 +32,12 @@ export class MiddlewareChain implements Disposable {
   useCaching(ttlMs: number): this {
     this.assertNotDisposed();
     middleware_use_caching(this._handle, ttlMs);
+    return this;
+  }
+
+  useRateLimit(requestsPerMinute: number, burst?: number): this {
+    this.assertNotDisposed();
+    middleware_use_rate_limit(this._handle, requestsPerMinute, burst);
     return this;
   }
 

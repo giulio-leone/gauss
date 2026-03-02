@@ -32,6 +32,7 @@ export type {
   ImageGenerationResult,
   GeneratedImageData,
   ProviderCapabilities,
+  CostEstimate,
   CodeExecutionOptions,
   CodeExecutionResult,
   ToolExecutor,
@@ -63,6 +64,11 @@ export {
   GOOGLE_PREMIUM,
   GOOGLE_IMAGE,
   OPENROUTER_DEFAULT,
+  TOGETHER_DEFAULT,
+  FIREWORKS_DEFAULT,
+  MISTRAL_DEFAULT,
+  PERPLEXITY_DEFAULT,
+  XAI_DEFAULT,
   DEEPSEEK_DEFAULT,
   DEEPSEEK_REASONING,
   PROVIDER_DEFAULTS,
@@ -72,6 +78,8 @@ export {
 // ─── Core Agent ────────────────────────────────────────────────────
 export { Agent, gauss } from "./agent.js";
 export type { AgentConfig } from "./agent.js";
+export { enterprisePreset, enterpriseRun } from "./enterprise.js";
+export type { EnterprisePresetOptions } from "./enterprise.js";
 
 // ─── Streaming ────────────────────────────────────────────────────
 export { AgentStream } from "./stream-iter.js";
@@ -153,6 +161,7 @@ export {
   countTokensForModel,
   countMessageTokens,
   getContextWindowSize,
+  estimateCost,
 } from "./tokens.js";
 
 // ─── Config ────────────────────────────────────────────────────────
