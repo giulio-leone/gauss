@@ -153,6 +153,8 @@ const c = new Agent({
     aliases: {
       "fast-chat": [{ provider: "anthropic", model: "claude-3-5-haiku-latest", priority: 10 }],
     },
+    fallbackOrder: ["anthropic", "openai"],
+    maxTotalCostUsd: 2.0,
   },
 });
 ```

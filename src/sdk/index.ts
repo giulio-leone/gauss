@@ -84,10 +84,13 @@ export type { AgentConfig } from "./agent.js";
 export { enterprisePreset, enterpriseRun } from "./enterprise.js";
 export type { EnterprisePresetOptions } from "./enterprise.js";
 export {
+  enforceRoutingCostLimit,
+  resolveFallbackProvider,
   resolveRoutingTarget,
   type RoutingPolicy,
   type RoutingCandidate,
   type ResolvedRoutingTarget,
+  type ResolveRoutingTargetOptions,
 } from "./routing-policy.js";
 
 // ─── Streaming ────────────────────────────────────────────────────
