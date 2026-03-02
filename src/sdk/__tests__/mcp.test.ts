@@ -29,8 +29,8 @@ describe("McpServer", () => {
   it("addTool returns this for chaining", () => {
     const server = new McpServer("chain", "1.0.0");
     const result = server
-      .addTool({ name: "a", description: "tool a", inputSchema: { type: "object" } })
-      .addTool({ name: "b", description: "tool b", inputSchema: { type: "object" } });
+      .addTool({ name: "a", description: "tool a", parameters: { type: "object" } })
+      .addTool({ name: "b", description: "tool b", parameters: { type: "object" } });
     expect(result).toBe(server);
     server.destroy();
   });
@@ -62,7 +62,7 @@ describe("McpServer", () => {
 
   it("handles tools/list JSON-RPC", async () => {
     const server = new McpServer("tools", "1.0.0");
-    server.addTool({ name: "add", description: "Add numbers", inputSchema: { type: "object" } });
+    server.addTool({ name: "add", description: "Add numbers", parameters: { type: "object" } });
     const resp = (await server.handleMessage({
       jsonrpc: "2.0",
       id: 1,
@@ -116,7 +116,7 @@ describe("McpServer", () => {
 
   it("includes capabilities for resources/prompts/tools", async () => {
     const server = new McpServer("caps", "1.0.0");
-    server.addTool({ name: "t", description: "t", inputSchema: { type: "object" } });
+    server.addTool({ name: "t", description: "t", parameters: { type: "object" } });
     server.addResource({ uri: "file:///x", name: "x" });
     server.addPrompt({ name: "p", arguments: [] });
     const resp = (await server.handleMessage({
@@ -138,7 +138,7 @@ describe("McpServer", () => {
   it("full builder chain works", () => {
     const server = new McpServer("builder", "2.0.0");
     server
-      .addTool({ name: "calc", description: "Calculator", inputSchema: { type: "object" } })
+      .addTool({ name: "calc", description: "Calculator", parameters: { type: "object" } })
       .addResource({ uri: "file:///data.json", name: "Data" })
       .addPrompt({
         name: "analyze",

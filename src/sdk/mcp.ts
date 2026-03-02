@@ -105,7 +105,12 @@ export class McpServer implements Disposable {
 
   addTool(tool: ToolDef): this {
     this.assertNotDisposed();
-    mcp_server_add_tool(this._handle, JSON.stringify(tool));
+    const mcpTool = {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.parameters ?? { type: "object" },
+    };
+    mcp_server_add_tool(this._handle, JSON.stringify(mcpTool));
     return this;
   }
 

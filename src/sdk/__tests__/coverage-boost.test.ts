@@ -196,7 +196,7 @@ describe("Symbol.dispose", () => {
   it("ToolValidator supports Symbol.dispose", () => {
     const v = new ToolValidator([]);
     (v as any)[Symbol.dispose]();
-    expect(() => v.validate({ name: "t", arguments: {} })).toThrow();
+    expect(() => v.validate({ name: "t", arguments: {} }, {})).toThrow();
   });
 
   it("McpServer supports Symbol.dispose", () => {
@@ -214,13 +214,13 @@ describe("Symbol.dispose", () => {
   it("ApprovalManager supports Symbol.dispose", () => {
     const a = new ApprovalManager();
     (a as any)[Symbol.dispose]();
-    expect(() => a.request("action", {})).toThrow();
+    expect(() => a.request("action", {}, "session-1")).toThrow();
   });
 
   it("Workflow supports Symbol.dispose", () => {
     const w = new Workflow();
     (w as any)[Symbol.dispose]();
-    expect(() => w.addStep("s1", { instructions: "do" })).toThrow();
+    expect(() => w.addStep({ stepId: "s1", agent: { name: "a", handle: 0 } as any, instructions: "do" })).toThrow();
   });
 
   it("Network supports Symbol.dispose", () => {
@@ -238,7 +238,7 @@ describe("Symbol.dispose", () => {
   it("Graph supports Symbol.dispose", () => {
     const g = new Graph();
     (g as any)[Symbol.dispose]();
-    expect(() => g.addNode("n1", { instructions: "do" })).toThrow();
+    expect(() => g.addNode({ nodeId: "n1", agent: { name: "a", handle: 0 } as any, instructions: "do" })).toThrow();
   });
 
   it("Telemetry supports Symbol.dispose", () => {
@@ -256,7 +256,7 @@ describe("Symbol.dispose", () => {
   it("EvalRunner supports Symbol.dispose", () => {
     const e = new EvalRunner();
     (e as any)[Symbol.dispose]();
-    expect(() => e.addScorer("exact_match", {})).toThrow();
+    expect(() => e.addScorer("exact_match")).toThrow();
   });
 });
 
@@ -266,7 +266,7 @@ describe("assertNotDisposed throws after destroy", () => {
   it("ToolValidator throws after destroy", () => {
     const v = new ToolValidator([]);
     v.destroy();
-    expect(() => v.validate({ name: "t", arguments: {} })).toThrow(/disposed|destroyed/i);
+    expect(() => v.validate({ name: "t", arguments: {} }, {})).toThrow(/disposed|destroyed/i);
   });
 
   it("McpServer throws after destroy", () => {
@@ -284,13 +284,13 @@ describe("assertNotDisposed throws after destroy", () => {
   it("ApprovalManager throws after destroy", () => {
     const a = new ApprovalManager();
     a.destroy();
-    expect(() => a.request("action", {})).toThrow(/disposed|destroyed/i);
+    expect(() => a.request("action", {}, "session-1")).toThrow(/disposed|destroyed/i);
   });
 
   it("Workflow throws after destroy", () => {
     const w = new Workflow();
     w.destroy();
-    expect(() => w.addStep("s1", { instructions: "do" })).toThrow(/disposed|destroyed/i);
+    expect(() => w.addStep({ stepId: "s1", agent: { name: "a", handle: 0 } as any, instructions: "do" })).toThrow(/disposed|destroyed/i);
   });
 
   it("Network throws after destroy", () => {
@@ -308,7 +308,7 @@ describe("assertNotDisposed throws after destroy", () => {
   it("Graph throws after destroy", () => {
     const g = new Graph();
     g.destroy();
-    expect(() => g.addNode("n1", { instructions: "do" })).toThrow(/disposed|destroyed/i);
+    expect(() => g.addNode({ nodeId: "n1", agent: { name: "a", handle: 0 } as any, instructions: "do" })).toThrow(/disposed|destroyed/i);
   });
 
   it("Telemetry throws after destroy", () => {
@@ -326,7 +326,7 @@ describe("assertNotDisposed throws after destroy", () => {
   it("EvalRunner throws after destroy", () => {
     const e = new EvalRunner();
     e.destroy();
-    expect(() => e.addScorer("exact_match", {})).toThrow(/disposed|destroyed/i);
+    expect(() => e.addScorer("exact_match")).toThrow(/disposed|destroyed/i);
   });
 });
 
@@ -384,7 +384,7 @@ describe("Agent edge cases", () => {
 
   it("Agent.providerHandle returns provider handle", () => {
     const a = new Agent({ instructions: "test" });
-    expect(a.providerHandle).toBe(100);
+    expect((a as any).providerHandle).toBe(100);
     a.destroy();
   });
 
