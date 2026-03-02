@@ -162,6 +162,10 @@ export { EvalRunner } from "./eval.js";
 // ─── Telemetry ─────────────────────────────────────────────────────
 export { Telemetry } from "./telemetry.js";
 
+// ─── Unified Control Plane ─────────────────────────────────────────
+export { ControlPlane } from "./control-plane.js";
+export type { ControlPlaneOptions, ControlPlaneSnapshot, ControlPlaneUsage } from "./control-plane.js";
+
 // ─── Resilience ────────────────────────────────────────────────────
 export {
   createFallbackProvider,

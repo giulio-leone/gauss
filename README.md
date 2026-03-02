@@ -147,6 +147,22 @@ const a = Agent.fromEnv({ instructions: "Be precise." });
 const b = a.withModel("gpt-4.1");
 ```
 
+### Unified Control Plane (M51 foundation)
+
+```ts
+import { ControlPlane, Telemetry, ApprovalManager } from "gauss-ts";
+
+const cp = new ControlPlane({
+  telemetry: new Telemetry(),
+  approvals: new ApprovalManager(),
+  model: "gpt-5.2",
+});
+
+cp.setCostUsage({ inputTokens: 1200, outputTokens: 600 });
+const { url } = await cp.startServer("127.0.0.1", 0);
+console.log(`Control Plane: ${url}`);
+```
+
 ---
 
 ## Core Features
@@ -162,6 +178,7 @@ const b = a.withModel("gpt-4.1");
 - **Guardrails + Middleware**: `GuardrailChain`, `MiddlewareChain`
 - **Reliability**: retry, circuit breaker, fallback providers
 - **Observability & quality**: `Telemetry`, `EvalRunner`
+- **Control plane**: `ControlPlane` (local snapshot API + dashboard)
 - **Enterprise preset**: `enterprisePreset()`, `enterpriseRun()`
 
 ---
