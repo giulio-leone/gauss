@@ -68,6 +68,38 @@ describe("ControlPlane", () => {
     await cp.stopServer();
   });
 
+  it("enforces auth claims on query scopes", async () => {
+    const cp = new ControlPlane({
+      authToken: "claims-token",
+      authClaims: {
+        tenantId: "t-1",
+        allowedSessionIds: ["s-1"],
+        allowedRunIds: ["r-1"],
+      },
+      telemetry: {
+        exportSpans: () => [{ name: "s1" }],
+        exportMetrics: () => ({ totalSpans: 1 }),
+      },
+      approvals: {
+        listPending: () => [],
+      },
+    });
+
+    cp.withContext({ tenantId: "t-1", sessionId: "s-1", runId: "r-1" }).snapshot();
+    const { url } = await cp.startServer("127.0.0.1", 0);
+
+    const scoped = await fetch(`${url}/api/history?token=claims-token`);
+    expect(scoped.status).toBe(200);
+    const scopedBody = await scoped.json() as Array<{ context: { tenantId?: string } }>;
+    expect(scopedBody.length).toBe(1);
+    expect(scopedBody[0].context.tenantId).toBe("t-1");
+
+    const forbidden = await fetch(`${url}/api/history?token=claims-token&tenant=t-2`);
+    expect(forbidden.status).toBe(403);
+
+    await cp.stopServer();
+  });
+
   it("supports section filters, history, timeline, dag, and persistence", async () => {
     const persistPath = join(tmpdir(), `gauss-cp-${Date.now()}.jsonl`);
     const cp = new ControlPlane({

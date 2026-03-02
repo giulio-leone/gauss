@@ -15,6 +15,8 @@ import type { Telemetry } from "./telemetry.js";
 import type { ApprovalManager } from "./approval.js";
 import { estimateCost } from "./tokens.js";
 
+class ControlPlaneForbiddenError extends Error {}
+
 export interface ControlPlaneUsage {
   inputTokens: number;
   outputTokens: number;
@@ -40,11 +42,19 @@ export interface ControlPlaneContext {
   runId?: string;
 }
 
+export interface ControlPlaneAuthClaims {
+  tenantId?: string;
+  allowedSessionIds?: string[];
+  allowedRunIds?: string[];
+  roles?: string[];
+}
+
 export interface ControlPlaneOptions {
   telemetry?: Pick<Telemetry, "exportSpans" | "exportMetrics">;
   approvals?: Pick<ApprovalManager, "listPending">;
   model?: string;
   authToken?: string;
+  authClaims?: ControlPlaneAuthClaims;
   persistPath?: string;
   historyLimit?: number;
   context?: ControlPlaneContext;
@@ -62,6 +72,7 @@ export class ControlPlane implements Disposable {
   private readonly approvals?: Pick<ApprovalManager, "listPending">;
   private model: string;
   private authToken?: string;
+  private authClaims?: ControlPlaneAuthClaims;
   private readonly persistPath?: string;
   private readonly historyLimit: number;
   private context: ControlPlaneContext;
@@ -74,6 +85,7 @@ export class ControlPlane implements Disposable {
     this.approvals = options.approvals;
     this.model = options.model ?? "gpt-5.2";
     this.authToken = options.authToken;
+    this.authClaims = options.authClaims;
     this.persistPath = options.persistPath;
     this.historyLimit = options.historyLimit ?? 200;
     this.context = { ...(options.context ?? {}) };
@@ -89,7 +101,13 @@ export class ControlPlane implements Disposable {
     return this;
   }
 
+  withAuthClaims(claims?: ControlPlaneAuthClaims): this {
+    this.authClaims = claims;
+    return this;
+  }
+
   withContext(context: ControlPlaneContext): this {
+    this.assertContextAllowed(context);
     this.context = { ...context };
     return this;
   }
@@ -179,21 +197,21 @@ export class ControlPlane implements Disposable {
         }
 
         if (pathname === "/api/history") {
-          const filters = this.parseContextFilters(parsed.searchParams);
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.getHistory(filters), null, 2));
           return;
         }
 
         if (pathname === "/api/timeline") {
-          const filters = this.parseContextFilters(parsed.searchParams);
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.getTimeline(filters), null, 2));
           return;
         }
 
         if (pathname === "/api/dag") {
-          const filters = this.parseContextFilters(parsed.searchParams);
+          const filters = this.applyAuthClaims(this.parseContextFilters(parsed.searchParams));
           res.setHeader("Content-Type", "application/json; charset=utf-8");
           res.end(JSON.stringify(this.getDag(filters), null, 2));
           return;
@@ -208,6 +226,12 @@ export class ControlPlane implements Disposable {
         res.statusCode = 404;
         res.end("Not found");
       } catch (error) {
+        if (error instanceof ControlPlaneForbiddenError) {
+          res.statusCode = 403;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify({ error: error.message }));
+          return;
+        }
         const message = error instanceof Error ? error.message : "Internal error";
         res.statusCode = 500;
         res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -245,6 +269,7 @@ export class ControlPlane implements Disposable {
   }
 
   private captureSnapshot(): ControlPlaneSnapshot {
+    this.assertContextAllowed(this.context);
     const snapshot: ControlPlaneSnapshot = {
       generatedAt: new Date().toISOString(),
       context: { ...this.context },
@@ -282,6 +307,41 @@ export class ControlPlane implements Disposable {
       sessionId: params.get("session") ?? undefined,
       runId: params.get("run") ?? undefined,
     };
+  }
+
+  private applyAuthClaims(filters: ControlPlaneContext): ControlPlaneContext {
+    if (!this.authClaims) return filters;
+    const resolved = { ...filters };
+
+    if (this.authClaims.tenantId) {
+      if (resolved.tenantId && resolved.tenantId !== this.authClaims.tenantId) {
+        throw new ControlPlaneForbiddenError("Forbidden tenant scope");
+      }
+      resolved.tenantId ??= this.authClaims.tenantId;
+    }
+
+    const allowedSessions = this.authClaims.allowedSessionIds ?? [];
+    if (resolved.sessionId && allowedSessions.length > 0 && !allowedSessions.includes(resolved.sessionId)) {
+      throw new ControlPlaneForbiddenError("Forbidden session scope");
+    }
+    if (!resolved.sessionId && allowedSessions.length === 1) {
+      resolved.sessionId = allowedSessions[0];
+    }
+
+    const allowedRuns = this.authClaims.allowedRunIds ?? [];
+    if (resolved.runId && allowedRuns.length > 0 && !allowedRuns.includes(resolved.runId)) {
+      throw new ControlPlaneForbiddenError("Forbidden run scope");
+    }
+    if (!resolved.runId && allowedRuns.length === 1) {
+      resolved.runId = allowedRuns[0];
+    }
+
+    return resolved;
+  }
+
+  private assertContextAllowed(context: ControlPlaneContext): void {
+    if (!this.authClaims) return;
+    void this.applyAuthClaims(context);
   }
 
   private filterHistory(filters?: ControlPlaneContext): ControlPlaneSnapshot[] {
